@@ -50,11 +50,12 @@
 
         <!-- 题型 -->
         <div class="form-group">
-          <label class="form-label">题型：</label>
+          <label class="form-label required">题型：</label>
           <select
             v-model="form.question_type"
             class="form-select"
             @change="handleQuestionTypeChange"
+            required
           >
             <option :value="null">请选择题型</option>
             <option value="SINGLE">单选题</option>
@@ -116,7 +117,7 @@
             <button
               type="button"
               @click="uploadKnowledgePoint"
-              class="btn-secondary"
+              class="btn-highlight"
               :disabled="!newKnowledgePoint.trim()"
             >
               新增知识点
@@ -168,7 +169,7 @@
             <button
               type="button"
               @click="uploadQuestionDefinition"
-              class="btn-secondary"
+              class="btn-highlight"
               :disabled="!newQuestionDefinition.trim()"
             >
               新增问题定义
@@ -220,7 +221,7 @@
             <button
               type="button"
               @click="uploadSolutionIdea"
-              class="btn-secondary"
+              class="btn-highlight"
               :disabled="!newSolutionIdea.trim()"
             >
               新增解题思想
@@ -272,7 +273,7 @@
             <button
               type="button"
               @click="uploadQuestionCategory"
-              class="btn-secondary"
+              class="btn-highlight"
               :disabled="!newQuestionCategory.trim()"
             >
               新增问题类别
@@ -291,7 +292,7 @@
 
         <!-- 题目内容 -->
         <div class="form-group">
-          <label class="form-label">题目内容：</label>
+          <label class="form-label required">题目内容：</label>
           <textarea
             v-model="form.title"
             placeholder="请输入题干"
@@ -373,7 +374,7 @@
 
         <!-- 主观题答案 -->
         <div v-if="form.question_type === 'SUBJECTIVE'" class="form-group">
-          <label class="form-label">答案/参考答案：</label>
+          <label class="form-label required">答案/参考答案：</label>
           <textarea
             v-model="form.answer"
             placeholder="请输入答案或参考答案"
@@ -433,7 +434,7 @@
             <button
               type="button"
               @click="uploadSubKnowledgePoint"
-              class="btn-secondary"
+              class="btn-highlight"
               :disabled="!newSubKnowledgePoint.trim()"
             >
               新增子知识点
@@ -562,6 +563,7 @@
           <div class="results-table">
             <div class="table-header">
               <div class="table-cell">ID</div>
+              <div class="table-cell">学校</div>
               <div class="table-cell">年级</div>
               <div class="table-cell">科目</div>
               <div class="table-cell">题型</div>
@@ -578,6 +580,7 @@
             </div>
             <div v-for="q in questionList" :key="q.id" class="table-row">
               <div class="table-cell">{{ q.id }}</div>
+              <div class="table-cell">{{ getSchoolName(q.school_id) }}</div>
               <div class="table-cell">{{ getGradeName(q.grade_id) }}</div>
               <div class="table-cell">{{ getSubjectName(q.subject_id) }}</div>
               <div class="table-cell">{{ getQuestionTypeName(q.question_type) }}</div>
@@ -637,7 +640,7 @@
         <form @submit.prevent="handleUpdateSubmit" class="update-form">
           <!-- 学校 -->
           <div class="form-group">
-            <label class="form-label">学校：</label>
+            <label class="form-label required">学校：</label>
             <select v-model="updateForm.school_id" class="form-select" required>
               <option :value="null">请选择学校</option>
               <option v-for="school in schoolList" :key="school.id" :value="school.id">
@@ -648,7 +651,7 @@
 
           <!-- 年级 -->
           <div class="form-group">
-            <label class="form-label">年级：</label>
+            <label class="form-label required">年级：</label>
             <select v-model="updateForm.grade_id" class="form-select" required>
               <option :value="null">请选择年级</option>
               <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
@@ -659,7 +662,7 @@
 
           <!-- 科目 -->
           <div class="form-group">
-            <label class="form-label">科目：</label>
+            <label class="form-label required">科目：</label>
             <select v-model="updateForm.subject_id" class="form-select" required>
               <option :value="null">请选择科目</option>
               <option v-for="sub in subjectList" :key="sub.id" :value="sub.id">
@@ -670,7 +673,7 @@
 
           <!-- 题型 -->
           <div class="form-group">
-            <label class="form-label">题型：</label>
+            <label class="form-label required">题型：</label>
             <select
               v-model="updateForm.question_type"
               class="form-select"
@@ -686,7 +689,7 @@
 
           <!-- 评分方法 -->
           <div class="form-group">
-            <label class="form-label">评分方法：</label>
+            <label class="form-label required">评分方法：</label>
             <select v-model="updateForm.marking_type" class="form-select" required>
               <option value="0">自动评分</option>
               <option value="1">人工评分</option>
@@ -872,7 +875,7 @@
 
           <!-- 题目内容 -->
           <div class="form-group">
-            <label class="form-label">题目内容：</label>
+            <label class="form-label required">题目内容：</label>
             <textarea
               v-model="updateForm.title"
               placeholder="请输入题干"
@@ -964,7 +967,7 @@
 
           <!-- 主观题答案 -->
           <div v-if="updateForm.question_type === 'SUBJECTIVE'" class="form-group">
-            <label class="form-label">答案/参考答案：</label>
+            <label class="form-label required">答案/参考答案：</label>
             <textarea
               v-model="updateForm.answer"
               placeholder="请输入答案或参考答案"
@@ -2884,6 +2887,11 @@ export default {
   color: #606266;
 }
 
+.form-label.required::after {
+  content: " *";
+  color: #f56c6c;
+}
+
 .form-select,
 .form-input,
 .form-textarea {
@@ -3067,6 +3075,31 @@ export default {
   cursor: not-allowed;
 }
 
+.btn-highlight {
+  background-color: #67c23a;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-highlight:hover:not(:disabled) {
+  background-color: #85ce61;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(103, 194, 58, 0.3);
+}
+
+.btn-highlight:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-remove {
   background-color: #f56c6c;
   color: white;
@@ -3167,17 +3200,18 @@ export default {
 
 /* 调整表格列宽设置 */
 .table-cell:nth-child(1) { width: 60px; }  /* ID */
-.table-cell:nth-child(2) { width: 80px; }  /* 年级 */
-.table-cell:nth-child(3) { width: 100px; } /* 科目 */
-.table-cell:nth-child(4) { width: 80px; }  /* 题型 */
-.table-cell:nth-child(5) { width: 80px; }  /* 评分方法 */
-.table-cell:nth-child(6) { width: 120px; } /* 知识点 */
-.table-cell:nth-child(7) { width: 120px; } /* 问题定义 */
-.table-cell:nth-child(8) { width: 120px; } /* 解题思想 */
-.table-cell:nth-child(9) { width: 120px; } /* 问题类别 */
-.table-cell:nth-child(10) { width: 150px; } /* 子知识点 */
-.table-cell:nth-child(11) { width: 60px; }  /* 难度 */
-.table-cell:nth-child(12) { min-width: 300px; max-width: 400px; } /* 题目内容 */
-.table-cell:nth-child(13) { width: 80px; }  /* 图片 */
-.table-cell:nth-child(14) { width: 120px; } /* 操作 */
+.table-cell:nth-child(2) { width: 109px; } /* 学校 */
+.table-cell:nth-child(3) { width: 80px; }  /* 年级 */
+.table-cell:nth-child(4) { width: 100px; } /* 科目 */
+.table-cell:nth-child(5) { width: 80px; }  /* 题型 */
+.table-cell:nth-child(6) { width: 80px; }  /* 评分方法 */
+.table-cell:nth-child(7) { width: 120px; } /* 知识点 */
+.table-cell:nth-child(8) { width: 120px; } /* 问题定义 */
+.table-cell:nth-child(9) { width: 120px; } /* 解题思想 */
+.table-cell:nth-child(10) { width: 120px; } /* 问题类别 */
+.table-cell:nth-child(11) { width: 150px; } /* 子知识点 */
+.table-cell:nth-child(12) { width: 60px; }  /* 难度 */
+.table-cell:nth-child(13) { min-width: 300px; max-width: 400px; } /* 题目内容 */
+.table-cell:nth-child(14) { width: 80px; }  /* 图片 */
+.table-cell:nth-child(15) { width: 120px; } /* 操作 */
 </style>
