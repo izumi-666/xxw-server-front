@@ -1,7 +1,10 @@
 <template>
   <div class="container">
     <h1>教育题库管理系统</h1>
-    <!-- 模式切换 -->
+    <button @click="confirmLogout" class="logout-btn">
+      <span class="logout-icon"></span>
+      退出登录
+    </button>
     <div class="mode-select">
       <button :class="{ active: !updateMode }" @click="exitUpdateMode" type="button">
         上传题目
@@ -18,7 +21,7 @@
         <!-- 学校 -->
         <div class="form-group">
           <label class="form-label">学校：</label>
-          <select v-model="form.school_id" class="form-select blue-select">
+          <select v-model="form.school_id" class="form-select">
             <option :value="null">全部</option>
             <option v-for="school in schoolList" :key="school.id" :value="school.id">
               {{ school.name }}
@@ -29,7 +32,7 @@
         <!-- 科目 -->
         <div class="form-group">
           <label class="form-label">科目：</label>
-          <select v-model="form.subject_id" class="form-select blue-select">
+          <select v-model="form.subject_id" class="form-select">
             <option :value="null">全部</option>
             <option v-for="sub in subjectList" :key="sub.id" :value="sub.id">
               {{ sub.name }}
@@ -42,7 +45,7 @@
           <label class="form-label required">题型：</label>
           <select
             v-model="form.question_type"
-            class="form-select blue-select"
+            class="form-select"
             :class="{ error: questionTypeError }"
             @change="handleQuestionTypeChange"
             required
@@ -114,14 +117,24 @@
                     name="singleAnswer"
                     :value="index"
                     v-model="singleAnswerIndex"
+                    :id="`upload-single-answer-${index}`"
                     class="radio-input"
                     required
                   />
-                  <label class="radio-label">正确答案</label>
+                  <label class="radio-label" :for="`upload-single-answer-${index}`"
+                    >正确答案</label
+                  >
                 </template>
                 <template v-else-if="form.question_type === 'MULTIPLE'">
-                  <input type="checkbox" v-model="opt.isAnswer" class="checkbox-input" />
-                  <label class="checkbox-label">正确答案</label>
+                  <input
+                    type="checkbox"
+                    v-model="opt.isAnswer"
+                    :id="`upload-multiple-answer-${index}`"
+                    class="checkbox-input"
+                  />
+                  <label class="checkbox-label" :for="`upload-multiple-answer-${index}`"
+                    >正确答案</label
+                  >
                 </template>
                 <button
                   type="button"
@@ -427,7 +440,7 @@
         <!-- 评分方法 -->
         <div class="form-group">
           <label class="form-label">评分方法：</label>
-          <select v-model="form.marking_type" class="form-select blue-select">
+          <select v-model="form.marking_type" class="form-select">
             <option value="0">自动评分</option>
             <option value="1">人工评分</option>
           </select>
@@ -636,7 +649,7 @@
           <!-- 学校 -->
           <div class="form-group">
             <label class="form-label required">学校：</label>
-            <select v-model="updateForm.school_id" class="form-select blue-select" required>
+            <select v-model="updateForm.school_id" class="form-select" required>
               <option :value="null">请选择学校</option>
               <option v-for="school in schoolList" :key="school.id" :value="school.id">
                 {{ school.name }}
@@ -647,7 +660,7 @@
           <!-- 年级 -->
           <div class="form-group">
             <label class="form-label required">年级：</label>
-            <select v-model="updateForm.grade_id" class="form-select blue-select" required>
+            <select v-model="updateForm.grade_id" class="form-select" required>
               <option :value="null">请选择年级</option>
               <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
                 {{ grade.name }}
@@ -658,7 +671,7 @@
           <!-- 科目 -->
           <div class="form-group">
             <label class="form-label required">科目：</label>
-            <select v-model="updateForm.subject_id" class="form-select blue-select" required>
+            <select v-model="updateForm.subject_id" class="form-select" required>
               <option :value="null">请选择科目</option>
               <option v-for="sub in subjectList" :key="sub.id" :value="sub.id">
                 {{ sub.name }}
@@ -671,7 +684,7 @@
             <label class="form-label required">题型：</label>
             <select
               v-model="updateForm.question_type"
-              class="form-select blue-select"
+              class="form-select"
               :class="{ error: updateQuestionTypeError }"
               @change="handleUpdateQuestionTypeChange"
               required
@@ -687,7 +700,7 @@
           <!-- 评分方法 -->
           <div class="form-group">
             <label class="form-label required">评分方法：</label>
-            <select v-model="updateForm.marking_type" class="form-select blue-select" required>
+            <select v-model="updateForm.marking_type" class="form-select" required>
               <option value="0">自动评分</option>
               <option value="1">人工评分</option>
             </select>
@@ -933,18 +946,24 @@
                       name="updateSingleAnswer"
                       :value="index"
                       v-model="updateSingleAnswerIndex"
+                      :id="`update-single-answer-${index}`"
                       class="radio-input"
                       required
                     />
-                    <label class="radio-label">正确答案</label>
+                    <label class="radio-label" :for="`update-single-answer-${index}`"
+                      >正确答案</label
+                    >
                   </template>
                   <template v-else-if="updateForm.question_type === 'MULTIPLE'">
                     <input
                       type="checkbox"
                       v-model="opt.isAnswer"
+                      :id="`update-multiple-answer-${index}`"
                       class="checkbox-input"
                     />
-                    <label class="checkbox-label">正确答案</label>
+                    <label class="checkbox-label" :for="`update-multiple-answer-${index}`"
+                      >正确答案</label
+                    >
                   </template>
                   <button
                     type="button"
@@ -1063,11 +1082,28 @@
 <script>
 import { reactive, ref, onMounted, computed, watch, nextTick } from "vue";
 import axios from "axios";
+import { useRouter } from "vue-router"; // 添加路由导入
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export default {
   setup() {
+    const router = useRouter(); // 获取路由实例
+    const confirmLogout = () => {
+      if (confirm("确定要退出登录吗？")) {
+        handleLogout();
+      }
+    };
+
+    // 退出登录方法
+    const handleLogout = () => {
+      // 清除本地存储的token
+      localStorage.removeItem("token");
+      // 清除axios默认授权头
+      delete axios.defaults.headers.common["Authorization"];
+      // 跳转到登录页面 - 使用你的路由配置中的路径
+      router.push("/login");
+    };
     const schoolList = ref([]);
     const gradeList = ref([]);
     const subjectList = ref([]);
@@ -2655,6 +2691,8 @@ export default {
       // 新增：题型错误状态
       questionTypeError,
       updateQuestionTypeError,
+      handleLogout,
+      confirmLogout
     };
   },
 };
@@ -2919,6 +2957,7 @@ export default {
   grid-column: 1 / -1;
 }
 
+/* 修改弹窗样式 - 位于中央且放大 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -2934,53 +2973,90 @@ export default {
 
 .modal-content {
   background: white;
-  padding: 30px;
-  border-radius: 8px;
-  max-width: 400px;
+  padding: 40px;
+  border-radius: 12px;
+  max-width: 500px;
   width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  transform: scale(1.05);
+  animation: modalAppear 0.3s ease-out;
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.05) translateY(0);
+  }
 }
 
 .modal-content h3 {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   color: #303133;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .modal-content p {
-  margin-bottom: 20px;
+  margin-bottom: 30px;
   color: #606266;
+  font-size: 18px;
+  line-height: 1.5;
 }
 
 .modal-actions {
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  gap: 15px;
+  justify-content: center;
 }
 
+.modal-actions button {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 100px;
+}
+
+/* 修改图片预览模态框样式 */
 .image-preview-modal {
   background: white;
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 90%;
-  max-height: 90%;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transform: scale(1.05);
+  animation: modalAppear 0.3s ease-out;
 }
 
 .full-size-image {
   max-width: 100%;
-  max-height: 80vh;
+  max-height: 70vh;
   object-fit: contain;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .btn-close {
   background-color: #f56c6c;
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 12px 24px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 16px;
+  min-width: 100px;
+  transition: background-color 0.3s;
 }
 
 .btn-close:hover {
@@ -3022,7 +3098,6 @@ export default {
   border-color: #409eff;
 }
 
-
 /* 普通下拉框样式 */
 .form-select {
   background-color: white;
@@ -3030,7 +3105,6 @@ export default {
   border-radius: 6px;
   padding: 10px;
   font-size: 16px;
-  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -3435,5 +3509,37 @@ export default {
 /* 修复子知识点标签间距 */
 .sub-knowledge-tag {
   margin: 2px;
+}
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.header-bar h1 {
+  margin: 0;
+  color: #303133;
+}
+
+/* 退出按钮样式 */
+.logout-btn {
+  background-color: #f56c6c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  float: right; 
+}
+
+.logout-btn:hover {
+  background-color: red;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(245, 108, 108, 0.3);
 }
 </style>
