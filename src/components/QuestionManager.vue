@@ -1142,8 +1142,6 @@
 import { reactive, ref, onMounted, computed, watch, nextTick } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
-import katex from 'katex';
-import 'katex/dist/katex.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
