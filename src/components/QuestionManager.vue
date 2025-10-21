@@ -63,11 +63,13 @@
           <label class="form-label required">题目内容：</label>
           <textarea
             v-model="form.title"
-            placeholder="请输入题干"
+            placeholder="请输入题干，数学公式使用 $公式$ 或 $$公式$$ 格式"
             class="form-textarea"
             rows="3"
+            @input="renderMathPreview('title', form.title)"
             required
           ></textarea>
+          <div class="math-preview" v-html="titlePreview"></div>
 
           <!-- 图片上传（题干图片） -->
           <div class="image-upload-section">
@@ -103,13 +105,17 @@
           <div class="options-list">
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
-              <input
-                type="text"
-                v-model="opt.text"
-                :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                class="form-input option-input"
-                required
-              />
+              <div class="option-input-container">
+                <input
+                  type="text"
+                  v-model="opt.text"
+                  :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                  class="form-input option-input"
+                  @input="renderOptionPreview(index, opt.text)"
+                  required
+                />
+                <div class="math-preview small" v-html="optionPreviews[index]"></div>
+              </div>
               <div class="option-actions">
                 <template v-if="form.question_type === 'SINGLE'">
                   <input
@@ -155,11 +161,26 @@
           <label class="form-label required">参考答案：</label>
           <textarea
             v-model="form.answer"
-            placeholder="请输入参考答案"
+            placeholder="请输入参考答案，数学公式使用 $公式$ 或 $$公式$$ 格式"
             class="form-textarea"
             rows="4"
+            @input="renderMathPreview('answer', form.answer)"
             required
           ></textarea>
+          <div class="math-preview" v-html="answerPreview"></div>
+        </div>
+
+        <!-- 解析 -->
+        <div class="form-group">
+          <label class="form-label">解析：</label>
+          <textarea
+            v-model="form.notes"
+            placeholder="请输入题目解析，数学公式使用 $公式$ 或 $$公式$$ 格式"
+            class="form-textarea"
+            rows="3"
+            @input="renderMathPreview('notes', form.notes)"
+          ></textarea>
+          <div class="math-preview" v-html="notesPreview"></div>
         </div>
 
         <!-- 知识点 -->
@@ -886,11 +907,13 @@
             <label class="form-label required">题目内容：</label>
             <textarea
               v-model="updateForm.title"
-              placeholder="请输入题干"
+              placeholder="请输入题干，数学公式使用 $公式$ 或 $$公式$$ 格式"
               class="form-textarea"
               rows="3"
+              @input="renderMathPreview('updateTitle', updateForm.title)"
               required
             ></textarea>
+            <div class="math-preview" v-html="updateTitlePreview"></div>
 
             <!-- 图片上传（题干图片） -->
             <div class="image-upload-section">
@@ -930,13 +953,17 @@
                 class="option-item"
               >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
-                <input
-                  type="text"
-                  v-model="opt.text"
-                  :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                  class="form-input option-input"
-                  required
-                />
+                <div class="option-input-container">
+                  <input
+                    type="text"
+                    v-model="opt.text"
+                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                    class="form-input option-input"
+                    @input="renderUpdateOptionPreview(index, opt.text)"
+                    required
+                  />
+                  <div class="math-preview small" v-html="updateOptionPreviews[index]"></div>
+                </div>
                 <div class="option-actions">
                   <template v-if="updateForm.question_type === 'SINGLE'">
                     <input
@@ -984,11 +1011,26 @@
             <label class="form-label required">答案/参考答案：</label>
             <textarea
               v-model="updateForm.answer"
-              placeholder="请输入答案或参考答案"
+              placeholder="请输入答案或参考答案，数学公式使用 $公式$ 或 $$公式$$ 格式"
               class="form-textarea"
               rows="4"
+              @input="renderMathPreview('updateAnswer', updateForm.answer)"
               required
             ></textarea>
+            <div class="math-preview" v-html="updateAnswerPreview"></div>
+          </div>
+
+          <!-- 解析 -->
+          <div class="form-group">
+            <label class="form-label">解析：</label>
+            <textarea
+              v-model="updateForm.notes"
+              placeholder="请输入题目解析，数学公式使用 $公式$ 或 $$公式$$ 格式"
+              class="form-textarea"
+              rows="3"
+              @input="renderMathPreview('updateNotes', updateForm.notes)"
+            ></textarea>
+            <div class="math-preview" v-html="updateNotesPreview"></div>
           </div>
 
           <!-- 子知识点 -->
@@ -1100,12 +1142,26 @@
 import { reactive, ref, onMounted, computed, watch, nextTick } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import katex from 'katex';
+import 'katex/dist/katex.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export default {
   setup() {
     const router = useRouter();
+
+    // 数学公式预览相关状态
+    const titlePreview = ref("");
+    const answerPreview = ref("");
+    const notesPreview = ref("");
+    const optionPreviews = ref(Array(10).fill(""));
+    
+    // 更新界面的预览
+    const updateTitlePreview = ref("");
+    const updateAnswerPreview = ref("");
+    const updateNotesPreview = ref("");
+    const updateOptionPreviews = ref(Array(10).fill(""));
 
     // 弹窗相关状态
     const showAlertModal = ref(false);
@@ -1344,6 +1400,76 @@ export default {
         .filter(Boolean);
     });
 
+    // 数学公式渲染函数
+    const renderMath = (text) => {
+      if (!text) return "";
+      
+      try {
+        // 处理行内公式：$...$
+        let html = text.replace(/\$(.+?)\$/g, (match, formula) => {
+          try {
+            return katex.renderToString(formula, {
+              throwOnError: false,
+              displayMode: false
+            });
+          } catch (e) {
+            return `<span class="math-error" title="${e.message}">${match}</span>`;
+          }
+        });
+        
+        // 处理块级公式：$$...$$
+        html = html.replace(/\$\$(.+?)\$\$/g, (match, formula) => {
+          try {
+            return katex.renderToString(formula, {
+              throwOnError: false,
+              displayMode: true
+            });
+          } catch (e) {
+            return `<div class="math-error" title="${e.message}">${match}</div>`;
+          }
+        });
+        
+        return html;
+      } catch (error) {
+        console.error("数学公式渲染错误:", error);
+        return text;
+      }
+    };
+
+    // 预览渲染函数
+    const renderMathPreview = (type, text) => {
+      const preview = renderMath(text);
+      switch (type) {
+        case 'title':
+          titlePreview.value = preview;
+          break;
+        case 'answer':
+          answerPreview.value = preview;
+          break;
+        case 'notes':
+          notesPreview.value = preview;
+          break;
+        case 'updateTitle':
+          updateTitlePreview.value = preview;
+          break;
+        case 'updateAnswer':
+          updateAnswerPreview.value = preview;
+          break;
+        case 'updateNotes':
+          updateNotesPreview.value = preview;
+          break;
+      }
+    };
+
+    // 选项预览渲染
+    const renderOptionPreview = (index, text) => {
+      optionPreviews.value[index] = renderMath(text);
+    };
+
+    const renderUpdateOptionPreview = (index, text) => {
+      updateOptionPreviews.value[index] = renderMath(text);
+    };
+
     // 方法
     const getOptionLabel = (index) => {
       let label = "";
@@ -1358,12 +1484,14 @@ export default {
     const addOption = () => {
       if (form.options.length < 10) {
         form.options.push({ text: "", isAnswer: false });
+        optionPreviews.value.push("");
       }
     };
 
     const removeOption = (index) => {
       if (form.options.length > 2) {
         form.options.splice(index, 1);
+        optionPreviews.value.splice(index, 1);
         if (form.question_type === "SINGLE" && singleAnswerIndex.value === index) {
           singleAnswerIndex.value = null;
         }
@@ -1373,12 +1501,14 @@ export default {
     const addUpdateOption = () => {
       if (updateForm.options.length < 10) {
         updateForm.options.push({ text: "", isAnswer: false });
+        updateOptionPreviews.value.push("");
       }
     };
 
     const removeUpdateOption = (index) => {
       if (updateForm.options.length > 2) {
         updateForm.options.splice(index, 1);
+        updateOptionPreviews.value.splice(index, 1);
         if (
           updateForm.question_type === "SINGLE" &&
           updateSingleAnswerIndex.value === index
@@ -1398,6 +1528,10 @@ export default {
       singleAnswerIndex.value = null;
       form.answer = "";
       questionTypeError.value = false;
+      optionPreviews.value = Array(10).fill("");
+      titlePreview.value = "";
+      answerPreview.value = "";
+      notesPreview.value = "";
     };
 
     const handleUpdateQuestionTypeChange = () => {
@@ -1410,6 +1544,10 @@ export default {
       updateSingleAnswerIndex.value = null;
       updateForm.answer = "";
       updateQuestionTypeError.value = false;
+      updateOptionPreviews.value = Array(10).fill("");
+      updateTitlePreview.value = "";
+      updateAnswerPreview.value = "";
+      updateNotesPreview.value = "";
     };
 
     // 知识点选择方法
@@ -2155,7 +2293,19 @@ export default {
         }
       }
 
+      // 初始化预览
       await nextTick();
+      renderMathPreview('updateTitle', updateForm.title);
+      renderMathPreview('updateAnswer', updateForm.answer);
+      renderMathPreview('updateNotes', updateForm.notes);
+      
+      // 初始化选项预览
+      if (updateForm.options && updateForm.options.length) {
+        updateForm.options.forEach((opt, index) => {
+          renderUpdateOptionPreview(index, opt.text);
+        });
+      }
+
       if (updateFormRef.value) {
         updateFormRef.value.scrollIntoView({
           behavior: "smooth",
@@ -2177,6 +2327,10 @@ export default {
       selectedUpdateFormSolutionIdea.value = null;
       selectedUpdateFormQuestionCategory.value = null;
       updateQuestionTypeError.value = false;
+      updateTitlePreview.value = "";
+      updateAnswerPreview.value = "";
+      updateNotesPreview.value = "";
+      updateOptionPreviews.value = Array(10).fill("");
     };
 
     const confirmDelete = (q) => {
@@ -2484,6 +2638,10 @@ export default {
       selectedSolutionIdea.value = null;
       selectedQuestionCategory.value = null;
       questionTypeError.value = false;
+      titlePreview.value = "";
+      answerPreview.value = "";
+      notesPreview.value = "";
+      optionPreviews.value = Array(10).fill("");
     };
 
     const enterUpdateMode = () => {
@@ -2742,6 +2900,18 @@ export default {
       showLogoutConfirm,
       cancelLogout,
       silentFindQuestions,
+      // 数学公式预览相关
+      titlePreview,
+      answerPreview,
+      notesPreview,
+      optionPreviews,
+      updateTitlePreview,
+      updateAnswerPreview,
+      updateNotesPreview,
+      updateOptionPreviews,
+      renderMathPreview,
+      renderOptionPreview,
+      renderUpdateOptionPreview,
     };
   },
 };
@@ -3460,9 +3630,9 @@ export default {
 
 .option-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   padding: 10px;
   background: #fafafa;
   border-radius: 4px;
@@ -3472,16 +3642,24 @@ export default {
   font-weight: 500;
   min-width: 30px;
   color: #409eff;
+  margin-top: 8px;
+}
+
+.option-input-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .option-input {
-  flex: 1;
+  margin-bottom: 4px;
 }
 
 .option-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 8px;
 }
 
 .radio-input,
@@ -3507,6 +3685,42 @@ export default {
 
 .submit-btn {
   flex: 1;
+}
+
+/* 数学公式预览样式 */
+.math-preview {
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 8px;
+  background: #f8f9fa;
+  min-height: 40px;
+  line-height: 1.5;
+}
+
+.math-preview.small {
+  min-height: 30px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.math-error {
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 2px 4px;
+  border-radius: 2px;
+  border: 1px solid #fbc4c4;
+}
+
+/* 确保 KaTeX 公式正确显示 */
+:deep(.katex) {
+  font-size: 1.1em;
+}
+
+:deep(.katex-display) {
+  margin: 0.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* 调整表格列宽设置 */
@@ -3611,5 +3825,18 @@ export default {
   background-color: red;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(245, 108, 108, 0.3);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .option-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .option-actions {
+    justify-content: flex-start;
+    margin-top: 10px;
+  }
 }
 </style>
