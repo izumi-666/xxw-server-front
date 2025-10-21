@@ -3441,7 +3441,7 @@ export default {
   width: 60px;
 } /* ID */
 .table-cell:nth-child(2) {
-  width: 109px;
+  width: 120px;
 } /* 学校 */
 .table-cell:nth-child(3) {
   width: 80px;
@@ -3456,7 +3456,7 @@ export default {
   width: 80px;
 } /* 评分方法 */
 .table-cell:nth-child(7) {
-  width: 120px;
+  width: 150px;
 } /* 知识点 */
 .table-cell:nth-child(8) {
   width: 120px;

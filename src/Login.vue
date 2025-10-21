@@ -6,10 +6,7 @@
       <div class="login-card">
         <!-- 顶部 Logo -->
         <div class="logo">
-          <img
-            src="./components/新希望特长学校logo.png"
-            alt="新希望特长学校"
-          />
+          <img src="./components/新希望特长学校logo.png" alt="新希望特长学校" />
         </div>
 
         <!-- 登录表单区域 -->
@@ -18,31 +15,11 @@
           <form @submit.prevent="handleLogin">
             <!-- 用户名输入框 -->
             <label for="username">用户名</label>
-            <input
-              type="text"
-              id="username"
-              v-model="username"
-              :class="{ error: usernameErrorVisible }"
-              placeholder="请输入用户名"
-            />
-            <!-- 用户名错误提示 -->
-            <div class="error-message" v-if="usernameErrorVisible">
-              {{ usernameError }}
-            </div>
+            <input type="text" id="username" v-model="username" placeholder="请输入用户名" />
 
             <!-- 密码输入框 -->
             <label for="password">密码</label>
-            <input
-              type="password"
-              id="password"
-              v-model="password"
-              :class="{ error: pwdErrorVisible }"
-              placeholder="请输入密码"
-            />
-            <!-- 密码错误提示 -->
-            <div class="error-message" v-if="pwdErrorVisible">
-              {{ pwdError }}
-            </div>
+            <input type="password" id="password" v-model="password" placeholder="请输入密码" />
 
             <!-- 登录按钮 -->
             <button type="submit" class="login-btn" :disabled="loading">
@@ -57,21 +34,31 @@
         </div>
       </div>
     </div>
+
+    <!-- 弹窗组件 -->
+    <div class="modal-overlay" v-if="showModal">
+      <div class="modal-content">
+        <h3 class="modal-title">{{ modalTitle }}</h3>
+        <p class="modal-message">{{ modalMessage }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
 export default {
   name: "Login",
   data() {
     return {
       username: "", // 用户输入的用户名
       password: "", // 用户输入的密码
-      usernameError: "请输入用户名", // 用户名错误提示信息
-      pwdError: "密码至少 6 位", // 密码错误提示信息
-      usernameErrorVisible: false, // 是否显示用户名错误提示
-      pwdErrorVisible: false, // 是否显示密码错误提示
       loading: false, // 登录按钮加载状态
+      showModal: false, // 是否显示弹窗
+      modalTitle: "", // 弹窗标题
+      modalMessage: "", // 弹窗消息
+      modalTimer: null // 弹窗定时器
     };
   },
 
@@ -82,32 +69,43 @@ export default {
     // 如果 token 存在且未过期，自动跳转到主页面
     if (savedToken && tokenExpire && Date.now() < Number(tokenExpire)) {
       console.log("已检测到有效 token，自动跳转中...");
-      this.$router.push("/upload"); // 登录成功或检测到 token 时
+      this.$router.push("/upload");
     }
   },
 
   methods: {
+    // 显示弹窗
+    showAlert(title, message) {
+      this.modalTitle = title;
+      this.modalMessage = message;
+      this.showModal = true;
+
+      // 清除之前的定时器
+      if (this.modalTimer) {
+        clearTimeout(this.modalTimer);
+      }
+
+      // 设置2秒后自动关闭弹窗
+      this.modalTimer = setTimeout(() => {
+        this.showModal = false;
+      }, 1500);
+    },
+
     // 校验表单输入合法性
     validateForm() {
-      let valid = true;
-
       // 检查用户名是否为空
       if (!this.username.trim()) {
-        this.usernameErrorVisible = true;
-        valid = false;
-      } else {
-        this.usernameErrorVisible = false;
+        this.showAlert("输入错误", "请输入用户名");
+        return false;
       }
 
-      // 检查密码长度
-      if (!this.password || this.password.length < 0) {
-        this.pwdErrorVisible = true;
-        valid = false;
-      } else {
-        this.pwdErrorVisible = false;
+      // 检查密码是否为空
+      if (!this.password.trim()) {
+        this.showAlert("输入错误", "请输入密码");
+        return false;
       }
 
-      return valid;
+      return true;
     },
 
     // 登录处理逻辑
@@ -117,7 +115,7 @@ export default {
       this.loading = true;
       try {
         // 向后端发送登录请求
-        const res = await fetch("http://54.238.146.189:8080/login", {
+        const res = await fetch(`${API_BASE}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -127,17 +125,24 @@ export default {
         });
         const data = await res.json();
 
-        if (data.code && data.message) {
-          alert("登录成功！");
+        // 登录成功处理
+        if (data.code && data.message != "用户名或密码错误") {
+          this.showAlert("登录成功", "欢迎回来！");
           const expireTime = Date.now() + 24 * 60 * 60 * 1000;
           localStorage.setItem("token", data.message);
           localStorage.setItem("tokenExpire", expireTime);
-          this.$router.push("/upload"); // 跳转页面
+
+          // 延迟跳转，让用户看到成功提示
+          setTimeout(() => {
+            this.$router.push("/upload");
+          }, 1500);
         } else {
-          alert("登录失败：" + (data.message || "用户名或密码错误"));
+          this.showAlert("登录失败", data.message || "用户名或密码错误");
+          // 登录失败时清空密码框
+          this.password = "";
         }
       } catch (err) {
-        alert("网络错误，请稍后重试");
+        this.showAlert("网络错误", "请稍后重试");
         console.error(err);
       } finally {
         this.loading = false;
@@ -182,6 +187,7 @@ body,
 .logo {
   padding: 45px 0 20px 0;
 }
+
 .logo img {
   width: 240px;
 }
@@ -191,12 +197,14 @@ body,
   padding: 36px 50px 50px 50px;
   text-align: left;
 }
+
 .tab-content label {
   font-size: 16px;
   margin-bottom: 8px;
   display: block;
   color: #444;
 }
+
 .tab-content input {
   width: 100%;
   height: 52px;
@@ -217,19 +225,6 @@ body,
   background: #fff;
 }
 
-/* 输入错误时红色高亮 */
-.error {
-  border-color: #e74c3c !important;
-}
-
-/* 错误提示文字样式 */
-.error-message {
-  color: #e74c3c;
-  font-size: 14px;
-  margin-top: -12px;
-  margin-bottom: 16px;
-}
-
 /* === 登录按钮 === */
 .login-btn {
   width: 100%;
@@ -243,10 +238,12 @@ body,
   cursor: pointer;
   transition: background 0.25s, transform 0.1s;
 }
+
 .login-btn:hover {
   background: #008fde;
   transform: scale(1.02);
 }
+
 .login-btn:disabled {
   background: #92d8ff;
   cursor: not-allowed;
@@ -259,6 +256,7 @@ body,
   color: #888;
   line-height: 1.6;
 }
+
 .privacy a {
   color: #00a1f5;
   text-decoration: none;
@@ -270,9 +268,60 @@ body,
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* === 弹窗样式 === */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 80%;
+  text-align: center;
+  animation: scaleIn 0.3s ease;
+}
+
+.modal-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.modal-message {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.5;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 </style>
