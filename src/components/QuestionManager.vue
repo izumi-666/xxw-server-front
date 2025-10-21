@@ -43,8 +43,13 @@
         <!-- 题型 -->
         <div class="form-group">
           <label class="form-label required">题型：</label>
-          <select v-model="form.question_type" class="form-select" :class="{ error: questionTypeError }"
-            @change="handleQuestionTypeChange" required>
+          <select
+            v-model="form.question_type"
+            class="form-select"
+            :class="{ error: questionTypeError }"
+            @change="handleQuestionTypeChange"
+            required
+          >
             <option :value="null">请选择题型</option>
             <option value="SINGLE">单选题</option>
             <option value="MULTIPLE">多选题</option>
@@ -56,14 +61,30 @@
         <!-- 题目内容 -->
         <div class="form-group">
           <label class="form-label required">题目内容：</label>
-          <textarea v-model="form.title" placeholder="请输入题干" class="form-textarea" rows="3" required></textarea>
+          <textarea
+            v-model="form.title"
+            placeholder="请输入题干"
+            class="form-textarea"
+            rows="3"
+            required
+          ></textarea>
 
           <!-- 图片上传（题干图片） -->
           <div class="image-upload-section">
             <label class="form-label">题干图片：</label>
             <div class="upload-controls">
-              <input type="file" @change="handleImageUpload" accept="image/*" class="file-input" ref="fileInput" />
-              <button type="button" @click="$refs.fileInput.click()" class="btn-secondary">
+              <input
+                type="file"
+                @change="handleImageUpload"
+                accept="image/*"
+                class="file-input"
+                ref="fileInput"
+              />
+              <button
+                type="button"
+                @click="$refs.fileInput.click()"
+                class="btn-secondary"
+              >
                 选择图片
               </button>
             </div>
@@ -82,21 +103,45 @@
           <div class="options-list">
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
-              <input type="text" v-model="opt.text" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                class="form-input option-input" required />
+              <input
+                type="text"
+                v-model="opt.text"
+                :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                class="form-input option-input"
+                required
+              />
               <div class="option-actions">
                 <template v-if="form.question_type === 'SINGLE'">
-                  <input type="radio" name="singleAnswer" :value="index" v-model="singleAnswerIndex"
-                    :id="`upload-single-answer-${index}`" class="radio-input" required />
-                  <label class="radio-label" :for="`upload-single-answer-${index}`">正确答案</label>
+                  <input
+                    type="radio"
+                    name="singleAnswer"
+                    :value="index"
+                    v-model="singleAnswerIndex"
+                    :id="`upload-single-answer-${index}`"
+                    class="radio-input"
+                    required
+                  />
+                  <label class="radio-label" :for="`upload-single-answer-${index}`"
+                    >正确答案</label
+                  >
                 </template>
                 <template v-else-if="form.question_type === 'MULTIPLE'">
-                  <input type="checkbox" v-model="opt.isAnswer" :id="`upload-multiple-answer-${index}`"
-                    class="checkbox-input" />
-                  <label class="checkbox-label" :for="`upload-multiple-answer-${index}`">正确答案</label>
+                  <input
+                    type="checkbox"
+                    v-model="opt.isAnswer"
+                    :id="`upload-multiple-answer-${index}`"
+                    class="checkbox-input"
+                  />
+                  <label class="checkbox-label" :for="`upload-multiple-answer-${index}`"
+                    >正确答案</label
+                  >
                 </template>
-                <button type="button" @click="removeOption(index)" class="btn-remove"
-                  :disabled="form.options.length <= 2">
+                <button
+                  type="button"
+                  @click="removeOption(index)"
+                  class="btn-remove"
+                  :disabled="form.options.length <= 2"
+                >
                   删除
                 </button>
               </div>
@@ -108,18 +153,38 @@
         <!-- 主观题答案 -->
         <div v-if="form.question_type === 'SUBJECTIVE'" class="form-group">
           <label class="form-label required">参考答案：</label>
-          <textarea v-model="form.answer" placeholder="请输入参考答案" class="form-textarea" rows="4" required></textarea>
+          <textarea
+            v-model="form.answer"
+            placeholder="请输入参考答案"
+            class="form-textarea"
+            rows="4"
+            required
+          ></textarea>
         </div>
 
         <!-- 知识点 -->
         <div class="form-group">
           <label class="form-label">知识点：</label>
           <div class="searchable-select">
-            <input type="text" v-model="knowledgeSearch" placeholder="输入关键字搜索知识点..." class="form-input search-input"
-              @input="filterKnowledgePoints" @focus="showKnowledgeDropdown = true" @blur="onKnowledgeBlur" />
-            <div v-if="showKnowledgeDropdown && filteredKnowledgePoints.length" class="dropdown-list">
-              <div v-for="kp in filteredKnowledgePoints" :key="kp.id" class="dropdown-item"
-                @mousedown="selectKnowledgePoint(kp)">
+            <input
+              type="text"
+              v-model="knowledgeSearch"
+              placeholder="输入关键字搜索知识点..."
+              class="form-input search-input"
+              @input="filterKnowledgePoints"
+              @focus="showKnowledgeDropdown = true"
+              @blur="onKnowledgeBlur"
+            />
+            <div
+              v-if="showKnowledgeDropdown && filteredKnowledgePoints.length"
+              class="dropdown-list"
+            >
+              <div
+                v-for="kp in filteredKnowledgePoints"
+                :key="kp.id"
+                class="dropdown-item"
+                @mousedown="selectKnowledgePoint(kp)"
+              >
                 {{ kp.name }}
               </div>
             </div>
@@ -131,10 +196,19 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input type="text" v-model="newKnowledgePoint" placeholder="新建知识点（多个用逗号分隔）" class="form-input"
-              @keypress.enter="uploadKnowledgePoint" />
-            <button type="button" @click="uploadKnowledgePoint" class="btn-highlight"
-              :disabled="!newKnowledgePoint.trim()">
+            <input
+              type="text"
+              v-model="newKnowledgePoint"
+              placeholder="新建知识点（多个用逗号分隔）"
+              class="form-input"
+              @keypress.enter="uploadKnowledgePoint"
+            />
+            <button
+              type="button"
+              @click="uploadKnowledgePoint"
+              class="btn-highlight"
+              :disabled="!newKnowledgePoint.trim()"
+            >
               新增知识点
             </button>
           </div>
@@ -144,11 +218,25 @@
         <div class="form-group">
           <label class="form-label">子知识点：</label>
           <div class="searchable-select">
-            <input type="text" v-model="subKnowledgeSearch" placeholder="输入关键字搜索子知识点..." class="form-input search-input"
-              @input="filterSubKnowledgePoints" @focus="showSubKnowledgeDropdown = true" @blur="onSubKnowledgeBlur" />
-            <div v-if="showSubKnowledgeDropdown && filteredSubKnowledgePoints.length" class="dropdown-list">
-              <div v-for="kp in filteredSubKnowledgePoints" :key="kp.id" class="dropdown-item"
-                @mousedown="selectSubKnowledgePoint(kp)">
+            <input
+              type="text"
+              v-model="subKnowledgeSearch"
+              placeholder="输入关键字搜索子知识点..."
+              class="form-input search-input"
+              @input="filterSubKnowledgePoints"
+              @focus="showSubKnowledgeDropdown = true"
+              @blur="onSubKnowledgeBlur"
+            />
+            <div
+              v-if="showSubKnowledgeDropdown && filteredSubKnowledgePoints.length"
+              class="dropdown-list"
+            >
+              <div
+                v-for="kp in filteredSubKnowledgePoints"
+                :key="kp.id"
+                class="dropdown-item"
+                @mousedown="selectSubKnowledgePoint(kp)"
+              >
                 {{ kp.name }}
                 <span v-if="isSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
               </div>
@@ -156,16 +244,29 @@
           </div>
           <div class="selected-items" v-if="selectedSubKnowledgePoints.length">
             <span class="selected-tags-label">已选择：</span>
-            <span v-for="kp in selectedSubKnowledgePoints" :key="kp.id" class="selected-tag"
-              @click="removeSubKnowledgePoint(kp.id)">
+            <span
+              v-for="kp in selectedSubKnowledgePoints"
+              :key="kp.id"
+              class="selected-tag"
+              @click="removeSubKnowledgePoint(kp.id)"
+            >
               {{ kp.name }} ×
             </span>
           </div>
           <div class="new-knowledge-input">
-            <input type="text" v-model="newSubKnowledgePoint" placeholder="新建子知识点（多个用逗号分隔）" class="form-input"
-              @keypress.enter="uploadSubKnowledgePoint" />
-            <button type="button" @click="uploadSubKnowledgePoint" class="btn-highlight"
-              :disabled="!newSubKnowledgePoint.trim()">
+            <input
+              type="text"
+              v-model="newSubKnowledgePoint"
+              placeholder="新建子知识点（多个用逗号分隔）"
+              class="form-input"
+              @keypress.enter="uploadSubKnowledgePoint"
+            />
+            <button
+              type="button"
+              @click="uploadSubKnowledgePoint"
+              class="btn-highlight"
+              :disabled="!newSubKnowledgePoint.trim()"
+            >
               新增子知识点
             </button>
           </div>
@@ -175,12 +276,25 @@
         <div class="form-group">
           <label class="form-label">问题定义：</label>
           <div class="searchable-select">
-            <input type="text" v-model="questionDefinitionSearch" placeholder="输入关键字搜索问题定义..."
-              class="form-input search-input" @input="filterQuestionDefinitions"
-              @focus="showQuestionDefinitionDropdown = true" @blur="onQuestionDefinitionBlur" />
-            <div v-if="showQuestionDefinitionDropdown && filteredQuestionDefinitions.length" class="dropdown-list">
-              <div v-for="item in filteredQuestionDefinitions" :key="item.id" class="dropdown-item"
-                @mousedown="selectQuestionDefinition(item)">
+            <input
+              type="text"
+              v-model="questionDefinitionSearch"
+              placeholder="输入关键字搜索问题定义..."
+              class="form-input search-input"
+              @input="filterQuestionDefinitions"
+              @focus="showQuestionDefinitionDropdown = true"
+              @blur="onQuestionDefinitionBlur"
+            />
+            <div
+              v-if="showQuestionDefinitionDropdown && filteredQuestionDefinitions.length"
+              class="dropdown-list"
+            >
+              <div
+                v-for="item in filteredQuestionDefinitions"
+                :key="item.id"
+                class="dropdown-item"
+                @mousedown="selectQuestionDefinition(item)"
+              >
                 {{ item.name }}
               </div>
             </div>
@@ -192,10 +306,19 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input type="text" v-model="newQuestionDefinition" placeholder="新建问题定义（多个用逗号分隔）" class="form-input"
-              @keypress.enter="uploadQuestionDefinition" />
-            <button type="button" @click="uploadQuestionDefinition" class="btn-highlight"
-              :disabled="!newQuestionDefinition.trim()">
+            <input
+              type="text"
+              v-model="newQuestionDefinition"
+              placeholder="新建问题定义（多个用逗号分隔）"
+              class="form-input"
+              @keypress.enter="uploadQuestionDefinition"
+            />
+            <button
+              type="button"
+              @click="uploadQuestionDefinition"
+              class="btn-highlight"
+              :disabled="!newQuestionDefinition.trim()"
+            >
               新增问题定义
             </button>
           </div>
@@ -205,11 +328,25 @@
         <div class="form-group">
           <label class="form-label">解题思想：</label>
           <div class="searchable-select">
-            <input type="text" v-model="solutionIdeaSearch" placeholder="输入关键字搜索解题思想..." class="form-input search-input"
-              @input="filterSolutionIdeas" @focus="showSolutionIdeaDropdown = true" @blur="onSolutionIdeaBlur" />
-            <div v-if="showSolutionIdeaDropdown && filteredSolutionIdeas.length" class="dropdown-list">
-              <div v-for="item in filteredSolutionIdeas" :key="item.id" class="dropdown-item"
-                @mousedown="selectSolutionIdea(item)">
+            <input
+              type="text"
+              v-model="solutionIdeaSearch"
+              placeholder="输入关键字搜索解题思想..."
+              class="form-input search-input"
+              @input="filterSolutionIdeas"
+              @focus="showSolutionIdeaDropdown = true"
+              @blur="onSolutionIdeaBlur"
+            />
+            <div
+              v-if="showSolutionIdeaDropdown && filteredSolutionIdeas.length"
+              class="dropdown-list"
+            >
+              <div
+                v-for="item in filteredSolutionIdeas"
+                :key="item.id"
+                class="dropdown-item"
+                @mousedown="selectSolutionIdea(item)"
+              >
                 {{ item.name }}
               </div>
             </div>
@@ -221,9 +358,19 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input type="text" v-model="newSolutionIdea" placeholder="新建解题思想（多个用逗号分隔）" class="form-input"
-              @keypress.enter="uploadSolutionIdea" />
-            <button type="button" @click="uploadSolutionIdea" class="btn-highlight" :disabled="!newSolutionIdea.trim()">
+            <input
+              type="text"
+              v-model="newSolutionIdea"
+              placeholder="新建解题思想（多个用逗号分隔）"
+              class="form-input"
+              @keypress.enter="uploadSolutionIdea"
+            />
+            <button
+              type="button"
+              @click="uploadSolutionIdea"
+              class="btn-highlight"
+              :disabled="!newSolutionIdea.trim()"
+            >
               新增解题思想
             </button>
           </div>
@@ -233,12 +380,25 @@
         <div class="form-group">
           <label class="form-label">问题类别：</label>
           <div class="searchable-select">
-            <input type="text" v-model="questionCategorySearch" placeholder="输入关键字搜索问题类别..."
-              class="form-input search-input" @input="filterQuestionCategories"
-              @focus="showQuestionCategoryDropdown = true" @blur="onQuestionCategoryBlur" />
-            <div v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length" class="dropdown-list">
-              <div v-for="item in filteredQuestionCategories" :key="item.id" class="dropdown-item"
-                @mousedown="selectQuestionCategory(item)">
+            <input
+              type="text"
+              v-model="questionCategorySearch"
+              placeholder="输入关键字搜索问题类别..."
+              class="form-input search-input"
+              @input="filterQuestionCategories"
+              @focus="showQuestionCategoryDropdown = true"
+              @blur="onQuestionCategoryBlur"
+            />
+            <div
+              v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length"
+              class="dropdown-list"
+            >
+              <div
+                v-for="item in filteredQuestionCategories"
+                :key="item.id"
+                class="dropdown-item"
+                @mousedown="selectQuestionCategory(item)"
+              >
                 {{ item.name }}
               </div>
             </div>
@@ -250,10 +410,19 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input type="text" v-model="newQuestionCategory" placeholder="新建问题类别（多个用逗号分隔）" class="form-input"
-              @keypress.enter="uploadQuestionCategory" />
-            <button type="button" @click="uploadQuestionCategory" class="btn-highlight"
-              :disabled="!newQuestionCategory.trim()">
+            <input
+              type="text"
+              v-model="newQuestionCategory"
+              placeholder="新建问题类别（多个用逗号分隔）"
+              class="form-input"
+              @keypress.enter="uploadQuestionCategory"
+            />
+            <button
+              type="button"
+              @click="uploadQuestionCategory"
+              class="btn-highlight"
+              :disabled="!newQuestionCategory.trim()"
+            >
               新增问题类别
             </button>
           </div>
@@ -326,21 +495,40 @@
           <div class="criteria-item">
             <label>知识点：</label>
             <div class="searchable-select">
-              <input type="text" v-model="updateKnowledgeSearch" placeholder="输入关键字搜索知识点..."
-                class="form-input search-input" @input="filterUpdateKnowledgePoints"
-                @focus="showUpdateKnowledgeDropdown = true" @blur="onUpdateKnowledgeBlur" />
-              <div v-if="showUpdateKnowledgeDropdown && filteredUpdateKnowledgePoints.length" class="dropdown-list">
-                <div v-for="kp in filteredUpdateKnowledgePoints" :key="kp.id" class="dropdown-item"
-                  @mousedown="selectUpdateKnowledgePoint(kp)">
+              <input
+                type="text"
+                v-model="updateKnowledgeSearch"
+                placeholder="输入关键字搜索知识点..."
+                class="form-input search-input"
+                @input="filterUpdateKnowledgePoints"
+                @focus="showUpdateKnowledgeDropdown = true"
+                @blur="onUpdateKnowledgeBlur"
+              />
+              <div
+                v-if="showUpdateKnowledgeDropdown && filteredUpdateKnowledgePoints.length"
+                class="dropdown-list"
+              >
+                <div
+                  v-for="kp in filteredUpdateKnowledgePoints"
+                  :key="kp.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateKnowledgePoint(kp)"
+                >
                   {{ kp.name }}
-                  <span v-if="isUpdateKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
+                  <span v-if="isUpdateKnowledgeSelected(kp.id)" class="selected-mark"
+                    >✓</span
+                  >
                 </div>
               </div>
             </div>
             <div class="selected-items" v-if="selectedUpdateKnowledgePoints.length">
               <span class="selected-tags-label">已选择：</span>
-              <span v-for="kp in selectedUpdateKnowledgePoints" :key="kp.id" class="selected-tag"
-                @click="removeUpdateKnowledgePoint(kp.id)">
+              <span
+                v-for="kp in selectedUpdateKnowledgePoints"
+                :key="kp.id"
+                class="selected-tag"
+                @click="removeUpdateKnowledgePoint(kp.id)"
+              >
                 {{ kp.name }} ×
               </span>
             </div>
@@ -356,7 +544,12 @@
 
           <div class="criteria-item">
             <label>题目内容：</label>
-            <input type="text" v-model="searchCriteria.title" placeholder="输入题目关键词" class="form-input" />
+            <input
+              type="text"
+              v-model="searchCriteria.title"
+              placeholder="输入题目关键词"
+              class="form-input"
+            />
           </div>
 
           <div class="criteria-item">
@@ -403,18 +596,30 @@
                 {{ getQuestionCategoryName(q.question_category_id) }}
               </div>
               <div class="table-cell sub-knowledge-cell">
-                <span v-for="subId in q.sub_knowledge_point || []" :key="subId" class="sub-knowledge-tag">
+                <span
+                  v-for="subId in q.sub_knowledge_point || []"
+                  :key="subId"
+                  class="sub-knowledge-tag"
+                >
                   {{ getKnowledgePointName(subId) }}
                 </span>
-                <span v-if="!(q.sub_knowledge_point && q.sub_knowledge_point.length)" class="no-sub-knowledge">
+                <span
+                  v-if="!(q.sub_knowledge_point && q.sub_knowledge_point.length)"
+                  class="no-sub-knowledge"
+                >
                   无
                 </span>
               </div>
               <div class="table-cell">{{ q.difficulty_level }}星</div>
               <div class="table-cell title-cell">{{ q.title }}</div>
               <div class="table-cell image-cell">
-                <img v-if="q.img_url" :src="q.img_url" alt="题目图片" class="thumbnail-image"
-                  @click="previewImage(q.img_url)" />
+                <img
+                  v-if="q.img_url"
+                  :src="q.img_url"
+                  alt="题目图片"
+                  class="thumbnail-image"
+                  @click="previewImage(q.img_url)"
+                />
                 <span v-else class="no-image">-</span>
               </div>
               <div class="table-cell actions-cell">
@@ -432,7 +637,11 @@
       </div>
 
       <!-- 更新题目表单 -->
-      <div v-if="selectedQuestion && showUpdateForm" class="update-form-section" ref="updateFormRef">
+      <div
+        v-if="selectedQuestion && showUpdateForm"
+        class="update-form-section"
+        ref="updateFormRef"
+      >
         <h3>更新题目 (ID: {{ selectedQuestion.id }})</h3>
         <form @submit.prevent="handleUpdateSubmit" class="update-form">
           <!-- 学校 -->
@@ -471,8 +680,13 @@
           <!-- 题型 -->
           <div class="form-group">
             <label class="form-label required">题型：</label>
-            <select v-model="updateForm.question_type" class="form-select" :class="{ error: updateQuestionTypeError }"
-              @change="handleUpdateQuestionTypeChange" required>
+            <select
+              v-model="updateForm.question_type"
+              class="form-select"
+              :class="{ error: updateQuestionTypeError }"
+              @change="handleUpdateQuestionTypeChange"
+              required
+            >
               <option :value="null">请选择题型</option>
               <option value="SINGLE">单选题</option>
               <option value="MULTIPLE">多选题</option>
@@ -494,22 +708,39 @@
           <div class="form-group">
             <label class="form-label">知识点：</label>
             <div class="searchable-select">
-              <input type="text" v-model="updateFormKnowledgeSearch" placeholder="输入关键字搜索知识点..."
-                class="form-input search-input" @input="filterUpdateFormKnowledgePoints"
-                @focus="showUpdateFormKnowledgeDropdown = true" @blur="onUpdateFormKnowledgeBlur" />
-              <div v-if="
-                showUpdateFormKnowledgeDropdown &&
-                filteredUpdateFormKnowledgePoints.length
-              " class="dropdown-list">
-                <div v-for="kp in filteredUpdateFormKnowledgePoints" :key="kp.id" class="dropdown-item"
-                  @mousedown="selectUpdateFormKnowledgePoint(kp)">
+              <input
+                type="text"
+                v-model="updateFormKnowledgeSearch"
+                placeholder="输入关键字搜索知识点..."
+                class="form-input search-input"
+                @input="filterUpdateFormKnowledgePoints"
+                @focus="showUpdateFormKnowledgeDropdown = true"
+                @blur="onUpdateFormKnowledgeBlur"
+              />
+              <div
+                v-if="
+                  showUpdateFormKnowledgeDropdown &&
+                  filteredUpdateFormKnowledgePoints.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="kp in filteredUpdateFormKnowledgePoints"
+                  :key="kp.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateFormKnowledgePoint(kp)"
+                >
                   {{ kp.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormKnowledgePoint">
               已选择: {{ selectedUpdateFormKnowledgePoint.name }}
-              <button type="button" @click="clearUpdateFormKnowledgePoint" class="btn-remove">
+              <button
+                type="button"
+                @click="clearUpdateFormKnowledgePoint"
+                class="btn-remove"
+              >
                 清除
               </button>
             </div>
@@ -519,22 +750,39 @@
           <div class="form-group">
             <label class="form-label">问题定义：</label>
             <div class="searchable-select">
-              <input type="text" v-model="updateFormQuestionDefinitionSearch" placeholder="输入关键字搜索问题定义..."
-                class="form-input search-input" @input="filterUpdateFormQuestionDefinitions"
-                @focus="showUpdateFormQuestionDefinitionDropdown = true" @blur="onUpdateFormQuestionDefinitionBlur" />
-              <div v-if="
-                showUpdateFormQuestionDefinitionDropdown &&
-                filteredUpdateFormQuestionDefinitions.length
-              " class="dropdown-list">
-                <div v-for="item in filteredUpdateFormQuestionDefinitions" :key="item.id" class="dropdown-item"
-                  @mousedown="selectUpdateFormQuestionDefinition(item)">
+              <input
+                type="text"
+                v-model="updateFormQuestionDefinitionSearch"
+                placeholder="输入关键字搜索问题定义..."
+                class="form-input search-input"
+                @input="filterUpdateFormQuestionDefinitions"
+                @focus="showUpdateFormQuestionDefinitionDropdown = true"
+                @blur="onUpdateFormQuestionDefinitionBlur"
+              />
+              <div
+                v-if="
+                  showUpdateFormQuestionDefinitionDropdown &&
+                  filteredUpdateFormQuestionDefinitions.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateFormQuestionDefinitions"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateFormQuestionDefinition(item)"
+                >
                   {{ item.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormQuestionDefinition">
               已选择: {{ selectedUpdateFormQuestionDefinition.name }}
-              <button type="button" @click="clearUpdateFormQuestionDefinition" class="btn-remove">
+              <button
+                type="button"
+                @click="clearUpdateFormQuestionDefinition"
+                class="btn-remove"
+              >
                 清除
               </button>
             </div>
@@ -544,22 +792,39 @@
           <div class="form-group">
             <label class="form-label">解题思想：</label>
             <div class="searchable-select">
-              <input type="text" v-model="updateFormSolutionIdeaSearch" placeholder="输入关键字搜索解题思想..."
-                class="form-input search-input" @input="filterUpdateFormSolutionIdeas"
-                @focus="showUpdateFormSolutionIdeaDropdown = true" @blur="onUpdateFormSolutionIdeaBlur" />
-              <div v-if="
-                showUpdateFormSolutionIdeaDropdown &&
-                filteredUpdateFormSolutionIdeas.length
-              " class="dropdown-list">
-                <div v-for="item in filteredUpdateFormSolutionIdeas" :key="item.id" class="dropdown-item"
-                  @mousedown="selectUpdateFormSolutionIdea(item)">
+              <input
+                type="text"
+                v-model="updateFormSolutionIdeaSearch"
+                placeholder="输入关键字搜索解题思想..."
+                class="form-input search-input"
+                @input="filterUpdateFormSolutionIdeas"
+                @focus="showUpdateFormSolutionIdeaDropdown = true"
+                @blur="onUpdateFormSolutionIdeaBlur"
+              />
+              <div
+                v-if="
+                  showUpdateFormSolutionIdeaDropdown &&
+                  filteredUpdateFormSolutionIdeas.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateFormSolutionIdeas"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateFormSolutionIdea(item)"
+                >
                   {{ item.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormSolutionIdea">
               已选择: {{ selectedUpdateFormSolutionIdea.name }}
-              <button type="button" @click="clearUpdateFormSolutionIdea" class="btn-remove">
+              <button
+                type="button"
+                @click="clearUpdateFormSolutionIdea"
+                class="btn-remove"
+              >
                 清除
               </button>
             </div>
@@ -569,22 +834,39 @@
           <div class="form-group">
             <label class="form-label">问题类别：</label>
             <div class="searchable-select">
-              <input type="text" v-model="updateFormQuestionCategorySearch" placeholder="输入关键字搜索问题类别..."
-                class="form-input search-input" @input="filterUpdateFormQuestionCategories"
-                @focus="showUpdateFormQuestionCategoryDropdown = true" @blur="onUpdateFormQuestionCategoryBlur" />
-              <div v-if="
-                showUpdateFormQuestionCategoryDropdown &&
-                filteredUpdateFormQuestionCategories.length
-              " class="dropdown-list">
-                <div v-for="item in filteredUpdateFormQuestionCategories" :key="item.id" class="dropdown-item"
-                  @mousedown="selectUpdateFormQuestionCategory(item)">
+              <input
+                type="text"
+                v-model="updateFormQuestionCategorySearch"
+                placeholder="输入关键字搜索问题类别..."
+                class="form-input search-input"
+                @input="filterUpdateFormQuestionCategories"
+                @focus="showUpdateFormQuestionCategoryDropdown = true"
+                @blur="onUpdateFormQuestionCategoryBlur"
+              />
+              <div
+                v-if="
+                  showUpdateFormQuestionCategoryDropdown &&
+                  filteredUpdateFormQuestionCategories.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateFormQuestionCategories"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateFormQuestionCategory(item)"
+                >
                   {{ item.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormQuestionCategory">
               已选择: {{ selectedUpdateFormQuestionCategory.name }}
-              <button type="button" @click="clearUpdateFormQuestionCategory" class="btn-remove">
+              <button
+                type="button"
+                @click="clearUpdateFormQuestionCategory"
+                class="btn-remove"
+              >
                 清除
               </button>
             </div>
@@ -602,15 +884,30 @@
           <!-- 题目内容 -->
           <div class="form-group">
             <label class="form-label required">题目内容：</label>
-            <textarea v-model="updateForm.title" placeholder="请输入题干" class="form-textarea" rows="3" required></textarea>
+            <textarea
+              v-model="updateForm.title"
+              placeholder="请输入题干"
+              class="form-textarea"
+              rows="3"
+              required
+            ></textarea>
 
             <!-- 图片上传（题干图片） -->
             <div class="image-upload-section">
               <label class="form-label">题干图片：</label>
               <div class="upload-controls">
-                <input type="file" @change="handleUpdateImageUpload" accept="image/*" class="file-input"
-                  ref="updateFileInput" />
-                <button type="button" @click="$refs.updateFileInput.click()" class="btn-secondary">
+                <input
+                  type="file"
+                  @change="handleUpdateImageUpload"
+                  accept="image/*"
+                  class="file-input"
+                  ref="updateFileInput"
+                />
+                <button
+                  type="button"
+                  @click="$refs.updateFileInput.click()"
+                  class="btn-secondary"
+                >
                   选择图片
                 </button>
               </div>
@@ -627,23 +924,51 @@
           <div v-if="showUpdateOptions" class="form-group">
             <label class="form-label">选项：</label>
             <div class="options-list">
-              <div v-for="(opt, index) in updateForm.options" :key="index" class="option-item">
+              <div
+                v-for="(opt, index) in updateForm.options"
+                :key="index"
+                class="option-item"
+              >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
-                <input type="text" v-model="opt.text" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                  class="form-input option-input" required />
+                <input
+                  type="text"
+                  v-model="opt.text"
+                  :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                  class="form-input option-input"
+                  required
+                />
                 <div class="option-actions">
                   <template v-if="updateForm.question_type === 'SINGLE'">
-                    <input type="radio" name="updateSingleAnswer" :value="index" v-model="updateSingleAnswerIndex"
-                      :id="`update-single-answer-${index}`" class="radio-input" required />
-                    <label class="radio-label" :for="`update-single-answer-${index}`">正确答案</label>
+                    <input
+                      type="radio"
+                      name="updateSingleAnswer"
+                      :value="index"
+                      v-model="updateSingleAnswerIndex"
+                      :id="`update-single-answer-${index}`"
+                      class="radio-input"
+                      required
+                    />
+                    <label class="radio-label" :for="`update-single-answer-${index}`"
+                      >正确答案</label
+                    >
                   </template>
                   <template v-else-if="updateForm.question_type === 'MULTIPLE'">
-                    <input type="checkbox" v-model="opt.isAnswer" :id="`update-multiple-answer-${index}`"
-                      class="checkbox-input" />
-                    <label class="checkbox-label" :for="`update-multiple-answer-${index}`">正确答案</label>
+                    <input
+                      type="checkbox"
+                      v-model="opt.isAnswer"
+                      :id="`update-multiple-answer-${index}`"
+                      class="checkbox-input"
+                    />
+                    <label class="checkbox-label" :for="`update-multiple-answer-${index}`"
+                      >正确答案</label
+                    >
                   </template>
-                  <button type="button" @click="removeUpdateOption(index)" class="btn-remove"
-                    :disabled="updateForm.options.length <= 2">
+                  <button
+                    type="button"
+                    @click="removeUpdateOption(index)"
+                    class="btn-remove"
+                    :disabled="updateForm.options.length <= 2"
+                  >
                     删除
                   </button>
                 </div>
@@ -657,32 +982,61 @@
           <!-- 主观题答案 -->
           <div v-if="updateForm.question_type === 'SUBJECTIVE'" class="form-group">
             <label class="form-label required">答案/参考答案：</label>
-            <textarea v-model="updateForm.answer" placeholder="请输入答案或参考答案" class="form-textarea" rows="4"
-              required></textarea>
+            <textarea
+              v-model="updateForm.answer"
+              placeholder="请输入答案或参考答案"
+              class="form-textarea"
+              rows="4"
+              required
+            ></textarea>
           </div>
 
           <!-- 子知识点 -->
           <div class="form-group">
             <label class="form-label">子知识点：</label>
             <div class="searchable-select">
-              <input type="text" v-model="updateFormSubKnowledgeSearch" placeholder="输入关键字搜索子知识点..."
-                class="form-input search-input" @input="filterUpdateFormSubKnowledgePoints"
-                @focus="showUpdateFormSubKnowledgeDropdown = true" @blur="onUpdateFormSubKnowledgeBlur" />
-              <div v-if="
-                showUpdateFormSubKnowledgeDropdown &&
-                filteredUpdateFormSubKnowledgePoints.length
-              " class="dropdown-list">
-                <div v-for="kp in filteredUpdateFormSubKnowledgePoints" :key="kp.id" class="dropdown-item"
-                  @mousedown="selectUpdateFormSubKnowledgePoint(kp)">
+              <input
+                type="text"
+                v-model="updateFormSubKnowledgeSearch"
+                placeholder="输入关键字搜索子知识点..."
+                class="form-input search-input"
+                @input="filterUpdateFormSubKnowledgePoints"
+                @focus="showUpdateFormSubKnowledgeDropdown = true"
+                @blur="onUpdateFormSubKnowledgeBlur"
+              />
+              <div
+                v-if="
+                  showUpdateFormSubKnowledgeDropdown &&
+                  filteredUpdateFormSubKnowledgePoints.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="kp in filteredUpdateFormSubKnowledgePoints"
+                  :key="kp.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateFormSubKnowledgePoint(kp)"
+                >
                   {{ kp.name }}
-                  <span v-if="isUpdateFormSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
+                  <span
+                    v-if="isUpdateFormSubKnowledgeSelected(kp.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
                 </div>
               </div>
             </div>
-            <div class="selected-items" v-if="selectedUpdateFormSubKnowledgePoints.length">
+            <div
+              class="selected-items"
+              v-if="selectedUpdateFormSubKnowledgePoints.length"
+            >
               <span class="selected-tags-label">已选择：</span>
-              <span v-for="kp in selectedUpdateFormSubKnowledgePoints" :key="kp.id" class="selected-tag"
-                @click="removeUpdateFormSubKnowledgePoint(kp.id)">
+              <span
+                v-for="kp in selectedUpdateFormSubKnowledgePoints"
+                :key="kp.id"
+                class="selected-tag"
+                @click="removeUpdateFormSubKnowledgePoint(kp.id)"
+              >
                 {{ kp.name }} ×
               </span>
             </div>
@@ -2044,7 +2398,7 @@ export default {
               : null,
           title: updateForm.title,
           ...(updateForm.question_type === "SINGLE" ||
-            updateForm.question_type === "MULTIPLE"
+          updateForm.question_type === "MULTIPLE"
             ? { options: optionsPayload }
             : {}),
           answer: answerPayload,
@@ -2059,12 +2413,43 @@ export default {
 
         const res = await axios.post(`${API_BASE}/questions/updateQuestion`, payload);
         showAlert("更新成功", res.data.message || "更新成功");
+        await silentFindQuestions();
         cancelUpdate();
       } catch (err) {
         console.error("更新失败:", err);
         showAlert("更新失败", err.response?.data?.message || err.message);
       } finally {
         submitting.value = false;
+      }
+    };
+    const silentFindQuestions = async () => {
+      try {
+        const payload = {};
+
+        if (searchCriteria.grade_id !== null)
+          payload.grade_id = Number(searchCriteria.grade_id);
+        if (searchCriteria.subject_id !== null)
+          payload.subject_id = Number(searchCriteria.subject_id);
+        if (searchCriteria.question_type !== null)
+          payload.question_type = searchCriteria.question_type;
+        if (searchCriteria.knowledge_points.length > 0)
+          payload.knowledge_points = searchCriteria.knowledge_points.map((id) =>
+            Number(id)
+          );
+        if (searchCriteria.difficulty_level !== null)
+          payload.difficulty_level = Number(searchCriteria.difficulty_level);
+        if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
+
+        const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+        questionList.value = res.data.data || [];
+        hasSearched.value = true;
+
+        // 不显示任何弹窗
+      } catch (err) {
+        console.error("检索失败:", err);
+        questionList.value = [];
+        hasSearched.value = true;
+        // 也不显示错误弹窗
       }
     };
 
@@ -2356,6 +2741,7 @@ export default {
       showAlert,
       showLogoutConfirm,
       cancelLogout,
+      silentFindQuestions,
     };
   },
 };
