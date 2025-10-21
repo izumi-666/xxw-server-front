@@ -63,7 +63,7 @@
           <label class="form-label required">题目内容：</label>
           <textarea
             v-model="form.title"
-            placeholder="请输入题干，数学公式使用 $公式$ 或 $$公式$$ 格式"
+            placeholder="请输入题干，数学公式使用 $公式$ "
             class="form-textarea"
             rows="3"
             @input="renderMathPreview('title', form.title)"
@@ -161,7 +161,7 @@
           <label class="form-label required">参考答案：</label>
           <textarea
             v-model="form.answer"
-            placeholder="请输入参考答案，数学公式使用 $公式$ 或 $$公式$$ 格式"
+            placeholder="请输入参考答案，数学公式使用 $公式$ "
             class="form-textarea"
             rows="4"
             @input="renderMathPreview('answer', form.answer)"
@@ -175,7 +175,7 @@
           <label class="form-label">解析：</label>
           <textarea
             v-model="form.notes"
-            placeholder="请输入题目解析，数学公式使用 $公式$ 或 $$公式$$ 格式"
+            placeholder="请输入题目解析，数学公式使用 $公式$ "
             class="form-textarea"
             rows="3"
             @input="renderMathPreview('notes', form.notes)"
@@ -907,7 +907,7 @@
             <label class="form-label required">题目内容：</label>
             <textarea
               v-model="updateForm.title"
-              placeholder="请输入题干，数学公式使用 $公式$ 或 $$公式$$ 格式"
+              placeholder="请输入题干，数学公式使用 $公式$ "
               class="form-textarea"
               rows="3"
               @input="renderMathPreview('updateTitle', updateForm.title)"
@@ -1011,7 +1011,7 @@
             <label class="form-label required">答案/参考答案：</label>
             <textarea
               v-model="updateForm.answer"
-              placeholder="请输入答案或参考答案，数学公式使用 $公式$ 或 $$公式$$ 格式"
+              placeholder="请输入答案或参考答案，数学公式使用 $公式$ "
               class="form-textarea"
               rows="4"
               @input="renderMathPreview('updateAnswer', updateForm.answer)"
@@ -1025,7 +1025,7 @@
             <label class="form-label">解析：</label>
             <textarea
               v-model="updateForm.notes"
-              placeholder="请输入题目解析，数学公式使用 $公式$ 或 $$公式$$ 格式"
+              placeholder="请输入题目解析，数学公式使用 $公式$ "
               class="form-textarea"
               rows="3"
               @input="renderMathPreview('updateNotes', updateForm.notes)"
@@ -1414,19 +1414,7 @@ export default {
             return `<span class="math-error" title="${e.message}">${match}</span>`;
           }
         });
-        
-        // 处理块级公式：$$...$$
-        html = html.replace(/\$\$(.+?)\$\$/g, (match, formula) => {
-          try {
-            return katex.renderToString(formula, {
-              throwOnError: false,
-              displayMode: true
-            });
-          } catch (e) {
-            return `<div class="math-error" title="${e.message}">${match}</div>`;
-          }
-        });
-        
+  
         return html;
       } catch (error) {
         console.error("数学公式渲染错误:", error);
