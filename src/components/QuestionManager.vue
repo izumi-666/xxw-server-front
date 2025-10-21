@@ -43,13 +43,8 @@
         <!-- 题型 -->
         <div class="form-group">
           <label class="form-label required">题型：</label>
-          <select
-            v-model="form.question_type"
-            class="form-select"
-            :class="{ error: questionTypeError }"
-            @change="handleQuestionTypeChange"
-            required
-          >
+          <select v-model="form.question_type" class="form-select" :class="{ error: questionTypeError }"
+            @change="handleQuestionTypeChange" required>
             <option :value="null">请选择题型</option>
             <option value="SINGLE">单选题</option>
             <option value="MULTIPLE">多选题</option>
@@ -61,30 +56,14 @@
         <!-- 题目内容 -->
         <div class="form-group">
           <label class="form-label required">题目内容：</label>
-          <textarea
-            v-model="form.title"
-            placeholder="请输入题干"
-            class="form-textarea"
-            rows="3"
-            required
-          ></textarea>
+          <textarea v-model="form.title" placeholder="请输入题干" class="form-textarea" rows="3" required></textarea>
 
           <!-- 图片上传（题干图片） -->
           <div class="image-upload-section">
             <label class="form-label">题干图片：</label>
             <div class="upload-controls">
-              <input
-                type="file"
-                @change="handleImageUpload"
-                accept="image/*"
-                class="file-input"
-                ref="fileInput"
-              />
-              <button
-                type="button"
-                @click="$refs.fileInput.click()"
-                class="btn-secondary"
-              >
+              <input type="file" @change="handleImageUpload" accept="image/*" class="file-input" ref="fileInput" />
+              <button type="button" @click="$refs.fileInput.click()" class="btn-secondary">
                 选择图片
               </button>
             </div>
@@ -103,45 +82,21 @@
           <div class="options-list">
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
-              <input
-                type="text"
-                v-model="opt.text"
-                :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                class="form-input option-input"
-                required
-              />
+              <input type="text" v-model="opt.text" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                class="form-input option-input" required />
               <div class="option-actions">
                 <template v-if="form.question_type === 'SINGLE'">
-                  <input
-                    type="radio"
-                    name="singleAnswer"
-                    :value="index"
-                    v-model="singleAnswerIndex"
-                    :id="`upload-single-answer-${index}`"
-                    class="radio-input"
-                    required
-                  />
-                  <label class="radio-label" :for="`upload-single-answer-${index}`"
-                    >正确答案</label
-                  >
+                  <input type="radio" name="singleAnswer" :value="index" v-model="singleAnswerIndex"
+                    :id="`upload-single-answer-${index}`" class="radio-input" required />
+                  <label class="radio-label" :for="`upload-single-answer-${index}`">正确答案</label>
                 </template>
                 <template v-else-if="form.question_type === 'MULTIPLE'">
-                  <input
-                    type="checkbox"
-                    v-model="opt.isAnswer"
-                    :id="`upload-multiple-answer-${index}`"
-                    class="checkbox-input"
-                  />
-                  <label class="checkbox-label" :for="`upload-multiple-answer-${index}`"
-                    >正确答案</label
-                  >
+                  <input type="checkbox" v-model="opt.isAnswer" :id="`upload-multiple-answer-${index}`"
+                    class="checkbox-input" />
+                  <label class="checkbox-label" :for="`upload-multiple-answer-${index}`">正确答案</label>
                 </template>
-                <button
-                  type="button"
-                  @click="removeOption(index)"
-                  class="btn-remove"
-                  :disabled="form.options.length <= 2"
-                >
+                <button type="button" @click="removeOption(index)" class="btn-remove"
+                  :disabled="form.options.length <= 2">
                   删除
                 </button>
               </div>
@@ -152,39 +107,19 @@
 
         <!-- 主观题答案 -->
         <div v-if="form.question_type === 'SUBJECTIVE'" class="form-group">
-          <label class="form-label required">答案/参考答案：</label>
-          <textarea
-            v-model="form.answer"
-            placeholder="请输入答案或参考答案"
-            class="form-textarea"
-            rows="4"
-            required
-          ></textarea>
+          <label class="form-label required">参考答案：</label>
+          <textarea v-model="form.answer" placeholder="请输入参考答案" class="form-textarea" rows="4" required></textarea>
         </div>
 
         <!-- 知识点 -->
         <div class="form-group">
           <label class="form-label">知识点：</label>
           <div class="searchable-select">
-            <input
-              type="text"
-              v-model="knowledgeSearch"
-              placeholder="输入关键字搜索知识点..."
-              class="form-input search-input"
-              @input="filterKnowledgePoints"
-              @focus="showKnowledgeDropdown = true"
-              @blur="onKnowledgeBlur"
-            />
-            <div
-              v-if="showKnowledgeDropdown && filteredKnowledgePoints.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="kp in filteredKnowledgePoints"
-                :key="kp.id"
-                class="dropdown-item"
-                @mousedown="selectKnowledgePoint(kp)"
-              >
+            <input type="text" v-model="knowledgeSearch" placeholder="输入关键字搜索知识点..." class="form-input search-input"
+              @input="filterKnowledgePoints" @focus="showKnowledgeDropdown = true" @blur="onKnowledgeBlur" />
+            <div v-if="showKnowledgeDropdown && filteredKnowledgePoints.length" class="dropdown-list">
+              <div v-for="kp in filteredKnowledgePoints" :key="kp.id" class="dropdown-item"
+                @mousedown="selectKnowledgePoint(kp)">
                 {{ kp.name }}
               </div>
             </div>
@@ -196,19 +131,10 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newKnowledgePoint"
-              placeholder="新建知识点（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadKnowledgePoint"
-            />
-            <button
-              type="button"
-              @click="uploadKnowledgePoint"
-              class="btn-highlight"
-              :disabled="!newKnowledgePoint.trim()"
-            >
+            <input type="text" v-model="newKnowledgePoint" placeholder="新建知识点（多个用逗号分隔）" class="form-input"
+              @keypress.enter="uploadKnowledgePoint" />
+            <button type="button" @click="uploadKnowledgePoint" class="btn-highlight"
+              :disabled="!newKnowledgePoint.trim()">
               新增知识点
             </button>
           </div>
@@ -218,25 +144,11 @@
         <div class="form-group">
           <label class="form-label">子知识点：</label>
           <div class="searchable-select">
-            <input
-              type="text"
-              v-model="subKnowledgeSearch"
-              placeholder="输入关键字搜索子知识点..."
-              class="form-input search-input"
-              @input="filterSubKnowledgePoints"
-              @focus="showSubKnowledgeDropdown = true"
-              @blur="onSubKnowledgeBlur"
-            />
-            <div
-              v-if="showSubKnowledgeDropdown && filteredSubKnowledgePoints.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="kp in filteredSubKnowledgePoints"
-                :key="kp.id"
-                class="dropdown-item"
-                @mousedown="selectSubKnowledgePoint(kp)"
-              >
+            <input type="text" v-model="subKnowledgeSearch" placeholder="输入关键字搜索子知识点..." class="form-input search-input"
+              @input="filterSubKnowledgePoints" @focus="showSubKnowledgeDropdown = true" @blur="onSubKnowledgeBlur" />
+            <div v-if="showSubKnowledgeDropdown && filteredSubKnowledgePoints.length" class="dropdown-list">
+              <div v-for="kp in filteredSubKnowledgePoints" :key="kp.id" class="dropdown-item"
+                @mousedown="selectSubKnowledgePoint(kp)">
                 {{ kp.name }}
                 <span v-if="isSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
               </div>
@@ -244,29 +156,16 @@
           </div>
           <div class="selected-items" v-if="selectedSubKnowledgePoints.length">
             <span class="selected-tags-label">已选择：</span>
-            <span
-              v-for="kp in selectedSubKnowledgePoints"
-              :key="kp.id"
-              class="selected-tag"
-              @click="removeSubKnowledgePoint(kp.id)"
-            >
+            <span v-for="kp in selectedSubKnowledgePoints" :key="kp.id" class="selected-tag"
+              @click="removeSubKnowledgePoint(kp.id)">
               {{ kp.name }} ×
             </span>
           </div>
           <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newSubKnowledgePoint"
-              placeholder="新建子知识点（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadSubKnowledgePoint"
-            />
-            <button
-              type="button"
-              @click="uploadSubKnowledgePoint"
-              class="btn-highlight"
-              :disabled="!newSubKnowledgePoint.trim()"
-            >
+            <input type="text" v-model="newSubKnowledgePoint" placeholder="新建子知识点（多个用逗号分隔）" class="form-input"
+              @keypress.enter="uploadSubKnowledgePoint" />
+            <button type="button" @click="uploadSubKnowledgePoint" class="btn-highlight"
+              :disabled="!newSubKnowledgePoint.trim()">
               新增子知识点
             </button>
           </div>
@@ -276,25 +175,12 @@
         <div class="form-group">
           <label class="form-label">问题定义：</label>
           <div class="searchable-select">
-            <input
-              type="text"
-              v-model="questionDefinitionSearch"
-              placeholder="输入关键字搜索问题定义..."
-              class="form-input search-input"
-              @input="filterQuestionDefinitions"
-              @focus="showQuestionDefinitionDropdown = true"
-              @blur="onQuestionDefinitionBlur"
-            />
-            <div
-              v-if="showQuestionDefinitionDropdown && filteredQuestionDefinitions.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="item in filteredQuestionDefinitions"
-                :key="item.id"
-                class="dropdown-item"
-                @mousedown="selectQuestionDefinition(item)"
-              >
+            <input type="text" v-model="questionDefinitionSearch" placeholder="输入关键字搜索问题定义..."
+              class="form-input search-input" @input="filterQuestionDefinitions"
+              @focus="showQuestionDefinitionDropdown = true" @blur="onQuestionDefinitionBlur" />
+            <div v-if="showQuestionDefinitionDropdown && filteredQuestionDefinitions.length" class="dropdown-list">
+              <div v-for="item in filteredQuestionDefinitions" :key="item.id" class="dropdown-item"
+                @mousedown="selectQuestionDefinition(item)">
                 {{ item.name }}
               </div>
             </div>
@@ -306,19 +192,10 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newQuestionDefinition"
-              placeholder="新建问题定义（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadQuestionDefinition"
-            />
-            <button
-              type="button"
-              @click="uploadQuestionDefinition"
-              class="btn-highlight"
-              :disabled="!newQuestionDefinition.trim()"
-            >
+            <input type="text" v-model="newQuestionDefinition" placeholder="新建问题定义（多个用逗号分隔）" class="form-input"
+              @keypress.enter="uploadQuestionDefinition" />
+            <button type="button" @click="uploadQuestionDefinition" class="btn-highlight"
+              :disabled="!newQuestionDefinition.trim()">
               新增问题定义
             </button>
           </div>
@@ -328,25 +205,11 @@
         <div class="form-group">
           <label class="form-label">解题思想：</label>
           <div class="searchable-select">
-            <input
-              type="text"
-              v-model="solutionIdeaSearch"
-              placeholder="输入关键字搜索解题思想..."
-              class="form-input search-input"
-              @input="filterSolutionIdeas"
-              @focus="showSolutionIdeaDropdown = true"
-              @blur="onSolutionIdeaBlur"
-            />
-            <div
-              v-if="showSolutionIdeaDropdown && filteredSolutionIdeas.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="item in filteredSolutionIdeas"
-                :key="item.id"
-                class="dropdown-item"
-                @mousedown="selectSolutionIdea(item)"
-              >
+            <input type="text" v-model="solutionIdeaSearch" placeholder="输入关键字搜索解题思想..." class="form-input search-input"
+              @input="filterSolutionIdeas" @focus="showSolutionIdeaDropdown = true" @blur="onSolutionIdeaBlur" />
+            <div v-if="showSolutionIdeaDropdown && filteredSolutionIdeas.length" class="dropdown-list">
+              <div v-for="item in filteredSolutionIdeas" :key="item.id" class="dropdown-item"
+                @mousedown="selectSolutionIdea(item)">
                 {{ item.name }}
               </div>
             </div>
@@ -358,19 +221,9 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newSolutionIdea"
-              placeholder="新建解题思想（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadSolutionIdea"
-            />
-            <button
-              type="button"
-              @click="uploadSolutionIdea"
-              class="btn-highlight"
-              :disabled="!newSolutionIdea.trim()"
-            >
+            <input type="text" v-model="newSolutionIdea" placeholder="新建解题思想（多个用逗号分隔）" class="form-input"
+              @keypress.enter="uploadSolutionIdea" />
+            <button type="button" @click="uploadSolutionIdea" class="btn-highlight" :disabled="!newSolutionIdea.trim()">
               新增解题思想
             </button>
           </div>
@@ -380,25 +233,12 @@
         <div class="form-group">
           <label class="form-label">问题类别：</label>
           <div class="searchable-select">
-            <input
-              type="text"
-              v-model="questionCategorySearch"
-              placeholder="输入关键字搜索问题类别..."
-              class="form-input search-input"
-              @input="filterQuestionCategories"
-              @focus="showQuestionCategoryDropdown = true"
-              @blur="onQuestionCategoryBlur"
-            />
-            <div
-              v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="item in filteredQuestionCategories"
-                :key="item.id"
-                class="dropdown-item"
-                @mousedown="selectQuestionCategory(item)"
-              >
+            <input type="text" v-model="questionCategorySearch" placeholder="输入关键字搜索问题类别..."
+              class="form-input search-input" @input="filterQuestionCategories"
+              @focus="showQuestionCategoryDropdown = true" @blur="onQuestionCategoryBlur" />
+            <div v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length" class="dropdown-list">
+              <div v-for="item in filteredQuestionCategories" :key="item.id" class="dropdown-item"
+                @mousedown="selectQuestionCategory(item)">
                 {{ item.name }}
               </div>
             </div>
@@ -410,19 +250,10 @@
             </button>
           </div>
           <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newQuestionCategory"
-              placeholder="新建问题类别（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadQuestionCategory"
-            />
-            <button
-              type="button"
-              @click="uploadQuestionCategory"
-              class="btn-highlight"
-              :disabled="!newQuestionCategory.trim()"
-            >
+            <input type="text" v-model="newQuestionCategory" placeholder="新建问题类别（多个用逗号分隔）" class="form-input"
+              @keypress.enter="uploadQuestionCategory" />
+            <button type="button" @click="uploadQuestionCategory" class="btn-highlight"
+              :disabled="!newQuestionCategory.trim()">
               新增问题类别
             </button>
           </div>
@@ -461,8 +292,6 @@
       <div class="search-criteria">
         <h2>检索题目</h2>
         <div class="criteria-row">
-          <!-- 移除了学校检索条件 -->
-
           <div class="criteria-item">
             <label>年级：</label>
             <select v-model="searchCriteria.grade_id" class="form-select">
@@ -497,40 +326,21 @@
           <div class="criteria-item">
             <label>知识点：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateKnowledgeSearch"
-                placeholder="输入关键字搜索知识点..."
-                class="form-input search-input"
-                @input="filterUpdateKnowledgePoints"
-                @focus="showUpdateKnowledgeDropdown = true"
-                @blur="onUpdateKnowledgeBlur"
-              />
-              <div
-                v-if="showUpdateKnowledgeDropdown && filteredUpdateKnowledgePoints.length"
-                class="dropdown-list"
-              >
-                <div
-                  v-for="kp in filteredUpdateKnowledgePoints"
-                  :key="kp.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateKnowledgePoint(kp)"
-                >
+              <input type="text" v-model="updateKnowledgeSearch" placeholder="输入关键字搜索知识点..."
+                class="form-input search-input" @input="filterUpdateKnowledgePoints"
+                @focus="showUpdateKnowledgeDropdown = true" @blur="onUpdateKnowledgeBlur" />
+              <div v-if="showUpdateKnowledgeDropdown && filteredUpdateKnowledgePoints.length" class="dropdown-list">
+                <div v-for="kp in filteredUpdateKnowledgePoints" :key="kp.id" class="dropdown-item"
+                  @mousedown="selectUpdateKnowledgePoint(kp)">
                   {{ kp.name }}
-                  <span v-if="isUpdateKnowledgeSelected(kp.id)" class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="isUpdateKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
                 </div>
               </div>
             </div>
             <div class="selected-items" v-if="selectedUpdateKnowledgePoints.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="kp in selectedUpdateKnowledgePoints"
-                :key="kp.id"
-                class="selected-tag"
-                @click="removeUpdateKnowledgePoint(kp.id)"
-              >
+              <span v-for="kp in selectedUpdateKnowledgePoints" :key="kp.id" class="selected-tag"
+                @click="removeUpdateKnowledgePoint(kp.id)">
                 {{ kp.name }} ×
               </span>
             </div>
@@ -546,12 +356,7 @@
 
           <div class="criteria-item">
             <label>题目内容：</label>
-            <input
-              type="text"
-              v-model="searchCriteria.title"
-              placeholder="输入题目关键词"
-              class="form-input"
-            />
+            <input type="text" v-model="searchCriteria.title" placeholder="输入题目关键词" class="form-input" />
           </div>
 
           <div class="criteria-item">
@@ -598,30 +403,18 @@
                 {{ getQuestionCategoryName(q.question_category_id) }}
               </div>
               <div class="table-cell sub-knowledge-cell">
-                <span
-                  v-for="subId in q.sub_knowledge_point || []"
-                  :key="subId"
-                  class="sub-knowledge-tag"
-                >
+                <span v-for="subId in q.sub_knowledge_point || []" :key="subId" class="sub-knowledge-tag">
                   {{ getKnowledgePointName(subId) }}
                 </span>
-                <span
-                  v-if="!(q.sub_knowledge_point && q.sub_knowledge_point.length)"
-                  class="no-sub-knowledge"
-                >
+                <span v-if="!(q.sub_knowledge_point && q.sub_knowledge_point.length)" class="no-sub-knowledge">
                   无
                 </span>
               </div>
               <div class="table-cell">{{ q.difficulty_level }}星</div>
               <div class="table-cell title-cell">{{ q.title }}</div>
               <div class="table-cell image-cell">
-                <img
-                  v-if="q.img_url"
-                  :src="q.img_url"
-                  alt="题目图片"
-                  class="thumbnail-image"
-                  @click="previewImage(q.img_url)"
-                />
+                <img v-if="q.img_url" :src="q.img_url" alt="题目图片" class="thumbnail-image"
+                  @click="previewImage(q.img_url)" />
                 <span v-else class="no-image">-</span>
               </div>
               <div class="table-cell actions-cell">
@@ -639,11 +432,7 @@
       </div>
 
       <!-- 更新题目表单 -->
-      <div
-        v-if="selectedQuestion && showUpdateForm"
-        class="update-form-section"
-        ref="updateFormRef"
-      >
+      <div v-if="selectedQuestion && showUpdateForm" class="update-form-section" ref="updateFormRef">
         <h3>更新题目 (ID: {{ selectedQuestion.id }})</h3>
         <form @submit.prevent="handleUpdateSubmit" class="update-form">
           <!-- 学校 -->
@@ -682,13 +471,8 @@
           <!-- 题型 -->
           <div class="form-group">
             <label class="form-label required">题型：</label>
-            <select
-              v-model="updateForm.question_type"
-              class="form-select"
-              :class="{ error: updateQuestionTypeError }"
-              @change="handleUpdateQuestionTypeChange"
-              required
-            >
+            <select v-model="updateForm.question_type" class="form-select" :class="{ error: updateQuestionTypeError }"
+              @change="handleUpdateQuestionTypeChange" required>
               <option :value="null">请选择题型</option>
               <option value="SINGLE">单选题</option>
               <option value="MULTIPLE">多选题</option>
@@ -710,39 +494,22 @@
           <div class="form-group">
             <label class="form-label">知识点：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormKnowledgeSearch"
-                placeholder="输入关键字搜索知识点..."
-                class="form-input search-input"
-                @input="filterUpdateFormKnowledgePoints"
-                @focus="showUpdateFormKnowledgeDropdown = true"
-                @blur="onUpdateFormKnowledgeBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormKnowledgeDropdown &&
-                  filteredUpdateFormKnowledgePoints.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="kp in filteredUpdateFormKnowledgePoints"
-                  :key="kp.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormKnowledgePoint(kp)"
-                >
+              <input type="text" v-model="updateFormKnowledgeSearch" placeholder="输入关键字搜索知识点..."
+                class="form-input search-input" @input="filterUpdateFormKnowledgePoints"
+                @focus="showUpdateFormKnowledgeDropdown = true" @blur="onUpdateFormKnowledgeBlur" />
+              <div v-if="
+                showUpdateFormKnowledgeDropdown &&
+                filteredUpdateFormKnowledgePoints.length
+              " class="dropdown-list">
+                <div v-for="kp in filteredUpdateFormKnowledgePoints" :key="kp.id" class="dropdown-item"
+                  @mousedown="selectUpdateFormKnowledgePoint(kp)">
                   {{ kp.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormKnowledgePoint">
               已选择: {{ selectedUpdateFormKnowledgePoint.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormKnowledgePoint"
-                class="btn-remove"
-              >
+              <button type="button" @click="clearUpdateFormKnowledgePoint" class="btn-remove">
                 清除
               </button>
             </div>
@@ -752,39 +519,22 @@
           <div class="form-group">
             <label class="form-label">问题定义：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormQuestionDefinitionSearch"
-                placeholder="输入关键字搜索问题定义..."
-                class="form-input search-input"
-                @input="filterUpdateFormQuestionDefinitions"
-                @focus="showUpdateFormQuestionDefinitionDropdown = true"
-                @blur="onUpdateFormQuestionDefinitionBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormQuestionDefinitionDropdown &&
-                  filteredUpdateFormQuestionDefinitions.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateFormQuestionDefinitions"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormQuestionDefinition(item)"
-                >
+              <input type="text" v-model="updateFormQuestionDefinitionSearch" placeholder="输入关键字搜索问题定义..."
+                class="form-input search-input" @input="filterUpdateFormQuestionDefinitions"
+                @focus="showUpdateFormQuestionDefinitionDropdown = true" @blur="onUpdateFormQuestionDefinitionBlur" />
+              <div v-if="
+                showUpdateFormQuestionDefinitionDropdown &&
+                filteredUpdateFormQuestionDefinitions.length
+              " class="dropdown-list">
+                <div v-for="item in filteredUpdateFormQuestionDefinitions" :key="item.id" class="dropdown-item"
+                  @mousedown="selectUpdateFormQuestionDefinition(item)">
                   {{ item.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormQuestionDefinition">
               已选择: {{ selectedUpdateFormQuestionDefinition.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormQuestionDefinition"
-                class="btn-remove"
-              >
+              <button type="button" @click="clearUpdateFormQuestionDefinition" class="btn-remove">
                 清除
               </button>
             </div>
@@ -794,39 +544,22 @@
           <div class="form-group">
             <label class="form-label">解题思想：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormSolutionIdeaSearch"
-                placeholder="输入关键字搜索解题思想..."
-                class="form-input search-input"
-                @input="filterUpdateFormSolutionIdeas"
-                @focus="showUpdateFormSolutionIdeaDropdown = true"
-                @blur="onUpdateFormSolutionIdeaBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormSolutionIdeaDropdown &&
-                  filteredUpdateFormSolutionIdeas.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateFormSolutionIdeas"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormSolutionIdea(item)"
-                >
+              <input type="text" v-model="updateFormSolutionIdeaSearch" placeholder="输入关键字搜索解题思想..."
+                class="form-input search-input" @input="filterUpdateFormSolutionIdeas"
+                @focus="showUpdateFormSolutionIdeaDropdown = true" @blur="onUpdateFormSolutionIdeaBlur" />
+              <div v-if="
+                showUpdateFormSolutionIdeaDropdown &&
+                filteredUpdateFormSolutionIdeas.length
+              " class="dropdown-list">
+                <div v-for="item in filteredUpdateFormSolutionIdeas" :key="item.id" class="dropdown-item"
+                  @mousedown="selectUpdateFormSolutionIdea(item)">
                   {{ item.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormSolutionIdea">
               已选择: {{ selectedUpdateFormSolutionIdea.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormSolutionIdea"
-                class="btn-remove"
-              >
+              <button type="button" @click="clearUpdateFormSolutionIdea" class="btn-remove">
                 清除
               </button>
             </div>
@@ -836,39 +569,22 @@
           <div class="form-group">
             <label class="form-label">问题类别：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormQuestionCategorySearch"
-                placeholder="输入关键字搜索问题类别..."
-                class="form-input search-input"
-                @input="filterUpdateFormQuestionCategories"
-                @focus="showUpdateFormQuestionCategoryDropdown = true"
-                @blur="onUpdateFormQuestionCategoryBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormQuestionCategoryDropdown &&
-                  filteredUpdateFormQuestionCategories.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateFormQuestionCategories"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormQuestionCategory(item)"
-                >
+              <input type="text" v-model="updateFormQuestionCategorySearch" placeholder="输入关键字搜索问题类别..."
+                class="form-input search-input" @input="filterUpdateFormQuestionCategories"
+                @focus="showUpdateFormQuestionCategoryDropdown = true" @blur="onUpdateFormQuestionCategoryBlur" />
+              <div v-if="
+                showUpdateFormQuestionCategoryDropdown &&
+                filteredUpdateFormQuestionCategories.length
+              " class="dropdown-list">
+                <div v-for="item in filteredUpdateFormQuestionCategories" :key="item.id" class="dropdown-item"
+                  @mousedown="selectUpdateFormQuestionCategory(item)">
                   {{ item.name }}
                 </div>
               </div>
             </div>
             <div class="selected-item" v-if="selectedUpdateFormQuestionCategory">
               已选择: {{ selectedUpdateFormQuestionCategory.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormQuestionCategory"
-                class="btn-remove"
-              >
+              <button type="button" @click="clearUpdateFormQuestionCategory" class="btn-remove">
                 清除
               </button>
             </div>
@@ -886,30 +602,15 @@
           <!-- 题目内容 -->
           <div class="form-group">
             <label class="form-label required">题目内容：</label>
-            <textarea
-              v-model="updateForm.title"
-              placeholder="请输入题干"
-              class="form-textarea"
-              rows="3"
-              required
-            ></textarea>
+            <textarea v-model="updateForm.title" placeholder="请输入题干" class="form-textarea" rows="3" required></textarea>
 
             <!-- 图片上传（题干图片） -->
             <div class="image-upload-section">
               <label class="form-label">题干图片：</label>
               <div class="upload-controls">
-                <input
-                  type="file"
-                  @change="handleUpdateImageUpload"
-                  accept="image/*"
-                  class="file-input"
-                  ref="updateFileInput"
-                />
-                <button
-                  type="button"
-                  @click="$refs.updateFileInput.click()"
-                  class="btn-secondary"
-                >
+                <input type="file" @change="handleUpdateImageUpload" accept="image/*" class="file-input"
+                  ref="updateFileInput" />
+                <button type="button" @click="$refs.updateFileInput.click()" class="btn-secondary">
                   选择图片
                 </button>
               </div>
@@ -926,51 +627,23 @@
           <div v-if="showUpdateOptions" class="form-group">
             <label class="form-label">选项：</label>
             <div class="options-list">
-              <div
-                v-for="(opt, index) in updateForm.options"
-                :key="index"
-                class="option-item"
-              >
+              <div v-for="(opt, index) in updateForm.options" :key="index" class="option-item">
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
-                <input
-                  type="text"
-                  v-model="opt.text"
-                  :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                  class="form-input option-input"
-                  required
-                />
+                <input type="text" v-model="opt.text" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                  class="form-input option-input" required />
                 <div class="option-actions">
                   <template v-if="updateForm.question_type === 'SINGLE'">
-                    <input
-                      type="radio"
-                      name="updateSingleAnswer"
-                      :value="index"
-                      v-model="updateSingleAnswerIndex"
-                      :id="`update-single-answer-${index}`"
-                      class="radio-input"
-                      required
-                    />
-                    <label class="radio-label" :for="`update-single-answer-${index}`"
-                      >正确答案</label
-                    >
+                    <input type="radio" name="updateSingleAnswer" :value="index" v-model="updateSingleAnswerIndex"
+                      :id="`update-single-answer-${index}`" class="radio-input" required />
+                    <label class="radio-label" :for="`update-single-answer-${index}`">正确答案</label>
                   </template>
                   <template v-else-if="updateForm.question_type === 'MULTIPLE'">
-                    <input
-                      type="checkbox"
-                      v-model="opt.isAnswer"
-                      :id="`update-multiple-answer-${index}`"
-                      class="checkbox-input"
-                    />
-                    <label class="checkbox-label" :for="`update-multiple-answer-${index}`"
-                      >正确答案</label
-                    >
+                    <input type="checkbox" v-model="opt.isAnswer" :id="`update-multiple-answer-${index}`"
+                      class="checkbox-input" />
+                    <label class="checkbox-label" :for="`update-multiple-answer-${index}`">正确答案</label>
                   </template>
-                  <button
-                    type="button"
-                    @click="removeUpdateOption(index)"
-                    class="btn-remove"
-                    :disabled="updateForm.options.length <= 2"
-                  >
+                  <button type="button" @click="removeUpdateOption(index)" class="btn-remove"
+                    :disabled="updateForm.options.length <= 2">
                     删除
                   </button>
                 </div>
@@ -984,61 +657,32 @@
           <!-- 主观题答案 -->
           <div v-if="updateForm.question_type === 'SUBJECTIVE'" class="form-group">
             <label class="form-label required">答案/参考答案：</label>
-            <textarea
-              v-model="updateForm.answer"
-              placeholder="请输入答案或参考答案"
-              class="form-textarea"
-              rows="4"
-              required
-            ></textarea>
+            <textarea v-model="updateForm.answer" placeholder="请输入答案或参考答案" class="form-textarea" rows="4"
+              required></textarea>
           </div>
 
           <!-- 子知识点 -->
           <div class="form-group">
             <label class="form-label">子知识点：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormSubKnowledgeSearch"
-                placeholder="输入关键字搜索子知识点..."
-                class="form-input search-input"
-                @input="filterUpdateFormSubKnowledgePoints"
-                @focus="showUpdateFormSubKnowledgeDropdown = true"
-                @blur="onUpdateFormSubKnowledgeBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormSubKnowledgeDropdown &&
-                  filteredUpdateFormSubKnowledgePoints.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="kp in filteredUpdateFormSubKnowledgePoints"
-                  :key="kp.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormSubKnowledgePoint(kp)"
-                >
+              <input type="text" v-model="updateFormSubKnowledgeSearch" placeholder="输入关键字搜索子知识点..."
+                class="form-input search-input" @input="filterUpdateFormSubKnowledgePoints"
+                @focus="showUpdateFormSubKnowledgeDropdown = true" @blur="onUpdateFormSubKnowledgeBlur" />
+              <div v-if="
+                showUpdateFormSubKnowledgeDropdown &&
+                filteredUpdateFormSubKnowledgePoints.length
+              " class="dropdown-list">
+                <div v-for="kp in filteredUpdateFormSubKnowledgePoints" :key="kp.id" class="dropdown-item"
+                  @mousedown="selectUpdateFormSubKnowledgePoint(kp)">
                   {{ kp.name }}
-                  <span
-                    v-if="isUpdateFormSubKnowledgeSelected(kp.id)"
-                    class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="isUpdateFormSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
                 </div>
               </div>
             </div>
-            <div
-              class="selected-items"
-              v-if="selectedUpdateFormSubKnowledgePoints.length"
-            >
+            <div class="selected-items" v-if="selectedUpdateFormSubKnowledgePoints.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="kp in selectedUpdateFormSubKnowledgePoints"
-                :key="kp.id"
-                class="selected-tag"
-                @click="removeUpdateFormSubKnowledgePoint(kp.id)"
-              >
+              <span v-for="kp in selectedUpdateFormSubKnowledgePoints" :key="kp.id" class="selected-tag"
+                @click="removeUpdateFormSubKnowledgePoint(kp.id)">
                 {{ kp.name }} ×
               </span>
             </div>
@@ -1076,34 +720,82 @@
         <button @click="closeImagePreview" class="btn-close">关闭</button>
       </div>
     </div>
+
+    <!-- 统一弹窗提示 -->
+    <div v-if="showAlertModal" class="modal-overlay">
+      <div class="alert-modal-content">
+        <h3 class="alert-modal-title">{{ alertModalTitle }}</h3>
+        <p class="alert-modal-message">{{ alertModalMessage }}</p>
+      </div>
+    </div>
+  </div>
+  <!-- 退出登录确认对话框 -->
+  <div v-if="showLogoutConfirm" class="modal-overlay">
+    <div class="modal-content">
+      <h3>确认退出</h3>
+      <p>确定要退出登录吗？</p>
+      <div class="modal-actions">
+        <button @click="handleLogout" class="btn-delete">确认退出</button>
+        <button @click="cancelLogout" class="btn-secondary">取消</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { reactive, ref, onMounted, computed, watch, nextTick } from "vue";
 import axios from "axios";
-import { useRouter } from "vue-router"; // 添加路由导入
+import { useRouter } from "vue-router";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export default {
   setup() {
-    const router = useRouter(); // 获取路由实例
-    const confirmLogout = () => {
-      if (confirm("确定要退出登录吗？")) {
-        handleLogout();
+    const router = useRouter();
+
+    // 弹窗相关状态
+    const showAlertModal = ref(false);
+    const alertModalTitle = ref("");
+    const alertModalMessage = ref("");
+    const alertModalTimer = ref(null);
+
+    // 显示弹窗的方法
+    const showAlert = (title, message) => {
+      alertModalTitle.value = title;
+      alertModalMessage.value = message;
+      showAlertModal.value = true;
+
+      // 清除之前的定时器
+      if (alertModalTimer.value) {
+        clearTimeout(alertModalTimer.value);
       }
+
+      // 设置1秒后自动关闭弹窗
+      alertModalTimer.value = setTimeout(() => {
+        showAlertModal.value = false;
+      }, 1000);
     };
 
-    // 退出登录方法
-    const handleLogout = () => {
-      // 清除本地存储的token
-      localStorage.removeItem("token");
-      // 清除axios默认授权头
-      delete axios.defaults.headers.common["Authorization"];
-      // 跳转到登录页面 - 使用你的路由配置中的路径
-      router.push("/login");
+    const showLogoutConfirm = ref(false);
+
+    const confirmLogout = () => {
+      showLogoutConfirm.value = true;
     };
+
+    const handleLogout = () => {
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common["Authorization"];
+      showAlert("退出成功", "已成功退出登录");
+      showLogoutConfirm.value = false;
+      // 延迟跳转，让用户看到退出成功的提示
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
+    };
+    const cancelLogout = () => {
+      showLogoutConfirm.value = false;
+    };
+
     const schoolList = ref([]);
     const gradeList = ref([]);
     const subjectList = ref([]);
@@ -1127,7 +819,7 @@ export default {
     const showImagePreview = ref(false);
     const previewImageUrl = ref("");
 
-    // 新增：题型选择错误状态
+    // 题型选择错误状态
     const questionTypeError = ref(false);
     const updateQuestionTypeError = ref(false);
 
@@ -1197,7 +889,7 @@ export default {
       img_url: "",
     });
 
-    // 检索条件 - 移除了school_id
+    // 检索条件
     const searchCriteria = reactive({
       grade_id: null,
       subject_id: null,
@@ -1351,7 +1043,6 @@ export default {
       ];
       singleAnswerIndex.value = null;
       form.answer = "";
-      // 清除错误状态
       questionTypeError.value = false;
     };
 
@@ -1364,7 +1055,6 @@ export default {
       ];
       updateSingleAnswerIndex.value = null;
       updateForm.answer = "";
-      // 清除错误状态
       updateQuestionTypeError.value = false;
     };
 
@@ -1734,12 +1424,12 @@ export default {
       if (!file) return;
 
       if (!file.type.startsWith("image/")) {
-        alert("请选择图片文件");
+        showAlert("文件错误", "请选择图片文件");
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert("图片大小不能超过5MB");
+        showAlert("文件过大", "图片大小不能超过5MB");
         return;
       }
 
@@ -1753,12 +1443,12 @@ export default {
       if (!file) return;
 
       if (!file.type.startsWith("image/")) {
-        alert("请选择图片文件");
+        showAlert("文件错误", "请选择图片文件");
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert("图片大小不能超过5MB");
+        showAlert("文件过大", "图片大小不能超过5MB");
         return;
       }
 
@@ -1857,117 +1547,112 @@ export default {
         filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
       } catch (err) {
         console.error("获取列表失败:", err);
-        alert("获取列表失败");
+        showAlert("加载失败", "获取列表失败");
       }
     };
 
     const uploadKnowledgePoint = async () => {
       if (!newKnowledgePoint.value.trim()) {
-        alert("请输入知识点名称");
+        showAlert("输入错误", "请输入知识点名称");
         return;
       }
 
       try {
-        // 分割逗号分隔的输入
         const items = newKnowledgePoint.value
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
         await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        alert("知识点上传成功");
+        showAlert("上传成功", "知识点上传成功");
         newKnowledgePoint.value = "";
         await loadLists();
       } catch (err) {
         console.error("上传知识点失败:", err);
-        alert("上传知识点失败");
+        showAlert("上传失败", "上传知识点失败");
       }
     };
 
     const uploadSubKnowledgePoint = async () => {
       if (!newSubKnowledgePoint.value.trim()) {
-        alert("请输入子知识点名称");
+        showAlert("输入错误", "请输入子知识点名称");
         return;
       }
 
       try {
-        // 分割逗号分隔的输入
         const items = newSubKnowledgePoint.value
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
         await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        alert("子知识点上传成功");
+        showAlert("上传成功", "子知识点上传成功");
         newSubKnowledgePoint.value = "";
         await loadLists();
       } catch (err) {
         console.error("上传子知识点失败:", err);
-        alert("上传子知识点失败");
+        showAlert("上传失败", "上传子知识点失败");
       }
     };
 
     const uploadQuestionDefinition = async () => {
       if (!newQuestionDefinition.value.trim()) {
-        alert("请输入问题定义");
+        showAlert("输入错误", "请输入问题定义");
         return;
       }
 
       try {
-        // 分割逗号分隔的输入
         const items = newQuestionDefinition.value
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
         await axios.post(`${API_BASE}/questions/uploadQuestionDefinition`, items);
-        alert("问题定义上传成功");
+        showAlert("上传成功", "问题定义上传成功");
         newQuestionDefinition.value = "";
         await loadLists();
       } catch (err) {
         console.error("上传问题定义失败:", err);
-        alert("上传问题定义失败");
+        showAlert("上传失败", "上传问题定义失败");
       }
     };
 
     const uploadSolutionIdea = async () => {
       if (!newSolutionIdea.value.trim()) {
-        alert("请输入解题思想");
+        showAlert("输入错误", "请输入解题思想");
         return;
       }
 
       try {
-        // 分割逗号分隔的输入
         const items = newSolutionIdea.value
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
         await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
-        alert("解题思想上传成功");
+        showAlert("上传成功", "解题思想上传成功");
         newSolutionIdea.value = "";
         await loadLists();
       } catch (err) {
         console.error("上传解题思想失败:", err);
-        alert("上传解题思想失败");
+        showAlert("上传失败", "上传解题思想失败");
       }
     };
 
     const uploadQuestionCategory = async () => {
       if (!newQuestionCategory.value.trim()) {
-        alert("请输入问题类别");
+        showAlert("输入错误", "请输入问题类别");
         return;
       }
 
       try {
-        // 分割逗号分隔的输入
         const items = newQuestionCategory.value
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
         await axios.post(`${API_BASE}/questions/uploadQuestionCategory`, items);
-        alert("问题类别上传成功");
+        showAlert("上传成功", "问题类别上传成功");
         newQuestionCategory.value = "";
         await loadLists();
       } catch (err) {
         console.error("上传问题类别失败:", err);
-        alert("上传问题类别失败");
+        showAlert("上传失败", "上传问题类别失败");
       }
     };
 
@@ -1975,14 +1660,12 @@ export default {
       try {
         const payload = {};
 
-        // 移除了school_id的检索条件
         if (searchCriteria.grade_id !== null)
           payload.grade_id = Number(searchCriteria.grade_id);
         if (searchCriteria.subject_id !== null)
           payload.subject_id = Number(searchCriteria.subject_id);
         if (searchCriteria.question_type !== null)
           payload.question_type = searchCriteria.question_type;
-        // 知识点多选
         if (searchCriteria.knowledge_points.length > 0)
           payload.knowledge_points = searchCriteria.knowledge_points.map((id) =>
             Number(id)
@@ -1996,11 +1679,13 @@ export default {
         hasSearched.value = true;
 
         if (!questionList.value.length) {
-          console.log("未找到符合条件的题目");
+          showAlert("检索结果", "未找到符合条件的题目");
+        } else {
+          showAlert("检索成功", `找到 ${questionList.value.length} 条题目`);
         }
       } catch (err) {
         console.error("检索失败:", err);
-        alert("检索失败");
+        showAlert("检索失败", "检索失败");
         questionList.value = [];
         hasSearched.value = true;
       }
@@ -2086,21 +1771,17 @@ export default {
       // 处理选择题选项
       if (q.question_type === "SINGLE" || q.question_type === "MULTIPLE") {
         if (q.options && typeof q.options === "object") {
-          // 按照选项键（A、B、C、D）排序
           const sortedEntries = Object.entries(q.options).sort(([keyA], [keyB]) => {
             return keyA.localeCompare(keyB);
           });
 
           updateForm.options = sortedEntries.map(([key, text], index) => {
-            // 使用索引生成选项键
             const optionKey = getOptionLabel(index);
             let isAnswer = false;
 
             if (q.question_type === "SINGLE") {
-              // 单选题：答案应该直接匹配选项键
               isAnswer = q.answer === optionKey;
             } else if (q.question_type === "MULTIPLE") {
-              // 多选题：答案可能是逗号分隔的字符串
               if (q.answer) {
                 const answers = q.answer.split(",").map((a) => a.trim());
                 isAnswer = answers.includes(optionKey);
@@ -2113,7 +1794,6 @@ export default {
             };
           });
 
-          // 设置单选题正确答案索引
           if (q.question_type === "SINGLE") {
             const answerIndex = updateForm.options.findIndex((opt) => opt.isAnswer);
             updateSingleAnswerIndex.value = answerIndex !== -1 ? answerIndex : null;
@@ -2121,7 +1801,6 @@ export default {
         }
       }
 
-      // 等待DOM更新后滚动到更新表单
       await nextTick();
       if (updateFormRef.value) {
         updateFormRef.value.scrollIntoView({
@@ -2143,7 +1822,6 @@ export default {
       selectedUpdateFormQuestionDefinition.value = null;
       selectedUpdateFormSolutionIdea.value = null;
       selectedUpdateFormQuestionCategory.value = null;
-      // 清除题型错误状态
       updateQuestionTypeError.value = false;
     };
 
@@ -2163,7 +1841,7 @@ export default {
       try {
         const id = questionToDelete.value.id;
         await axios.delete(`${API_BASE}/questions/deleteQuestion/${id}`);
-        alert("删除成功");
+        showAlert("删除成功", "题目删除成功");
 
         questionList.value = questionList.value.filter((q) => q.id !== id);
 
@@ -2171,15 +1849,13 @@ export default {
         questionToDelete.value = null;
       } catch (err) {
         console.error("删除失败:", err);
-        alert("删除失败");
+        showAlert("删除失败", "删除失败");
       }
     };
 
     const handleSubmit = async () => {
-      // 新增：检查题型是否已选择
       if (!form.question_type) {
         questionTypeError.value = true;
-        // 滚动到题型选择位置
         const questionTypeElement = document.querySelector(".form-select.error");
         if (questionTypeElement) {
           questionTypeElement.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2191,7 +1867,6 @@ export default {
       try {
         submitting.value = true;
 
-        // 上传图片
         if (pendingImageFile.value) {
           const fd = new FormData();
           fd.append("file", pendingImageFile.value);
@@ -2208,7 +1883,6 @@ export default {
           pendingImageFile.value = null;
         }
 
-        // 构建选项和答案
         let optionsPayload = {};
         let answerPayload = "";
 
@@ -2233,7 +1907,6 @@ export default {
           answerPayload = form.answer;
         }
 
-        // 修复：允许知识点和子知识点为null
         const payload = {
           school_id: form.school_id !== null ? Number(form.school_id) : null,
           grade_id: form.grade_id !== null ? Number(form.grade_id) : null,
@@ -2270,26 +1943,21 @@ export default {
           `${API_BASE}/questions/uploadSingleQuestion`,
           payload
         );
-        alert(res.data.message || "上传成功");
+        showAlert("上传成功", res.data.message || "上传成功");
 
-        // 保存上传记忆
         saveUploadMemory();
-
-        // 重置表单（保留记忆的设置）
         resetForm();
       } catch (err) {
         console.error("提交失败:", err);
-        alert("提交失败: " + (err.response?.data?.message || err.message));
+        showAlert("提交失败", err.response?.data?.message || err.message);
       } finally {
         submitting.value = false;
       }
     };
 
     const handleUpdateSubmit = async () => {
-      // 新增：检查题型是否已选择
       if (!updateForm.question_type) {
         updateQuestionTypeError.value = true;
-        // 滚动到题型选择位置
         const questionTypeElement = document.querySelector(
           ".update-form .form-select.error"
         );
@@ -2303,7 +1971,6 @@ export default {
       try {
         submitting.value = true;
 
-        // 上传图片
         if (pendingUpdateImageFile.value) {
           const fd = new FormData();
           fd.append("file", pendingUpdateImageFile.value);
@@ -2320,7 +1987,6 @@ export default {
           pendingUpdateImageFile.value = null;
         }
 
-        // 构建选项和答案
         let optionsPayload = {};
         let answerPayload = "";
 
@@ -2348,7 +2014,6 @@ export default {
           answerPayload = updateForm.answer;
         }
 
-        // 修复：允许知识点和子知识点为null
         const payload = {
           id: updateForm.id,
           school_id: updateForm.school_id !== null ? Number(updateForm.school_id) : null,
@@ -2379,7 +2044,7 @@ export default {
               : null,
           title: updateForm.title,
           ...(updateForm.question_type === "SINGLE" ||
-          updateForm.question_type === "MULTIPLE"
+            updateForm.question_type === "MULTIPLE"
             ? { options: optionsPayload }
             : {}),
           answer: answerPayload,
@@ -2393,14 +2058,11 @@ export default {
         };
 
         const res = await axios.post(`${API_BASE}/questions/updateQuestion`, payload);
-        alert(res.data.message || "更新成功");
-
-        // 更新成功后刷新列表
-        await findQuestions();
+        showAlert("更新成功", res.data.message || "更新成功");
         cancelUpdate();
       } catch (err) {
         console.error("更新失败:", err);
-        alert("更新失败: " + (err.response?.data?.message || err.message));
+        showAlert("更新失败", err.response?.data?.message || err.message);
       } finally {
         submitting.value = false;
       }
@@ -2424,8 +2086,6 @@ export default {
         question_definition_id: null,
         solution_idea_id: null,
         question_category_id: null,
-        // 保留记忆的设置，不重置
-        // school_id, grade_id, subject_id, question_type, marking_type, difficulty_level 保持不变
       });
       singleAnswerIndex.value = null;
       knowledgeSearch.value = "";
@@ -2438,7 +2098,6 @@ export default {
       selectedQuestionDefinition.value = null;
       selectedSolutionIdea.value = null;
       selectedQuestionCategory.value = null;
-      // 清除题型错误状态
       questionTypeError.value = false;
     };
 
@@ -2450,7 +2109,6 @@ export default {
       updateKnowledgeSearch.value = "";
       searchCriteria.knowledge_points = [];
       hasSearched.value = false;
-      // 重置检索条件
       Object.assign(searchCriteria, {
         grade_id: null,
         subject_id: null,
@@ -2464,12 +2122,11 @@ export default {
     const exitUpdateMode = () => {
       updateMode.value = false;
       questionList.value = [];
-      // 重置表单时保留记忆的设置
       resetForm();
       hasSearched.value = false;
     };
 
-    // 辅助方法 - 修复显示问题
+    // 辅助方法
     const getSchoolName = (id) => {
       if (id === null) return "-";
       const school = schoolList.value.find((s) => s.id === Number(id));
@@ -2688,11 +2345,17 @@ export default {
       closeImagePreview,
       showImagePreview,
       previewImageUrl,
-      // 新增：题型错误状态
       questionTypeError,
       updateQuestionTypeError,
       handleLogout,
-      confirmLogout
+      confirmLogout,
+      // 弹窗相关
+      showAlertModal,
+      alertModalTitle,
+      alertModalMessage,
+      showAlert,
+      showLogoutConfirm,
+      cancelLogout,
     };
   },
 };
@@ -2824,7 +2487,6 @@ export default {
   font-weight: 600;
 }
 
-/* 修复表格分割线问题 */
 .table-row {
   border-bottom: 1px solid #e4e7ed;
 }
@@ -2957,7 +2619,7 @@ export default {
   grid-column: 1 / -1;
 }
 
-/* 修改弹窗样式 - 位于中央且放大 */
+/* 弹窗样式 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -2988,6 +2650,7 @@ export default {
     opacity: 0;
     transform: scale(0.8) translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: scale(1.05) translateY(0);
@@ -3023,7 +2686,7 @@ export default {
   min-width: 100px;
 }
 
-/* 修改图片预览模态框样式 */
+/* 图片预览模态框样式 */
 .image-preview-modal {
   background: white;
   padding: 30px;
@@ -3063,6 +2726,33 @@ export default {
   background-color: #f78989;
 }
 
+/* 统一弹窗提示样式 */
+.alert-modal-content {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  transform: scale(1.05);
+  animation: modalAppear 0.3s ease-out;
+}
+
+.alert-modal-title {
+  margin-bottom: 20px;
+  color: #303133;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.alert-modal-message {
+  margin-bottom: 0;
+  color: #606266;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
 .form-group {
   margin-bottom: 20px;
 }
@@ -3098,7 +2788,6 @@ export default {
   border-color: #409eff;
 }
 
-/* 普通下拉框样式 */
 .form-select {
   background-color: white;
   border: 2px solid #e4e7ed;
@@ -3120,7 +2809,6 @@ export default {
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
 
-/* 新增：题型选择错误状态 */
 .form-select.error {
   border-color: #f56c6c;
   background-color: #fef0f0;
@@ -3131,7 +2819,6 @@ export default {
   box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2);
 }
 
-/* 新增：错误提示消息 */
 .error-message {
   color: #f56c6c;
   font-size: 12px;
@@ -3439,52 +3126,65 @@ export default {
 /* 调整表格列宽设置 */
 .table-cell:nth-child(1) {
   width: 60px;
-} /* ID */
+}
+
 .table-cell:nth-child(2) {
   width: 120px;
-} /* 学校 */
+}
+
 .table-cell:nth-child(3) {
   width: 80px;
-} /* 年级 */
+}
+
 .table-cell:nth-child(4) {
   width: 100px;
-} /* 科目 */
+}
+
 .table-cell:nth-child(5) {
   width: 80px;
-} /* 题型 */
+}
+
 .table-cell:nth-child(6) {
   width: 80px;
-} /* 评分方法 */
+}
+
 .table-cell:nth-child(7) {
   width: 150px;
-} /* 知识点 */
+}
+
 .table-cell:nth-child(8) {
   width: 120px;
-} /* 问题定义 */
+}
+
 .table-cell:nth-child(9) {
   width: 120px;
-} /* 解题思想 */
+}
+
 .table-cell:nth-child(10) {
   width: 120px;
-} /* 问题类别 */
+}
+
 .table-cell:nth-child(11) {
   width: 150px;
-} /* 子知识点 */
+}
+
 .table-cell:nth-child(12) {
   width: 60px;
-} /* 难度 */
+}
+
 .table-cell:nth-child(13) {
   min-width: 300px;
   max-width: 400px;
-} /* 题目内容 */
+}
+
 .table-cell:nth-child(14) {
   width: 80px;
-} /* 图片 */
+}
+
 .table-cell:nth-child(15) {
   width: 120px;
-} /* 操作 */
+}
 
-/* 表格分割线优化 - 确保所有行都有统一的分割线 */
 .table-row {
   border-bottom: 1px solid #e4e7ed;
 }
@@ -3497,7 +3197,6 @@ export default {
   border-bottom: none;
 }
 
-/* 确保操作列垂直居中 */
 .actions-cell {
   display: flex;
   align-items: center;
@@ -3506,25 +3205,10 @@ export default {
   min-height: 60px;
 }
 
-/* 修复子知识点标签间距 */
 .sub-knowledge-tag {
   margin: 2px;
 }
-.header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e4e7ed;
-}
 
-.header-bar h1 {
-  margin: 0;
-  color: #303133;
-}
-
-/* 退出按钮样式 */
 .logout-btn {
   background-color: #f56c6c;
   color: white;
@@ -3534,7 +3218,7 @@ export default {
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.3s;
-  float: right; 
+  float: right;
 }
 
 .logout-btn:hover {
