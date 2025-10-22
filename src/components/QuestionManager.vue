@@ -39,6 +39,15 @@
             </option>
           </select>
         </div>
+        <div class="form-group">
+          <label class="form-label">年级：</label>
+          <select v-model="form.grade_id" class="form-select">
+            <option :value="null">全部</option>
+            <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
+              {{ grade.name }}
+            </option>
+          </select>
+        </div>
 
         <!-- 题型 -->
         <div class="form-group">
@@ -962,7 +971,10 @@
                     @input="renderUpdateOptionPreview(index, opt.text)"
                     required
                   />
-                  <div class="math-preview small" v-html="updateOptionPreviews[index]"></div>
+                  <div
+                    class="math-preview small"
+                    v-html="updateOptionPreviews[index]"
+                  ></div>
                 </div>
                 <div class="option-actions">
                   <template v-if="updateForm.question_type === 'SINGLE'">
@@ -1154,7 +1166,7 @@ export default {
     const answerPreview = ref("");
     const notesPreview = ref("");
     const optionPreviews = ref(Array(10).fill(""));
-    
+
     // 更新界面的预览
     const updateTitlePreview = ref("");
     const updateAnswerPreview = ref("");
@@ -1401,20 +1413,20 @@ export default {
     // 数学公式渲染函数
     const renderMath = (text) => {
       if (!text) return "";
-      
+
       try {
         // 处理行内公式：$...$
         let html = text.replace(/\$(.+?)\$/g, (match, formula) => {
           try {
             return katex.renderToString(formula, {
               throwOnError: false,
-              displayMode: false
+              displayMode: false,
             });
           } catch (e) {
             return `<span class="math-error" title="${e.message}">${match}</span>`;
           }
         });
-  
+
         return html;
       } catch (error) {
         console.error("数学公式渲染错误:", error);
@@ -1426,22 +1438,22 @@ export default {
     const renderMathPreview = (type, text) => {
       const preview = renderMath(text);
       switch (type) {
-        case 'title':
+        case "title":
           titlePreview.value = preview;
           break;
-        case 'answer':
+        case "answer":
           answerPreview.value = preview;
           break;
-        case 'notes':
+        case "notes":
           notesPreview.value = preview;
           break;
-        case 'updateTitle':
+        case "updateTitle":
           updateTitlePreview.value = preview;
           break;
-        case 'updateAnswer':
+        case "updateAnswer":
           updateAnswerPreview.value = preview;
           break;
-        case 'updateNotes':
+        case "updateNotes":
           updateNotesPreview.value = preview;
           break;
       }
@@ -2281,10 +2293,10 @@ export default {
 
       // 初始化预览
       await nextTick();
-      renderMathPreview('updateTitle', updateForm.title);
-      renderMathPreview('updateAnswer', updateForm.answer);
-      renderMathPreview('updateNotes', updateForm.notes);
-      
+      renderMathPreview("updateTitle", updateForm.title);
+      renderMathPreview("updateAnswer", updateForm.answer);
+      renderMathPreview("updateNotes", updateForm.notes);
+
       // 初始化选项预览
       if (updateForm.options && updateForm.options.length) {
         updateForm.options.forEach((opt, index) => {
@@ -3819,7 +3831,7 @@ export default {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .option-actions {
     justify-content: flex-start;
     margin-top: 10px;
