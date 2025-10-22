@@ -6,7 +6,7 @@ export default defineConfig({
   base: './',  //资源路径用相对路径
   server: {
     proxy: {
-      '/api': 'http://192.168.50.39:5080' // 简写形式
+      '/api': 'https://xxw.flito.art:443' // 简写形式
     }
   }
 })
