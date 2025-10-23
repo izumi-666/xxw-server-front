@@ -39,15 +39,6 @@
             </option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">年级：</label>
-          <select v-model="form.grade_id" class="form-select">
-            <option :value="null">全部</option>
-            <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
-              {{ grade.name }}
-            </option>
-          </select>
-        </div>
 
         <!-- 题型 -->
         <div class="form-group">
@@ -326,14 +317,22 @@
                 @mousedown="selectQuestionDefinition(item)"
               >
                 {{ item.name }}
+                <span v-if="isQuestionDefinitionSelected(item.id)" class="selected-mark"
+                  >✓</span
+                >
               </div>
             </div>
           </div>
-          <div class="selected-item" v-if="selectedQuestionDefinition">
-            已选择: {{ selectedQuestionDefinition.name }}
-            <button type="button" @click="clearQuestionDefinition" class="btn-remove">
-              清除
-            </button>
+          <div class="selected-items" v-if="selectedQuestionDefinitions.length">
+            <span class="selected-tags-label">已选择：</span>
+            <span
+              v-for="item in selectedQuestionDefinitions"
+              :key="item.id"
+              class="selected-tag"
+              @click="removeQuestionDefinition(item.id)"
+            >
+              {{ item.name }} ×
+            </span>
           </div>
           <div class="new-knowledge-input">
             <input
@@ -378,14 +377,22 @@
                 @mousedown="selectSolutionIdea(item)"
               >
                 {{ item.name }}
+                <span v-if="isSolutionIdeaSelected(item.id)" class="selected-mark"
+                  >✓</span
+                >
               </div>
             </div>
           </div>
-          <div class="selected-item" v-if="selectedSolutionIdea">
-            已选择: {{ selectedSolutionIdea.name }}
-            <button type="button" @click="clearSolutionIdea" class="btn-remove">
-              清除
-            </button>
+          <div class="selected-items" v-if="selectedSolutionIdeas.length">
+            <span class="selected-tags-label">已选择：</span>
+            <span
+              v-for="item in selectedSolutionIdeas"
+              :key="item.id"
+              class="selected-tag"
+              @click="removeSolutionIdea(item.id)"
+            >
+              {{ item.name }} ×
+            </span>
           </div>
           <div class="new-knowledge-input">
             <input
@@ -430,14 +437,22 @@
                 @mousedown="selectQuestionCategory(item)"
               >
                 {{ item.name }}
+                <span v-if="isQuestionCategorySelected(item.id)" class="selected-mark"
+                  >✓</span
+                >
               </div>
             </div>
           </div>
-          <div class="selected-item" v-if="selectedQuestionCategory">
-            已选择: {{ selectedQuestionCategory.name }}
-            <button type="button" @click="clearQuestionCategory" class="btn-remove">
-              清除
-            </button>
+          <div class="selected-items" v-if="selectedQuestionCategories.length">
+            <span class="selected-tags-label">已选择：</span>
+            <span
+              v-for="item in selectedQuestionCategories"
+              :key="item.id"
+              class="selected-tag"
+              @click="removeQuestionCategory(item.id)"
+            >
+              {{ item.name }} ×
+            </span>
           </div>
           <div class="new-knowledge-input">
             <input
@@ -564,6 +579,147 @@
             </div>
           </div>
 
+          <!-- 问题定义（多选） -->
+          <div class="criteria-item">
+            <label>问题定义：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="updateQuestionDefinitionSearch"
+                placeholder="输入关键字搜索问题定义..."
+                class="form-input search-input"
+                @input="filterUpdateQuestionDefinitions"
+                @focus="showUpdateQuestionDefinitionDropdown = true"
+                @blur="onUpdateQuestionDefinitionBlur"
+              />
+              <div
+                v-if="
+                  showUpdateQuestionDefinitionDropdown &&
+                  filteredUpdateQuestionDefinitions.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateQuestionDefinitions"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateQuestionDefinition(item)"
+                >
+                  {{ item.name }}
+                  <span
+                    v-if="isUpdateQuestionDefinitionSelected(item.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-items" v-if="selectedUpdateQuestionDefinitions.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="item in selectedUpdateQuestionDefinitions"
+                :key="item.id"
+                class="selected-tag"
+                @click="removeUpdateQuestionDefinition(item.id)"
+              >
+                {{ item.name }} ×
+              </span>
+            </div>
+          </div>
+
+          <!-- 解题思想（多选） -->
+          <div class="criteria-item">
+            <label>解题思想：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="updateSolutionIdeaSearch"
+                placeholder="输入关键字搜索解题思想..."
+                class="form-input search-input"
+                @input="filterUpdateSolutionIdeas"
+                @focus="showUpdateSolutionIdeaDropdown = true"
+                @blur="onUpdateSolutionIdeaBlur"
+              />
+              <div
+                v-if="
+                  showUpdateSolutionIdeaDropdown && filteredUpdateSolutionIdeas.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateSolutionIdeas"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateSolutionIdea(item)"
+                >
+                  {{ item.name }}
+                  <span v-if="isUpdateSolutionIdeaSelected(item.id)" class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-items" v-if="selectedUpdateSolutionIdeas.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="item in selectedUpdateSolutionIdeas"
+                :key="item.id"
+                class="selected-tag"
+                @click="removeUpdateSolutionIdea(item.id)"
+              >
+                {{ item.name }} ×
+              </span>
+            </div>
+          </div>
+
+          <!-- 问题类别（多选） -->
+          <div class="criteria-item">
+            <label>问题类别：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="updateQuestionCategorySearch"
+                placeholder="输入关键字搜索问题类别..."
+                class="form-input search-input"
+                @input="filterUpdateQuestionCategories"
+                @focus="showUpdateQuestionCategoryDropdown = true"
+                @blur="onUpdateQuestionCategoryBlur"
+              />
+              <div
+                v-if="
+                  showUpdateQuestionCategoryDropdown &&
+                  filteredUpdateQuestionCategories.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateQuestionCategories"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateQuestionCategory(item)"
+                >
+                  {{ item.name }}
+                  <span
+                    v-if="isUpdateQuestionCategorySelected(item.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-items" v-if="selectedUpdateQuestionCategories.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="item in selectedUpdateQuestionCategories"
+                :key="item.id"
+                class="selected-tag"
+                @click="removeUpdateQuestionCategory(item.id)"
+              >
+                {{ item.name }} ×
+              </span>
+            </div>
+          </div>
+
           <div class="criteria-item">
             <label>难度：</label>
             <select v-model="searchCriteria.difficulty_level" class="form-select">
@@ -618,12 +774,50 @@
               <div class="table-cell">{{ getQuestionTypeName(q.question_type) }}</div>
               <div class="table-cell">{{ getMarkingTypeName(q.marking_type) }}</div>
               <div class="table-cell">{{ getKnowledgePointName(q.knowledge_point) }}</div>
-              <div class="table-cell">
-                {{ getQuestionDefinitionName(q.question_definition_id) }}
+              <div class="table-cell sub-knowledge-cell">
+                <span
+                  v-for="defId in q.question_definition_ids"
+                  :key="defId"
+                  class="sub-knowledge-tag"
+                >
+                  {{ getQuestionDefinitionName(defId) }}
+                </span>
+                <span
+                  v-if="!(q.question_definition_ids && q.question_definition_ids.length)"
+                  class="no-sub-knowledge"
+                >
+                  无
+                </span>
               </div>
-              <div class="table-cell">{{ getSolutionIdeaName(q.solution_idea_id) }}</div>
-              <div class="table-cell">
-                {{ getQuestionCategoryName(q.question_category_id) }}
+              <!-- 解题思想列 - 改为多选显示 -->
+              <div class="table-cell sub-knowledge-cell">
+                <span
+                  v-for="ideaId in q.solution_idea_ids || []"
+                  :key="ideaId"
+                  class="sub-knowledge-tag"
+                >
+                  {{ getSolutionIdeaName(ideaId) }}
+                </span>
+                <span
+                  v-if="!(q.solution_idea_ids && q.solution_idea_ids.length)"
+                  class="no-sub-knowledge"
+                >
+                  无
+                </span>
+              </div>
+              <div class="table-cell sub-knowledge-cell">
+                <span
+                  v-for="catId in q.question_category_ids || []"
+                  :key="catId"
+                  class="tag-item"
+                >
+                  {{ getQuestionCategoryName(catId) }}
+                </span>
+                <span
+                  v-if="!(q.question_category_ids && q.question_category_ids.length)"
+                  class="no-sub-knowledge"
+                  >无</span
+                >
               </div>
               <div class="table-cell sub-knowledge-cell">
                 <span
@@ -803,18 +997,27 @@
                   @mousedown="selectUpdateFormQuestionDefinition(item)"
                 >
                   {{ item.name }}
+                  <span
+                    v-if="isUpdateFormQuestionDefinitionSelected(item.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
                 </div>
               </div>
             </div>
-            <div class="selected-item" v-if="selectedUpdateFormQuestionDefinition">
-              已选择: {{ selectedUpdateFormQuestionDefinition.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormQuestionDefinition"
-                class="btn-remove"
+            <div
+              class="selected-items"
+              v-if="selectedUpdateFormQuestionDefinitions.length"
+            >
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="item in selectedUpdateFormQuestionDefinitions"
+                :key="item.id"
+                class="selected-tag"
+                @click="removeUpdateFormQuestionDefinition(item.id)"
               >
-                清除
-              </button>
+                {{ item.name }} ×
+              </span>
             </div>
           </div>
 
@@ -845,18 +1048,24 @@
                   @mousedown="selectUpdateFormSolutionIdea(item)"
                 >
                   {{ item.name }}
+                  <span
+                    v-if="isUpdateFormSolutionIdeaSelected(item.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
                 </div>
               </div>
             </div>
-            <div class="selected-item" v-if="selectedUpdateFormSolutionIdea">
-              已选择: {{ selectedUpdateFormSolutionIdea.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormSolutionIdea"
-                class="btn-remove"
+            <div class="selected-items" v-if="selectedUpdateFormSolutionIdeas.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="item in selectedUpdateFormSolutionIdeas"
+                :key="item.id"
+                class="selected-tag"
+                @click="removeUpdateFormSolutionIdea(item.id)"
               >
-                清除
-              </button>
+                {{ item.name }} ×
+              </span>
             </div>
           </div>
 
@@ -887,18 +1096,27 @@
                   @mousedown="selectUpdateFormQuestionCategory(item)"
                 >
                   {{ item.name }}
+                  <span
+                    v-if="isUpdateFormQuestionCategorySelected(item.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
                 </div>
               </div>
             </div>
-            <div class="selected-item" v-if="selectedUpdateFormQuestionCategory">
-              已选择: {{ selectedUpdateFormQuestionCategory.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormQuestionCategory"
-                class="btn-remove"
+            <div
+              class="selected-items"
+              v-if="selectedUpdateFormQuestionCategories.length"
+            >
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="item in selectedUpdateFormQuestionCategories"
+                :key="item.id"
+                class="selected-tag"
+                @click="removeUpdateFormQuestionCategory(item.id)"
               >
-                清除
-              </button>
+                {{ item.name }} ×
+              </span>
             </div>
           </div>
 
@@ -1264,9 +1482,9 @@ export default {
       question_type: uploadMemory.value.question_type,
       marking_type: uploadMemory.value.marking_type,
       knowledge_point: null,
-      question_definition_id: null,
-      solution_idea_id: null,
-      question_category_id: null,
+      question_definition_ids: [],
+      solution_idea_ids: [],
+      question_category_ids: [],
       difficulty_level: uploadMemory.value.difficulty_level,
       title: "",
       options: [
@@ -1291,9 +1509,9 @@ export default {
       question_type: null,
       marking_type: 0,
       knowledge_point: null,
-      question_definition_id: null,
-      solution_idea_id: null,
-      question_category_id: null,
+      question_definition_ids: [],
+      solution_idea_ids: [],
+      question_category_ids: [],
       difficulty_level: null,
       title: "",
       options: [
@@ -1315,6 +1533,9 @@ export default {
       subject_id: null,
       question_type: null,
       knowledge_points: [],
+      question_definition_ids: [],
+      solution_idea_ids: [],
+      question_category_ids: [],
       difficulty_level: null,
       title: "",
     });
@@ -1335,6 +1556,10 @@ export default {
     const questionCategorySearch = ref("");
 
     const updateKnowledgeSearch = ref("");
+    const updateQuestionDefinitionSearch = ref("");
+    const updateSolutionIdeaSearch = ref("");
+    const updateQuestionCategorySearch = ref("");
+
     const updateFormKnowledgeSearch = ref("");
     const updateFormQuestionDefinitionSearch = ref("");
     const updateFormSolutionIdeaSearch = ref("");
@@ -1349,6 +1574,10 @@ export default {
     const showQuestionCategoryDropdown = ref(false);
 
     const showUpdateKnowledgeDropdown = ref(false);
+    const showUpdateQuestionDefinitionDropdown = ref(false);
+    const showUpdateSolutionIdeaDropdown = ref(false);
+    const showUpdateQuestionCategoryDropdown = ref(false);
+
     const showUpdateFormKnowledgeDropdown = ref(false);
     const showUpdateFormQuestionDefinitionDropdown = ref(false);
     const showUpdateFormSolutionIdeaDropdown = ref(false);
@@ -1357,14 +1586,7 @@ export default {
 
     // 选中的对象
     const selectedKnowledgePoint = ref(null);
-    const selectedQuestionDefinition = ref(null);
-    const selectedSolutionIdea = ref(null);
-    const selectedQuestionCategory = ref(null);
-
     const selectedUpdateFormKnowledgePoint = ref(null);
-    const selectedUpdateFormQuestionDefinition = ref(null);
-    const selectedUpdateFormSolutionIdea = ref(null);
-    const selectedUpdateFormQuestionCategory = ref(null);
 
     // 过滤后的列表
     const filteredKnowledgePoints = ref([]);
@@ -1374,6 +1596,10 @@ export default {
     const filteredQuestionCategories = ref([]);
 
     const filteredUpdateKnowledgePoints = ref([]);
+    const filteredUpdateQuestionDefinitions = ref([]);
+    const filteredUpdateSolutionIdeas = ref([]);
+    const filteredUpdateQuestionCategories = ref([]);
+
     const filteredUpdateFormKnowledgePoints = ref([]);
     const filteredUpdateFormQuestionDefinitions = ref([]);
     const filteredUpdateFormSolutionIdeas = ref([]);
@@ -1397,10 +1623,73 @@ export default {
         .filter(Boolean);
     });
 
+    // 选中的问题定义对象列表
+    const selectedQuestionDefinitions = computed(() => {
+      return form.question_definition_ids
+        .map((id) => questionDefinitionList.value.find((q) => q.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的解题思想对象列表
+    const selectedSolutionIdeas = computed(() => {
+      return form.solution_idea_ids
+        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的问题类别对象列表
+    const selectedQuestionCategories = computed(() => {
+      return form.question_category_ids
+        .map((id) => questionCategoryList.value.find((c) => c.id === id))
+        .filter(Boolean);
+    });
+
     // 选中的更新界面知识点对象列表
     const selectedUpdateKnowledgePoints = computed(() => {
       return searchCriteria.knowledge_points
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的更新界面问题定义对象列表
+    const selectedUpdateQuestionDefinitions = computed(() => {
+      return searchCriteria.question_definition_ids
+        .map((id) => questionDefinitionList.value.find((q) => q.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的更新界面解题思想对象列表
+    const selectedUpdateSolutionIdeas = computed(() => {
+      return searchCriteria.solution_idea_ids
+        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的更新界面问题类别对象列表
+    const selectedUpdateQuestionCategories = computed(() => {
+      return searchCriteria.question_category_ids
+        .map((id) => questionCategoryList.value.find((c) => c.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的更新表单问题定义对象列表
+    const selectedUpdateFormQuestionDefinitions = computed(() => {
+      return updateForm.question_definition_ids
+        .map((id) => questionDefinitionList.value.find((q) => q.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的更新表单解题思想对象列表
+    const selectedUpdateFormSolutionIdeas = computed(() => {
+      return updateForm.solution_idea_ids
+        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+        .filter(Boolean);
+    });
+
+    // 选中的更新表单问题类别对象列表
+    const selectedUpdateFormQuestionCategories = computed(() => {
+      return updateForm.question_category_ids
+        .map((id) => questionCategoryList.value.find((c) => c.id === id))
         .filter(Boolean);
     });
 
@@ -1564,44 +1853,57 @@ export default {
 
     // 问题定义选择方法
     const selectQuestionDefinition = (item) => {
-      selectedQuestionDefinition.value = item;
-      form.question_definition_id = item.id;
-      questionDefinitionSearch.value = item.name;
+      if (!form.question_definition_ids.includes(item.id)) {
+        form.question_definition_ids.push(item.id);
+      }
+      questionDefinitionSearch.value = "";
       showQuestionDefinitionDropdown.value = false;
     };
 
-    const clearQuestionDefinition = () => {
-      selectedQuestionDefinition.value = null;
-      form.question_definition_id = null;
-      questionDefinitionSearch.value = "";
+    const isQuestionDefinitionSelected = (id) => {
+      return form.question_definition_ids.includes(id);
+    };
+
+    const removeQuestionDefinition = (id) => {
+      form.question_definition_ids = form.question_definition_ids.filter(
+        (itemId) => itemId !== id
+      );
     };
 
     // 解题思想选择方法
     const selectSolutionIdea = (item) => {
-      selectedSolutionIdea.value = item;
-      form.solution_idea_id = item.id;
-      solutionIdeaSearch.value = item.name;
+      if (!form.solution_idea_ids.includes(item.id)) {
+        form.solution_idea_ids.push(item.id);
+      }
+      solutionIdeaSearch.value = "";
       showSolutionIdeaDropdown.value = false;
     };
 
-    const clearSolutionIdea = () => {
-      selectedSolutionIdea.value = null;
-      form.solution_idea_id = null;
-      solutionIdeaSearch.value = "";
+    const isSolutionIdeaSelected = (id) => {
+      return form.solution_idea_ids.includes(id);
+    };
+
+    const removeSolutionIdea = (id) => {
+      form.solution_idea_ids = form.solution_idea_ids.filter((itemId) => itemId !== id);
     };
 
     // 问题类别选择方法
     const selectQuestionCategory = (item) => {
-      selectedQuestionCategory.value = item;
-      form.question_category_id = item.id;
-      questionCategorySearch.value = item.name;
+      if (!form.question_category_ids.includes(item.id)) {
+        form.question_category_ids.push(item.id);
+      }
+      questionCategorySearch.value = "";
       showQuestionCategoryDropdown.value = false;
     };
 
-    const clearQuestionCategory = () => {
-      selectedQuestionCategory.value = null;
-      form.question_category_id = null;
-      questionCategorySearch.value = "";
+    const isQuestionCategorySelected = (id) => {
+      return form.question_category_ids.includes(id);
+    };
+
+    const removeQuestionCategory = (id) => {
+      form.question_category_ids = form.question_category_ids.filter(
+        (itemId) => itemId !== id
+      );
     };
 
     const selectSubKnowledgePoint = (kp) => {
@@ -1639,6 +1941,64 @@ export default {
       );
     };
 
+    // 更新界面问题定义多选方法
+    const selectUpdateQuestionDefinition = (item) => {
+      if (!searchCriteria.question_definition_ids.includes(item.id)) {
+        searchCriteria.question_definition_ids.push(item.id);
+      }
+      updateQuestionDefinitionSearch.value = "";
+      showUpdateQuestionDefinitionDropdown.value = false;
+    };
+
+    const isUpdateQuestionDefinitionSelected = (id) => {
+      return searchCriteria.question_definition_ids.includes(id);
+    };
+
+    const removeUpdateQuestionDefinition = (id) => {
+      searchCriteria.question_definition_ids = searchCriteria.question_definition_ids.filter(
+        (itemId) => itemId !== id
+      );
+    };
+
+    // 更新界面解题思想多选方法
+    const selectUpdateSolutionIdea = (item) => {
+      if (!searchCriteria.solution_idea_ids.includes(item.id)) {
+        searchCriteria.solution_idea_ids.push(item.id);
+      }
+      updateSolutionIdeaSearch.value = "";
+      showUpdateSolutionIdeaDropdown.value = false;
+    };
+
+    const isUpdateSolutionIdeaSelected = (id) => {
+      return searchCriteria.solution_idea_ids.includes(id);
+    };
+
+    const removeUpdateSolutionIdea = (id) => {
+      searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
+        (itemId) => itemId !== id
+      );
+    };
+
+    // 更新界面问题类别多选方法
+    const selectUpdateQuestionCategory = (item) => {
+      if (!searchCriteria.question_category_ids.includes(item.id)) {
+        searchCriteria.question_category_ids.push(item.id);
+      }
+      updateQuestionCategorySearch.value = "";
+      showUpdateQuestionCategoryDropdown.value = false;
+    };
+
+    const isUpdateQuestionCategorySelected = (id) => {
+      return searchCriteria.question_category_ids.includes(id);
+    };
+
+    const removeUpdateQuestionCategory = (id) => {
+      searchCriteria.question_category_ids = searchCriteria.question_category_ids.filter(
+        (itemId) => itemId !== id
+      );
+    };
+
+    // 更新表单知识点选择方法
     const selectUpdateFormKnowledgePoint = (kp) => {
       selectedUpdateFormKnowledgePoint.value = kp;
       updateForm.knowledge_point = kp.id;
@@ -1652,43 +2012,61 @@ export default {
       updateFormKnowledgeSearch.value = "";
     };
 
+    // 更新表单问题定义多选方法
     const selectUpdateFormQuestionDefinition = (item) => {
-      selectedUpdateFormQuestionDefinition.value = item;
-      updateForm.question_definition_id = item.id;
-      updateFormQuestionDefinitionSearch.value = item.name;
+      if (!updateForm.question_definition_ids.includes(item.id)) {
+        updateForm.question_definition_ids.push(item.id);
+      }
+      updateFormQuestionDefinitionSearch.value = "";
       showUpdateFormQuestionDefinitionDropdown.value = false;
     };
 
-    const clearUpdateFormQuestionDefinition = () => {
-      selectedUpdateFormQuestionDefinition.value = null;
-      updateForm.question_definition_id = null;
-      updateFormQuestionDefinitionSearch.value = "";
+    const isUpdateFormQuestionDefinitionSelected = (id) => {
+      return updateForm.question_definition_ids.includes(id);
     };
 
+    const removeUpdateFormQuestionDefinition = (id) => {
+      updateForm.question_definition_ids = updateForm.question_definition_ids.filter(
+        (itemId) => itemId !== id
+      );
+    };
+
+    // 更新表单解题思想多选方法
     const selectUpdateFormSolutionIdea = (item) => {
-      selectedUpdateFormSolutionIdea.value = item;
-      updateForm.solution_idea_id = item.id;
-      updateFormSolutionIdeaSearch.value = item.name;
+      if (!updateForm.solution_idea_ids.includes(item.id)) {
+        updateForm.solution_idea_ids.push(item.id);
+      }
+      updateFormSolutionIdeaSearch.value = "";
       showUpdateFormSolutionIdeaDropdown.value = false;
     };
 
-    const clearUpdateFormSolutionIdea = () => {
-      selectedUpdateFormSolutionIdea.value = null;
-      updateForm.solution_idea_id = null;
-      updateFormSolutionIdeaSearch.value = "";
+    const isUpdateFormSolutionIdeaSelected = (id) => {
+      return updateForm.solution_idea_ids.includes(id);
     };
 
+    const removeUpdateFormSolutionIdea = (id) => {
+      updateForm.solution_idea_ids = updateForm.solution_idea_ids.filter(
+        (itemId) => itemId !== id
+      );
+    };
+
+    // 更新表单问题类别多选方法
     const selectUpdateFormQuestionCategory = (item) => {
-      selectedUpdateFormQuestionCategory.value = item;
-      updateForm.question_category_id = item.id;
-      updateFormQuestionCategorySearch.value = item.name;
+      if (!updateForm.question_category_ids.includes(item.id)) {
+        updateForm.question_category_ids.push(item.id);
+      }
+      updateFormQuestionCategorySearch.value = "";
       showUpdateFormQuestionCategoryDropdown.value = false;
     };
 
-    const clearUpdateFormQuestionCategory = () => {
-      selectedUpdateFormQuestionCategory.value = null;
-      updateForm.question_category_id = null;
-      updateFormQuestionCategorySearch.value = "";
+    const isUpdateFormQuestionCategorySelected = (id) => {
+      return updateForm.question_category_ids.includes(id);
+    };
+
+    const removeUpdateFormQuestionCategory = (id) => {
+      updateForm.question_category_ids = updateForm.question_category_ids.filter(
+        (itemId) => itemId !== id
+      );
     };
 
     const selectUpdateFormSubKnowledgePoint = (kp) => {
@@ -1754,6 +2132,24 @@ export default {
     const onUpdateKnowledgeBlur = () => {
       setTimeout(() => {
         showUpdateKnowledgeDropdown.value = false;
+      }, 200);
+    };
+
+    const onUpdateQuestionDefinitionBlur = () => {
+      setTimeout(() => {
+        showUpdateQuestionDefinitionDropdown.value = false;
+      }, 200);
+    };
+
+    const onUpdateSolutionIdeaBlur = () => {
+      setTimeout(() => {
+        showUpdateSolutionIdeaDropdown.value = false;
+      }, 200);
+    };
+
+    const onUpdateQuestionCategoryBlur = () => {
+      setTimeout(() => {
+        showUpdateQuestionCategoryDropdown.value = false;
       }, 200);
     };
 
@@ -1844,6 +2240,42 @@ export default {
       } else {
         filteredUpdateKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
           kp.name.toLowerCase().includes(updateKnowledgeSearch.value.toLowerCase())
+        );
+      }
+    };
+
+    const filterUpdateQuestionDefinitions = () => {
+      if (!updateQuestionDefinitionSearch.value) {
+        filteredUpdateQuestionDefinitions.value = questionDefinitionList.value;
+      } else {
+        filteredUpdateQuestionDefinitions.value = questionDefinitionList.value.filter(
+          (item) =>
+            item.name
+              .toLowerCase()
+              .includes(updateQuestionDefinitionSearch.value.toLowerCase())
+        );
+      }
+    };
+
+    const filterUpdateSolutionIdeas = () => {
+      if (!updateSolutionIdeaSearch.value) {
+        filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
+      } else {
+        filteredUpdateSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
+          item.name.toLowerCase().includes(updateSolutionIdeaSearch.value.toLowerCase())
+        );
+      }
+    };
+
+    const filterUpdateQuestionCategories = () => {
+      if (!updateQuestionCategorySearch.value) {
+        filteredUpdateQuestionCategories.value = questionCategoryList.value;
+      } else {
+        filteredUpdateQuestionCategories.value = questionCategoryList.value.filter(
+          (item) =>
+            item.name
+              .toLowerCase()
+              .includes(updateQuestionCategorySearch.value.toLowerCase())
         );
       }
     };
@@ -2030,6 +2462,10 @@ export default {
         filteredQuestionCategories.value = questionCategoryList.value;
 
         filteredUpdateKnowledgePoints.value = knowledgePointList.value;
+        filteredUpdateQuestionDefinitions.value = questionDefinitionList.value;
+        filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
+        filteredUpdateQuestionCategories.value = questionCategoryList.value;
+
         filteredUpdateFormKnowledgePoints.value = knowledgePointList.value;
         filteredUpdateFormQuestionDefinitions.value = questionDefinitionList.value;
         filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
@@ -2160,6 +2596,18 @@ export default {
           payload.knowledge_points = searchCriteria.knowledge_points.map((id) =>
             Number(id)
           );
+        if (searchCriteria.question_definition_ids.length > 0)
+          payload.question_definition_ids = searchCriteria.question_definition_ids.map(
+            (id) => Number(id)
+          );
+        if (searchCriteria.solution_idea_ids.length > 0)
+          payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
+            Number(id)
+          );
+        if (searchCriteria.question_category_ids.length > 0)
+          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
+            Number(id)
+          );
         if (searchCriteria.difficulty_level !== null)
           payload.difficulty_level = Number(searchCriteria.difficulty_level);
         if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
@@ -2194,15 +2642,15 @@ export default {
       updateForm.question_type = q.question_type;
       updateForm.marking_type = q.marking_type || 0;
       updateForm.knowledge_point = q.knowledge_point ? Number(q.knowledge_point) : null;
-      updateForm.question_definition_id = q.question_definition_id
-        ? Number(q.question_definition_id)
-        : null;
-      updateForm.solution_idea_id = q.solution_idea_id
-        ? Number(q.solution_idea_id)
-        : null;
-      updateForm.question_category_id = q.question_category_id
-        ? Number(q.question_category_id)
-        : null;
+      updateForm.question_definition_ids = q.question_definition_ids
+        ? q.question_definition_ids.map((id) => Number(id))
+        : [];
+      updateForm.solution_idea_ids = q.solution_idea_ids
+        ? q.solution_idea_ids.map((id) => Number(id))
+        : [];
+      updateForm.question_category_ids = q.question_category_ids
+        ? q.question_category_ids.map((id) => Number(id))
+        : [];
       updateForm.difficulty_level = q.difficulty_level
         ? Number(q.difficulty_level)
         : null;
@@ -2222,39 +2670,6 @@ export default {
         if (currentKnowledge) {
           selectedUpdateFormKnowledgePoint.value = currentKnowledge;
           updateFormKnowledgeSearch.value = currentKnowledge.name;
-        }
-      }
-
-      // 设置问题定义
-      if (q.question_definition_id) {
-        const currentQuestionDefinition = questionDefinitionList.value.find(
-          (item) => item.id === Number(q.question_definition_id)
-        );
-        if (currentQuestionDefinition) {
-          selectedUpdateFormQuestionDefinition.value = currentQuestionDefinition;
-          updateFormQuestionDefinitionSearch.value = currentQuestionDefinition.name;
-        }
-      }
-
-      // 设置解题思想
-      if (q.solution_idea_id) {
-        const currentSolutionIdea = solutionIdeaList.value.find(
-          (item) => item.id === Number(q.solution_idea_id)
-        );
-        if (currentSolutionIdea) {
-          selectedUpdateFormSolutionIdea.value = currentSolutionIdea;
-          updateFormSolutionIdeaSearch.value = currentSolutionIdea.name;
-        }
-      }
-
-      // 设置问题类别
-      if (q.question_category_id) {
-        const currentQuestionCategory = questionCategoryList.value.find(
-          (item) => item.id === Number(q.question_category_id)
-        );
-        if (currentQuestionCategory) {
-          selectedUpdateFormQuestionCategory.value = currentQuestionCategory;
-          updateFormQuestionCategorySearch.value = currentQuestionCategory.name;
         }
       }
 
@@ -2321,9 +2736,6 @@ export default {
       updateFormQuestionCategorySearch.value = "";
       updateFormSubKnowledgeSearch.value = "";
       selectedUpdateFormKnowledgePoint.value = null;
-      selectedUpdateFormQuestionDefinition.value = null;
-      selectedUpdateFormSolutionIdea.value = null;
-      selectedUpdateFormQuestionCategory.value = null;
       updateQuestionTypeError.value = false;
       updateTitlePreview.value = "";
       updateAnswerPreview.value = "";
@@ -2421,14 +2833,18 @@ export default {
           marking_type: form.marking_type,
           knowledge_point:
             form.knowledge_point !== null ? Number(form.knowledge_point) : null,
-          question_definition_id:
-            form.question_definition_id !== null
-              ? Number(form.question_definition_id)
+          question_definition_ids:
+            form.question_definition_ids.length > 0
+              ? form.question_definition_ids.map((id) => Number(id))
               : null,
-          solution_idea_id:
-            form.solution_idea_id !== null ? Number(form.solution_idea_id) : null,
-          question_category_id:
-            form.question_category_id !== null ? Number(form.question_category_id) : null,
+          solution_idea_ids:
+            form.solution_idea_ids.length > 0
+              ? form.solution_idea_ids.map((id) => Number(id))
+              : null,
+          question_category_ids:
+            form.question_category_ids.length > 0
+              ? form.question_category_ids.map((id) => Number(id))
+              : null,
           difficulty_level:
             form.difficulty_level !== null ? Number(form.difficulty_level) : null,
           title: form.title,
@@ -2532,17 +2948,17 @@ export default {
             updateForm.knowledge_point !== null
               ? Number(updateForm.knowledge_point)
               : null,
-          question_definition_id:
-            updateForm.question_definition_id !== null
-              ? Number(updateForm.question_definition_id)
+          question_definition_ids:
+            updateForm.question_definition_ids.length > 0
+              ? updateForm.question_definition_ids.map((id) => Number(id))
               : null,
-          solution_idea_id:
-            updateForm.solution_idea_id !== null
-              ? Number(updateForm.solution_idea_id)
+          solution_idea_ids:
+            updateForm.solution_idea_ids.length > 0
+              ? updateForm.solution_idea_ids.map((id) => Number(id))
               : null,
-          question_category_id:
-            updateForm.question_category_id !== null
-              ? Number(updateForm.question_category_id)
+          question_category_ids:
+            updateForm.question_category_ids.length > 0
+              ? updateForm.question_category_ids.map((id) => Number(id))
               : null,
           difficulty_level:
             updateForm.difficulty_level !== null
@@ -2588,6 +3004,18 @@ export default {
           payload.knowledge_points = searchCriteria.knowledge_points.map((id) =>
             Number(id)
           );
+        if (searchCriteria.question_definition_ids.length > 0)
+          payload.question_definition_ids = searchCriteria.question_definition_ids.map(
+            (id) => Number(id)
+          );
+        if (searchCriteria.solution_idea_ids.length > 0)
+          payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
+            Number(id)
+          );
+        if (searchCriteria.question_category_ids.length > 0)
+          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
+            Number(id)
+          );
         if (searchCriteria.difficulty_level !== null)
           payload.difficulty_level = Number(searchCriteria.difficulty_level);
         if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
@@ -2619,10 +3047,10 @@ export default {
         notes: "",
         remark: "",
         sub_knowledge_point: [],
+        question_definition_ids: [],
+        solution_idea_ids: [],
+        question_category_ids: [],
         img_url: "",
-        question_definition_id: null,
-        solution_idea_id: null,
-        question_category_id: null,
       });
       singleAnswerIndex.value = null;
       knowledgeSearch.value = "";
@@ -2632,9 +3060,6 @@ export default {
       questionCategorySearch.value = "";
       pendingImageFile.value = null;
       selectedKnowledgePoint.value = null;
-      selectedQuestionDefinition.value = null;
-      selectedSolutionIdea.value = null;
-      selectedQuestionCategory.value = null;
       questionTypeError.value = false;
       titlePreview.value = "";
       answerPreview.value = "";
@@ -2648,13 +3073,22 @@ export default {
       showUpdateForm.value = false;
       selectedQuestion.value = null;
       updateKnowledgeSearch.value = "";
+      updateQuestionDefinitionSearch.value = "";
+      updateSolutionIdeaSearch.value = "";
+      updateQuestionCategorySearch.value = "";
       searchCriteria.knowledge_points = [];
+      searchCriteria.question_definition_ids = [];
+      searchCriteria.solution_idea_ids = [];
+      searchCriteria.question_category_ids = [];
       hasSearched.value = false;
       Object.assign(searchCriteria, {
         grade_id: null,
         subject_id: null,
         question_type: null,
         knowledge_points: [],
+        question_definition_ids: [],
+        solution_idea_ids: [],
+        question_category_ids: [],
         difficulty_level: null,
         title: "",
       });
@@ -2770,6 +3204,9 @@ export default {
       filteredSolutionIdeas,
       filteredQuestionCategories,
       selectedSubKnowledgePoints,
+      selectedQuestionDefinitions,
+      selectedSolutionIdeas,
+      selectedQuestionCategories,
       uploadKnowledgePoint,
       uploadSubKnowledgePoint,
       uploadQuestionDefinition,
@@ -2801,12 +3238,18 @@ export default {
       getQuestionTypeName,
       getMarkingTypeName,
       updateKnowledgeSearch,
+      updateQuestionDefinitionSearch,
+      updateSolutionIdeaSearch,
+      updateQuestionCategorySearch,
       updateFormKnowledgeSearch,
       updateFormQuestionDefinitionSearch,
       updateFormSolutionIdeaSearch,
       updateFormQuestionCategorySearch,
       updateFormSubKnowledgeSearch,
       filteredUpdateKnowledgePoints,
+      filteredUpdateQuestionDefinitions,
+      filteredUpdateSolutionIdeas,
+      filteredUpdateQuestionCategories,
       filteredUpdateFormKnowledgePoints,
       filteredUpdateFormQuestionDefinitions,
       filteredUpdateFormSolutionIdeas,
@@ -2818,6 +3261,9 @@ export default {
       filterSolutionIdeas,
       filterQuestionCategories,
       filterUpdateKnowledgePoints,
+      filterUpdateQuestionDefinitions,
+      filterUpdateSolutionIdeas,
+      filterUpdateQuestionCategories,
       filterUpdateFormKnowledgePoints,
       filterUpdateFormQuestionDefinitions,
       filterUpdateFormSolutionIdeas,
@@ -2826,25 +3272,40 @@ export default {
       selectKnowledgePoint,
       clearKnowledgePoint,
       selectQuestionDefinition,
-      clearQuestionDefinition,
+      removeQuestionDefinition,
+      isQuestionDefinitionSelected,
       selectSolutionIdea,
-      clearSolutionIdea,
+      removeSolutionIdea,
+      isSolutionIdeaSelected,
       selectQuestionCategory,
-      clearQuestionCategory,
+      removeQuestionCategory,
+      isQuestionCategorySelected,
       selectSubKnowledgePoint,
       removeSubKnowledgePoint,
       isSubKnowledgeSelected,
       selectUpdateKnowledgePoint,
       removeUpdateKnowledgePoint,
       isUpdateKnowledgeSelected,
+      selectUpdateQuestionDefinition,
+      removeUpdateQuestionDefinition,
+      isUpdateQuestionDefinitionSelected,
+      selectUpdateSolutionIdea,
+      removeUpdateSolutionIdea,
+      isUpdateSolutionIdeaSelected,
+      selectUpdateQuestionCategory,
+      removeUpdateQuestionCategory,
+      isUpdateQuestionCategorySelected,
       selectUpdateFormKnowledgePoint,
       clearUpdateFormKnowledgePoint,
       selectUpdateFormQuestionDefinition,
-      clearUpdateFormQuestionDefinition,
+      removeUpdateFormQuestionDefinition,
+      isUpdateFormQuestionDefinitionSelected,
       selectUpdateFormSolutionIdea,
-      clearUpdateFormSolutionIdea,
+      removeUpdateFormSolutionIdea,
+      isUpdateFormSolutionIdeaSelected,
       selectUpdateFormQuestionCategory,
-      clearUpdateFormQuestionCategory,
+      removeUpdateFormQuestionCategory,
+      isUpdateFormQuestionCategorySelected,
       selectUpdateFormSubKnowledgePoint,
       removeUpdateFormSubKnowledgePoint,
       isUpdateFormSubKnowledgeSelected,
@@ -2854,6 +3315,9 @@ export default {
       showSolutionIdeaDropdown,
       showQuestionCategoryDropdown,
       showUpdateKnowledgeDropdown,
+      showUpdateQuestionDefinitionDropdown,
+      showUpdateSolutionIdeaDropdown,
+      showUpdateQuestionCategoryDropdown,
       showUpdateFormKnowledgeDropdown,
       showUpdateFormQuestionDefinitionDropdown,
       showUpdateFormSolutionIdeaDropdown,
@@ -2865,20 +3329,23 @@ export default {
       onSolutionIdeaBlur,
       onQuestionCategoryBlur,
       onUpdateKnowledgeBlur,
+      onUpdateQuestionDefinitionBlur,
+      onUpdateSolutionIdeaBlur,
+      onUpdateQuestionCategoryBlur,
       onUpdateFormKnowledgeBlur,
       onUpdateFormQuestionDefinitionBlur,
       onUpdateFormSolutionIdeaBlur,
       onUpdateFormQuestionCategoryBlur,
       onUpdateFormSubKnowledgeBlur,
       selectedKnowledgePoint,
-      selectedQuestionDefinition,
-      selectedSolutionIdea,
-      selectedQuestionCategory,
       selectedUpdateFormKnowledgePoint,
-      selectedUpdateFormQuestionDefinition,
-      selectedUpdateFormSolutionIdea,
-      selectedUpdateFormQuestionCategory,
       selectedUpdateKnowledgePoints,
+      selectedUpdateQuestionDefinitions,
+      selectedUpdateSolutionIdeas,
+      selectedUpdateQuestionCategories,
+      selectedUpdateFormQuestionDefinitions,
+      selectedUpdateFormSolutionIdeas,
+      selectedUpdateFormQuestionCategories,
       selectedUpdateFormSubKnowledgePoints,
       hasSearched,
       updateFormRef,
@@ -3013,32 +3480,38 @@ export default {
 .results-table {
   min-width: 1600px;
   width: 100%;
-  display: table;
-  border-collapse: collapse;
+  display: flex;
+  flex-direction: column;
 }
 
 .table-header,
 .table-row {
-  display: table-row;
+  display: flex;
+  align-items: center; /* 垂直居中 */
+  justify-content: center;
 }
 
 .table-header {
-  background-color: #f5f7fa;
+  background-color: #d6f0ff;
   font-weight: 600;
 }
 
 .table-cell {
-  display: table-cell;
+  display: flex;
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
   padding: 12px 8px;
   font-size: 14px;
   color: #606266;
-  vertical-align: middle;
+  box-sizing: border-box;
   text-align: center;
+  word-break: break-word;
 }
 
 .table-header .table-cell {
-  text-align: center;
   font-weight: 600;
+  justify-content: center;
+  align-items: center;
 }
 
 .table-row {
@@ -3081,8 +3554,6 @@ export default {
 .title-cell {
   word-break: break-word;
   line-height: 1.4;
-  max-width: 400px;
-  min-width: 300px;
   text-align: left;
 }
 
@@ -3722,65 +4193,51 @@ export default {
 }
 
 /* 调整表格列宽设置 */
+/* 按顺序指定每列固定宽度 */
 .table-cell:nth-child(1) {
-  width: 60px;
+  width: 40px;
 }
-
 .table-cell:nth-child(2) {
   width: 120px;
 }
-
 .table-cell:nth-child(3) {
   width: 80px;
 }
-
 .table-cell:nth-child(4) {
+  width: 80px;
+}
+.table-cell:nth-child(5) {
   width: 100px;
 }
-
-.table-cell:nth-child(5) {
-  width: 80px;
-}
-
 .table-cell:nth-child(6) {
-  width: 80px;
+  width: 100px;
 }
-
 .table-cell:nth-child(7) {
   width: 150px;
 }
-
 .table-cell:nth-child(8) {
   width: 120px;
 }
-
 .table-cell:nth-child(9) {
   width: 120px;
 }
-
 .table-cell:nth-child(10) {
   width: 120px;
 }
-
 .table-cell:nth-child(11) {
   width: 150px;
 }
-
 .table-cell:nth-child(12) {
   width: 60px;
 }
-
 .table-cell:nth-child(13) {
-  min-width: 300px;
-  max-width: 400px;
+  width: 280px;
 }
-
 .table-cell:nth-child(14) {
   width: 80px;
 }
-
 .table-cell:nth-child(15) {
-  width: 120px;
+  width: 80px;
 }
 
 .table-row {
