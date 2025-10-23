@@ -1,46 +1,56 @@
 <template>
+  <!-- 主容器 -->
   <div class="container">
+    <!-- 页面标题 -->
     <h1>教育题库管理系统</h1>
+
+    <!-- 退出登录按钮 -->
     <button @click="confirmLogout" class="logout-btn">
       <span class="logout-icon"></span>
       退出登录
     </button>
+
+    <!-- 模式选择：上传题目 vs 更新题目 -->
     <div class="mode-select">
+      <!-- 上传题目按钮 -->
       <button :class="{ active: !updateMode }" @click="exitUpdateMode" type="button">
         上传题目
       </button>
+      <!-- 更新题目按钮 -->
       <button :class="{ active: updateMode }" @click="enterUpdateMode" type="button">
         更新题目
       </button>
     </div>
 
-    <!-- 上传题目表单 -->
+    <!-- ==================== 上传题目表单部分 ==================== -->
     <section v-if="!updateMode" class="form-section">
       <h2>上传题目</h2>
       <form @submit.prevent="handleSubmit">
-        <!-- 学校 -->
+        <!-- 学校选择 -->
         <div class="form-group">
           <label class="form-label">学校：</label>
           <select v-model="form.school_id" class="form-select">
             <option :value="null">全部</option>
+            <!-- 遍历学校列表 -->
             <option v-for="school in schoolList" :key="school.id" :value="school.id">
               {{ school.name }}
             </option>
           </select>
         </div>
 
-        <!-- 科目 -->
+        <!-- 科目选择 -->
         <div class="form-group">
           <label class="form-label">科目：</label>
           <select v-model="form.subject_id" class="form-select">
             <option :value="null">全部</option>
+            <!-- 遍历科目列表 -->
             <option v-for="sub in subjectList" :key="sub.id" :value="sub.id">
               {{ sub.name }}
             </option>
           </select>
         </div>
 
-        <!-- 题型 -->
+        <!-- 题型选择 -->
         <div class="form-group">
           <label class="form-label required">题型：</label>
           <select
@@ -55,12 +65,14 @@
             <option value="MULTIPLE">多选题</option>
             <option value="SUBJECTIVE">主观题</option>
           </select>
+          <!-- 错误提示 -->
           <div v-if="questionTypeError" class="error-message">请选择题型</div>
         </div>
 
-        <!-- 题目内容 -->
+        <!-- 题目内容输入区域 -->
         <div class="form-group">
           <label class="form-label required">题目内容：</label>
+          <!-- 题目内容文本域 -->
           <textarea
             v-model="form.title"
             placeholder="请输入题干，数学公式使用 $公式$ "
@@ -69,12 +81,14 @@
             @input="renderMathPreview('title', form.title)"
             required
           ></textarea>
+          <!-- 数学公式预览 -->
           <div class="math-preview" v-html="titlePreview"></div>
 
-          <!-- 图片上传（题干图片） -->
+          <!-- 图片上传区域 -->
           <div class="image-upload-section">
             <label class="form-label">题干图片：</label>
             <div class="upload-controls">
+              <!-- 文件输入（隐藏） -->
               <input
                 type="file"
                 @change="handleImageUpload"
@@ -82,6 +96,7 @@
                 class="file-input"
                 ref="fileInput"
               />
+              <!-- 触发文件选择的按钮 -->
               <button
                 type="button"
                 @click="$refs.fileInput.click()"
@@ -90,6 +105,7 @@
                 选择图片
               </button>
             </div>
+            <!-- 图片预览 -->
             <div v-if="form.img_url" class="image-preview">
               <img :src="form.img_url" alt="预览" class="preview-image" />
               <button type="button" @click="removeImage" class="btn-remove">
@@ -99,13 +115,15 @@
           </div>
         </div>
 
-        <!-- 选择题选项 -->
+        <!-- 选择题选项区域（仅在选择题型时显示） -->
         <div v-if="showOptions" class="form-group">
           <label class="form-label">选项：</label>
           <div class="options-list">
+            <!-- 遍历选项列表 -->
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
               <div class="option-input-container">
+                <!-- 选项文本输入 -->
                 <input
                   type="text"
                   v-model="opt.text"
@@ -114,9 +132,11 @@
                   @input="renderOptionPreview(index, opt.text)"
                   required
                 />
+                <!-- 选项数学公式预览 -->
                 <div class="math-preview small" v-html="optionPreviews[index]"></div>
               </div>
               <div class="option-actions">
+                <!-- 单选题正确答案选择 -->
                 <template v-if="form.question_type === 'SINGLE'">
                   <input
                     type="radio"
@@ -131,6 +151,7 @@
                     >正确答案</label
                   >
                 </template>
+                <!-- 多选题正确答案选择 -->
                 <template v-else-if="form.question_type === 'MULTIPLE'">
                   <input
                     type="checkbox"
@@ -142,6 +163,7 @@
                     >正确答案</label
                   >
                 </template>
+                <!-- 删除选项按钮 -->
                 <button
                   type="button"
                   @click="removeOption(index)"
@@ -153,10 +175,11 @@
               </div>
             </div>
           </div>
+          <!-- 添加选项按钮 -->
           <button type="button" @click="addOption" class="btn-secondary">添加选项</button>
         </div>
 
-        <!-- 主观题答案 -->
+        <!-- 主观题答案区域 -->
         <div v-if="form.question_type === 'SUBJECTIVE'" class="form-group">
           <label class="form-label required">参考答案：</label>
           <textarea
@@ -170,7 +193,7 @@
           <div class="math-preview" v-html="answerPreview"></div>
         </div>
 
-        <!-- 解析 -->
+        <!-- 解析输入区域 -->
         <div class="form-group">
           <label class="form-label">解析：</label>
           <textarea
@@ -183,9 +206,10 @@
           <div class="math-preview" v-html="notesPreview"></div>
         </div>
 
-        <!-- 知识点 -->
+        <!-- 知识点选择区域 -->
         <div class="form-group">
           <label class="form-label">知识点：</label>
+          <!-- 可搜索的下拉选择 -->
           <div class="searchable-select">
             <input
               type="text"
@@ -196,6 +220,7 @@
               @focus="showKnowledgeDropdown = true"
               @blur="onKnowledgeBlur"
             />
+            <!-- 知识点下拉列表 -->
             <div
               v-if="showKnowledgeDropdown && filteredKnowledgePoints.length"
               class="dropdown-list"
@@ -210,12 +235,14 @@
               </div>
             </div>
           </div>
+          <!-- 已选择的知识点显示 -->
           <div class="selected-item" v-if="selectedKnowledgePoint">
             已选择: {{ selectedKnowledgePoint.name }}
             <button type="button" @click="clearKnowledgePoint" class="btn-remove">
               清除
             </button>
           </div>
+          <!-- 新建知识点输入 -->
           <div class="new-knowledge-input">
             <input
               type="text"
@@ -235,7 +262,7 @@
           </div>
         </div>
 
-        <!-- 子知识点 -->
+        <!-- 子知识点选择区域（结构与知识点类似） -->
         <div class="form-group">
           <label class="form-label">子知识点：</label>
           <div class="searchable-select">
@@ -259,10 +286,12 @@
                 @mousedown="selectSubKnowledgePoint(kp)"
               >
                 {{ kp.name }}
+                <!-- 已选择标记 -->
                 <span v-if="isSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
               </div>
             </div>
           </div>
+          <!-- 已选择的子知识点标签显示 -->
           <div class="selected-items" v-if="selectedSubKnowledgePoints.length">
             <span class="selected-tags-label">已选择：</span>
             <span
@@ -274,6 +303,7 @@
               {{ kp.name }} ×
             </span>
           </div>
+          <!-- 新建子知识点输入 -->
           <div class="new-knowledge-input">
             <input
               type="text"
@@ -293,7 +323,7 @@
           </div>
         </div>
 
-        <!-- 问题定义 -->
+        <!-- 问题定义选择区域（结构与知识点类似） -->
         <div class="form-group">
           <label class="form-label">问题定义：</label>
           <div class="searchable-select">
@@ -353,7 +383,7 @@
           </div>
         </div>
 
-        <!-- 解题思想 -->
+        <!-- 解题思想选择区域（结构与知识点类似） -->
         <div class="form-group">
           <label class="form-label">解题思想：</label>
           <div class="searchable-select">
@@ -413,7 +443,7 @@
           </div>
         </div>
 
-        <!-- 问题类别 -->
+        <!-- 问题类别选择区域（结构与知识点类似） -->
         <div class="form-group">
           <label class="form-label">问题类别：</label>
           <div class="searchable-select">
@@ -473,16 +503,17 @@
           </div>
         </div>
 
-        <!-- 难度 -->
+        <!-- 难度选择 -->
         <div class="form-group">
           <label class="form-label">难度：</label>
           <select v-model="form.difficulty_level" class="form-select">
             <option :value="null">暂无难度评级</option>
+            <!-- 1-5星难度选项 -->
             <option v-for="n in 5" :key="n" :value="n">{{ n }} 星</option>
           </select>
         </div>
 
-        <!-- 评分方法 -->
+        <!-- 评分方法选择 -->
         <div class="form-group">
           <label class="form-label">评分方法：</label>
           <select v-model="form.marking_type" class="form-select">
@@ -500,12 +531,13 @@
       </form>
     </section>
 
-    <!-- 更新题目界面 -->
+    <!-- ==================== 更新题目界面 ==================== -->
     <section v-if="updateMode" class="update-section">
-      <!-- 检索条件 -->
+      <!-- 检索条件区域 -->
       <div class="search-criteria">
         <h2>检索题目</h2>
         <div class="criteria-row">
+          <!-- 年级筛选 -->
           <div class="criteria-item">
             <label>年级：</label>
             <select v-model="searchCriteria.grade_id" class="form-select">
@@ -516,6 +548,7 @@
             </select>
           </div>
 
+          <!-- 科目筛选 -->
           <div class="criteria-item">
             <label>科目：</label>
             <select v-model="searchCriteria.subject_id" class="form-select">
@@ -526,6 +559,7 @@
             </select>
           </div>
 
+          <!-- 题型筛选 -->
           <div class="criteria-item">
             <label>题型：</label>
             <select v-model="searchCriteria.question_type" class="form-select">
@@ -536,7 +570,7 @@
             </select>
           </div>
 
-          <!-- 知识点（多选） -->
+          <!-- 知识点筛选（多选） -->
           <div class="criteria-item">
             <label>知识点：</label>
             <div class="searchable-select">
@@ -579,7 +613,7 @@
             </div>
           </div>
 
-          <!-- 问题定义（多选） -->
+          <!-- 问题定义筛选（多选） -->
           <div class="criteria-item">
             <label>问题定义：</label>
             <div class="searchable-select">
@@ -627,7 +661,7 @@
             </div>
           </div>
 
-          <!-- 解题思想（多选） -->
+          <!-- 解题思想筛选（多选） -->
           <div class="criteria-item">
             <label>解题思想：</label>
             <div class="searchable-select">
@@ -672,7 +706,7 @@
             </div>
           </div>
 
-          <!-- 问题类别（多选） -->
+          <!-- 问题类别筛选（多选） -->
           <div class="criteria-item">
             <label>问题类别：</label>
             <div class="searchable-select">
@@ -720,6 +754,7 @@
             </div>
           </div>
 
+          <!-- 难度筛选 -->
           <div class="criteria-item">
             <label>难度：</label>
             <select v-model="searchCriteria.difficulty_level" class="form-select">
@@ -728,6 +763,7 @@
             </select>
           </div>
 
+          <!-- 题目内容关键词搜索 -->
           <div class="criteria-item">
             <label>题目内容：</label>
             <input
@@ -738,17 +774,19 @@
             />
           </div>
 
+          <!-- 检索按钮 -->
           <div class="criteria-item">
             <button @click="findQuestions" class="btn-primary search-btn">检索</button>
           </div>
         </div>
       </div>
 
-      <!-- 检索结果 -->
+      <!-- 检索结果区域 -->
       <div v-if="questionList.length" class="search-results">
         <h3>检索结果 (共 {{ questionList.length }} 条)</h3>
         <div class="results-table-container">
           <div class="results-table">
+            <!-- 表格头部 -->
             <div class="table-header">
               <div class="table-cell">ID</div>
               <div class="table-cell">学校</div>
@@ -766,6 +804,7 @@
               <div class="table-cell">图片</div>
               <div class="table-cell">操作</div>
             </div>
+            <!-- 表格数据行 -->
             <div v-for="q in questionList" :key="q.id" class="table-row">
               <div class="table-cell">{{ q.id }}</div>
               <div class="table-cell">{{ getSchoolName(q.school_id) }}</div>
@@ -774,6 +813,7 @@
               <div class="table-cell">{{ getQuestionTypeName(q.question_type) }}</div>
               <div class="table-cell">{{ getMarkingTypeName(q.marking_type) }}</div>
               <div class="table-cell">{{ getKnowledgePointName(q.knowledge_point) }}</div>
+              <!-- 问题定义单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
                   v-for="defId in q.question_definition_ids"
@@ -789,7 +829,7 @@
                   无
                 </span>
               </div>
-              <!-- 解题思想列 - 改为多选显示 -->
+              <!-- 解题思想单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
                   v-for="ideaId in q.solution_idea_ids || []"
@@ -805,6 +845,7 @@
                   无
                 </span>
               </div>
+              <!-- 问题类别单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
                   v-for="catId in q.question_category_ids || []"
@@ -819,6 +860,7 @@
                   >无</span
                 >
               </div>
+              <!-- 子知识点单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
                   v-for="subId in q.sub_knowledge_point || []"
@@ -835,7 +877,9 @@
                 </span>
               </div>
               <div class="table-cell">{{ q.difficulty_level }}星</div>
+              <!-- 题目内容单元格（截断显示） -->
               <div class="table-cell title-cell">{{ q.title }}</div>
+              <!-- 图片预览单元格 -->
               <div class="table-cell image-cell">
                 <img
                   v-if="q.img_url"
@@ -846,6 +890,7 @@
                 />
                 <span v-else class="no-image">-</span>
               </div>
+              <!-- 操作按钮单元格 -->
               <div class="table-cell actions-cell">
                 <button @click="loadQuestionForUpdate(q)" class="btn-update">更新</button>
                 <button @click="confirmDelete(q)" class="btn-delete">删除</button>
@@ -860,7 +905,7 @@
         <p>暂无相关题目</p>
       </div>
 
-      <!-- 更新题目表单 -->
+      <!-- 更新题目表单（选中题目后显示） -->
       <div
         v-if="selectedQuestion && showUpdateForm"
         class="update-form-section"
@@ -868,7 +913,7 @@
       >
         <h3>更新题目 (ID: {{ selectedQuestion.id }})</h3>
         <form @submit.prevent="handleUpdateSubmit" class="update-form">
-          <!-- 学校 -->
+          <!-- 学校选择 -->
           <div class="form-group">
             <label class="form-label required">学校：</label>
             <select v-model="updateForm.school_id" class="form-select" required>
@@ -879,7 +924,7 @@
             </select>
           </div>
 
-          <!-- 年级 -->
+          <!-- 年级选择 -->
           <div class="form-group">
             <label class="form-label required">年级：</label>
             <select v-model="updateForm.grade_id" class="form-select" required>
@@ -890,7 +935,7 @@
             </select>
           </div>
 
-          <!-- 科目 -->
+          <!-- 科目选择 -->
           <div class="form-group">
             <label class="form-label required">科目：</label>
             <select v-model="updateForm.subject_id" class="form-select" required>
@@ -901,7 +946,7 @@
             </select>
           </div>
 
-          <!-- 题型 -->
+          <!-- 题型选择 -->
           <div class="form-group">
             <label class="form-label required">题型：</label>
             <select
@@ -919,7 +964,7 @@
             <div v-if="updateQuestionTypeError" class="error-message">请选择题型</div>
           </div>
 
-          <!-- 评分方法 -->
+          <!-- 评分方法选择 -->
           <div class="form-group">
             <label class="form-label required">评分方法：</label>
             <select v-model="updateForm.marking_type" class="form-select" required>
@@ -928,7 +973,7 @@
             </select>
           </div>
 
-          <!-- 知识点 -->
+          <!-- 知识点选择 -->
           <div class="form-group">
             <label class="form-label">知识点：</label>
             <div class="searchable-select">
@@ -970,7 +1015,7 @@
             </div>
           </div>
 
-          <!-- 问题定义 -->
+          <!-- 问题定义选择 -->
           <div class="form-group">
             <label class="form-label">问题定义：</label>
             <div class="searchable-select">
@@ -1021,7 +1066,7 @@
             </div>
           </div>
 
-          <!-- 解题思想 -->
+          <!-- 解题思想选择 -->
           <div class="form-group">
             <label class="form-label">解题思想：</label>
             <div class="searchable-select">
@@ -1069,7 +1114,7 @@
             </div>
           </div>
 
-          <!-- 问题类别 -->
+          <!-- 问题类别选择 -->
           <div class="form-group">
             <label class="form-label">问题类别：</label>
             <div class="searchable-select">
@@ -1120,7 +1165,7 @@
             </div>
           </div>
 
-          <!-- 难度 -->
+          <!-- 难度选择 -->
           <div class="form-group">
             <label class="form-label">难度：</label>
             <select v-model="updateForm.difficulty_level" class="form-select" required>
@@ -1142,7 +1187,7 @@
             ></textarea>
             <div class="math-preview" v-html="updateTitlePreview"></div>
 
-            <!-- 图片上传（题干图片） -->
+            <!-- 图片上传 -->
             <div class="image-upload-section">
               <label class="form-label">题干图片：</label>
               <div class="upload-controls">
@@ -1195,6 +1240,7 @@
                   ></div>
                 </div>
                 <div class="option-actions">
+                  <!-- 单选题答案选择 -->
                   <template v-if="updateForm.question_type === 'SINGLE'">
                     <input
                       type="radio"
@@ -1209,6 +1255,7 @@
                       >正确答案</label
                     >
                   </template>
+                  <!-- 多选题答案选择 -->
                   <template v-else-if="updateForm.question_type === 'MULTIPLE'">
                     <input
                       type="checkbox"
@@ -1220,6 +1267,7 @@
                       >正确答案</label
                     >
                   </template>
+                  <!-- 删除选项按钮 -->
                   <button
                     type="button"
                     @click="removeUpdateOption(index)"
@@ -1231,6 +1279,7 @@
                 </div>
               </div>
             </div>
+            <!-- 添加选项按钮 -->
             <button type="button" @click="addUpdateOption" class="btn-secondary">
               添加选项
             </button>
@@ -1263,7 +1312,7 @@
             <div class="math-preview" v-html="updateNotesPreview"></div>
           </div>
 
-          <!-- 子知识点 -->
+          <!-- 子知识点选择 -->
           <div class="form-group">
             <label class="form-label">子知识点：</label>
             <div class="searchable-select">
@@ -1314,7 +1363,7 @@
             </div>
           </div>
 
-          <!-- 提交按钮 -->
+          <!-- 更新操作按钮 -->
           <div class="form-actions">
             <button type="submit" class="btn-primary submit-btn" :disabled="submitting">
               {{ submitting ? "更新中..." : "更新题目" }}
@@ -1327,7 +1376,7 @@
       </div>
     </section>
 
-    <!-- 删除确认对话框 -->
+    <!-- ==================== 删除确认对话框 ==================== -->
     <div v-if="showDeleteConfirm" class="modal-overlay">
       <div class="modal-content">
         <h3>确认删除</h3>
@@ -1339,7 +1388,7 @@
       </div>
     </div>
 
-    <!-- 图片预览模态框 -->
+    <!-- ==================== 图片预览模态框 ==================== -->
     <div v-if="showImagePreview" class="modal-overlay" @click="closeImagePreview">
       <div class="image-preview-modal" @click.stop>
         <img :src="previewImageUrl" alt="预览" class="full-size-image" />
@@ -1347,7 +1396,7 @@
       </div>
     </div>
 
-    <!-- 统一弹窗提示 -->
+    <!-- ==================== 统一弹窗提示 ==================== -->
     <div v-if="showAlertModal" class="modal-overlay">
       <div class="alert-modal-content">
         <h3 class="alert-modal-title">{{ alertModalTitle }}</h3>
@@ -1355,7 +1404,8 @@
       </div>
     </div>
   </div>
-  <!-- 退出登录确认对话框 -->
+
+  <!-- ==================== 退出登录确认对话框 ==================== -->
   <div v-if="showLogoutConfirm" class="modal-overlay">
     <div class="modal-content">
       <h3>确认退出</h3>
@@ -1369,35 +1419,42 @@
 </template>
 
 <script>
+// 导入Vue相关功能和依赖
 import { reactive, ref, onMounted, computed, watch, nextTick } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
+// 从环境变量获取API基础URL
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export default {
   setup() {
     const router = useRouter();
 
-    // 数学公式预览相关状态
-    const titlePreview = ref("");
-    const answerPreview = ref("");
-    const notesPreview = ref("");
-    const optionPreviews = ref(Array(10).fill(""));
+    // ==================== 数学公式预览相关状态 ====================
+    // 上传界面的数学公式预览
+    const titlePreview = ref(""); // 题目内容预览
+    const answerPreview = ref(""); // 答案预览
+    const notesPreview = ref(""); // 解析预览
+    const optionPreviews = ref(Array(10).fill("")); // 选项预览数组
 
-    // 更新界面的预览
+    // 更新界面的数学公式预览
     const updateTitlePreview = ref("");
     const updateAnswerPreview = ref("");
     const updateNotesPreview = ref("");
     const updateOptionPreviews = ref(Array(10).fill(""));
 
-    // 弹窗相关状态
-    const showAlertModal = ref(false);
-    const alertModalTitle = ref("");
-    const alertModalMessage = ref("");
-    const alertModalTimer = ref(null);
+    // ==================== 弹窗和提示相关状态 ====================
+    const showAlertModal = ref(false); // 是否显示提示弹窗
+    const alertModalTitle = ref(""); // 弹窗标题
+    const alertModalMessage = ref(""); // 弹窗消息
+    const alertModalTimer = ref(null); // 弹窗定时器
 
-    // 显示弹窗的方法
+    /**
+     * 显示提示弹窗
+     * @param {string} title - 弹窗标题
+     * @param {string} message - 弹窗消息
+     */
     const showAlert = (title, message) => {
       alertModalTitle.value = title;
       alertModalMessage.value = message;
@@ -1414,15 +1471,25 @@ export default {
       }, 1000);
     };
 
-    const showLogoutConfirm = ref(false);
+    // ==================== 退出登录相关状态 ====================
+    const showLogoutConfirm = ref(false); // 退出登录确认框显示状态
 
+    /**
+     * 确认退出登录
+     */
     const confirmLogout = () => {
       showLogoutConfirm.value = true;
     };
 
+    /**
+     * 处理退出登录
+     */
     const handleLogout = () => {
+      // 清除本地存储的token
       localStorage.removeItem("token");
+      // 清除axios默认请求头中的Authorization
       delete axios.defaults.headers.common["Authorization"];
+      // 显示退出成功提示
       showAlert("退出成功", "已成功退出登录");
       showLogoutConfirm.value = false;
       // 延迟跳转，让用户看到退出成功的提示
@@ -1430,38 +1497,46 @@ export default {
         router.push("/login");
       }, 1500);
     };
+
+    /**
+     * 取消退出登录
+     */
     const cancelLogout = () => {
       showLogoutConfirm.value = false;
     };
 
-    const schoolList = ref([]);
-    const gradeList = ref([]);
-    const subjectList = ref([]);
-    const knowledgePointList = ref([]);
-    const questionDefinitionList = ref([]);
-    const solutionIdeaList = ref([]);
-    const questionCategoryList = ref([]);
+    // ==================== 数据列表状态 ====================
+    const schoolList = ref([]); // 学校列表
+    const gradeList = ref([]); // 年级列表
+    const subjectList = ref([]); // 科目列表
+    const knowledgePointList = ref([]); // 知识点列表
+    const questionDefinitionList = ref([]); // 问题定义列表
+    const solutionIdeaList = ref([]); // 解题思想列表
+    const questionCategoryList = ref([]); // 问题类别列表
 
-    const newKnowledgePoint = ref("");
-    const newSubKnowledgePoint = ref("");
-    const newQuestionDefinition = ref("");
-    const newSolutionIdea = ref("");
-    const newQuestionCategory = ref("");
+    // ==================== 新建内容输入状态 ====================
+    const newKnowledgePoint = ref(""); // 新建知识点输入
+    const newSubKnowledgePoint = ref(""); // 新建子知识点输入
+    const newQuestionDefinition = ref(""); // 新建问题定义输入
+    const newSolutionIdea = ref(""); // 新建解题思想输入
+    const newQuestionCategory = ref(""); // 新建问题类别输入
 
-    const questionList = ref([]);
-    const pendingImageFile = ref(null);
-    const pendingUpdateImageFile = ref(null);
-    const submitting = ref(false);
-    const hasSearched = ref(false);
-    const updateFormRef = ref(null);
-    const showImagePreview = ref(false);
-    const previewImageUrl = ref("");
+    // ==================== 其他状态 ====================
+    const questionList = ref([]); // 题目列表
+    const pendingImageFile = ref(null); // 待上传的图片文件
+    const pendingUpdateImageFile = ref(null); // 更新界面的待上传图片文件
+    const submitting = ref(false); // 提交状态
+    const hasSearched = ref(false); // 是否已进行过搜索
+    const updateFormRef = ref(null); // 更新表单的DOM引用
+    const showImagePreview = ref(false); // 图片预览显示状态
+    const previewImageUrl = ref(""); // 预览图片的URL
 
-    // 题型选择错误状态
-    const questionTypeError = ref(false);
-    const updateQuestionTypeError = ref(false);
+    // ==================== 表单验证状态 ====================
+    const questionTypeError = ref(false); // 题型选择错误状态
+    const updateQuestionTypeError = ref(false); // 更新界面题型选择错误状态
 
-    // 记忆上传设置
+    // ==================== 记忆上传设置 ====================
+    // 从localStorage读取或初始化上传记忆
     const uploadMemory = ref(
       JSON.parse(localStorage.getItem("uploadMemory")) || {
         school_id: null,
@@ -1473,7 +1548,7 @@ export default {
       }
     );
 
-    // 上传题目表单
+    // ==================== 上传题目表单数据 ====================
     const form = reactive({
       id: null,
       school_id: uploadMemory.value.school_id,
@@ -1481,26 +1556,27 @@ export default {
       subject_id: uploadMemory.value.subject_id,
       question_type: uploadMemory.value.question_type,
       marking_type: uploadMemory.value.marking_type,
-      knowledge_point: null,
-      question_definition_ids: [],
-      solution_idea_ids: [],
-      question_category_ids: [],
+      knowledge_point: null, // 知识点ID
+      question_definition_ids: [], // 问题定义ID数组
+      solution_idea_ids: [], // 解题思想ID数组
+      question_category_ids: [], // 问题类别ID数组
       difficulty_level: uploadMemory.value.difficulty_level,
-      title: "",
+      title: "", // 题目内容
       options: [
+        // 选择题选项数组
         { text: "", isAnswer: false },
         { text: "", isAnswer: false },
         { text: "", isAnswer: false },
         { text: "", isAnswer: false },
       ],
-      answer: "",
-      notes: "",
-      remark: "",
-      sub_knowledge_point: [],
-      img_url: "",
+      answer: "", // 答案
+      notes: "", // 解析
+      remark: "", // 备注
+      sub_knowledge_point: [], // 子知识点ID数组
+      img_url: "", // 图片URL
     });
 
-    // 更新题目表单
+    // ==================== 更新题目表单数据 ====================
     const updateForm = reactive({
       id: null,
       school_id: null,
@@ -1527,179 +1603,227 @@ export default {
       img_url: "",
     });
 
-    // 检索条件
+    // ==================== 检索条件 ====================
     const searchCriteria = reactive({
       grade_id: null,
       subject_id: null,
       question_type: null,
-      knowledge_points: [],
-      question_definition_ids: [],
-      solution_idea_ids: [],
-      question_category_ids: [],
+      knowledge_points: [], // 知识点ID数组
+      question_definition_ids: [], // 问题定义ID数组
+      solution_idea_ids: [], // 解题思想ID数组
+      question_category_ids: [], // 问题类别ID数组
       difficulty_level: null,
-      title: "",
+      title: "", // 题目关键词
     });
 
-    const singleAnswerIndex = ref(null);
-    const updateSingleAnswerIndex = ref(null);
-    const updateMode = ref(false);
-    const showUpdateForm = ref(false);
-    const selectedQuestion = ref(null);
-    const showDeleteConfirm = ref(false);
-    const questionToDelete = ref(null);
+    // ==================== 选择题答案索引 ====================
+    const singleAnswerIndex = ref(null); // 单选题正确答案索引
+    const updateSingleAnswerIndex = ref(null); // 更新界面单选题正确答案索引
 
-    // 搜索关键词和下拉框状态
+    // ==================== 界面模式状态 ====================
+    const updateMode = ref(false); // 是否为更新模式
+    const showUpdateForm = ref(false); // 是否显示更新表单
+    const selectedQuestion = ref(null); // 选中的题目
+    const showDeleteConfirm = ref(false); // 删除确认框显示状态
+    const questionToDelete = ref(null); // 待删除的题目
+
+    // ==================== 搜索关键词状态 ====================
+    // 上传界面的搜索关键词
     const knowledgeSearch = ref("");
     const subKnowledgeSearch = ref("");
     const questionDefinitionSearch = ref("");
     const solutionIdeaSearch = ref("");
     const questionCategorySearch = ref("");
 
+    // 更新界面检索条件的搜索关键词
     const updateKnowledgeSearch = ref("");
     const updateQuestionDefinitionSearch = ref("");
     const updateSolutionIdeaSearch = ref("");
     const updateQuestionCategorySearch = ref("");
 
+    // 更新表单的搜索关键词
     const updateFormKnowledgeSearch = ref("");
     const updateFormQuestionDefinitionSearch = ref("");
     const updateFormSolutionIdeaSearch = ref("");
     const updateFormQuestionCategorySearch = ref("");
     const updateFormSubKnowledgeSearch = ref("");
 
-    // 下拉框显示状态
+    // ==================== 下拉框显示状态 ====================
+    // 上传界面的下拉框显示状态
     const showKnowledgeDropdown = ref(false);
     const showSubKnowledgeDropdown = ref(false);
     const showQuestionDefinitionDropdown = ref(false);
     const showSolutionIdeaDropdown = ref(false);
     const showQuestionCategoryDropdown = ref(false);
 
+    // 更新界面检索条件的下拉框显示状态
     const showUpdateKnowledgeDropdown = ref(false);
     const showUpdateQuestionDefinitionDropdown = ref(false);
     const showUpdateSolutionIdeaDropdown = ref(false);
     const showUpdateQuestionCategoryDropdown = ref(false);
 
+    // 更新表单的下拉框显示状态
     const showUpdateFormKnowledgeDropdown = ref(false);
     const showUpdateFormQuestionDefinitionDropdown = ref(false);
     const showUpdateFormSolutionIdeaDropdown = ref(false);
     const showUpdateFormQuestionCategoryDropdown = ref(false);
     const showUpdateFormSubKnowledgeDropdown = ref(false);
 
-    // 选中的对象
-    const selectedKnowledgePoint = ref(null);
-    const selectedUpdateFormKnowledgePoint = ref(null);
+    // ==================== 选中的对象状态 ====================
+    const selectedKnowledgePoint = ref(null); // 选中的知识点
+    const selectedUpdateFormKnowledgePoint = ref(null); // 更新表单选中的知识点
 
-    // 过滤后的列表
+    // ==================== 过滤后的列表状态 ====================
+    // 上传界面的过滤列表
     const filteredKnowledgePoints = ref([]);
     const filteredSubKnowledgePoints = ref([]);
     const filteredQuestionDefinitions = ref([]);
     const filteredSolutionIdeas = ref([]);
     const filteredQuestionCategories = ref([]);
 
+    // 更新界面检索条件的过滤列表
     const filteredUpdateKnowledgePoints = ref([]);
     const filteredUpdateQuestionDefinitions = ref([]);
     const filteredUpdateSolutionIdeas = ref([]);
     const filteredUpdateQuestionCategories = ref([]);
 
+    // 更新表单的过滤列表
     const filteredUpdateFormKnowledgePoints = ref([]);
     const filteredUpdateFormQuestionDefinitions = ref([]);
     const filteredUpdateFormSolutionIdeas = ref([]);
     const filteredUpdateFormQuestionCategories = ref([]);
     const filteredUpdateFormSubKnowledgePoints = ref([]);
 
-    // 计算属性
+    // ==================== 计算属性 ====================
+    /**
+     * 是否显示选择题选项区域
+     */
     const showOptions = computed(
       () => form.question_type === "SINGLE" || form.question_type === "MULTIPLE"
     );
 
+    /**
+     * 更新界面是否显示选择题选项区域
+     */
     const showUpdateOptions = computed(
       () =>
         updateForm.question_type === "SINGLE" || updateForm.question_type === "MULTIPLE"
     );
 
-    // 选中的子知识点对象列表
+    /**
+     * 选中的子知识点对象列表
+     */
     const selectedSubKnowledgePoints = computed(() => {
       return form.sub_knowledge_point
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
         .filter(Boolean);
     });
 
-    // 选中的问题定义对象列表
+    /**
+     * 选中的问题定义对象列表
+     */
     const selectedQuestionDefinitions = computed(() => {
       return form.question_definition_ids
         .map((id) => questionDefinitionList.value.find((q) => q.id === id))
         .filter(Boolean);
     });
 
-    // 选中的解题思想对象列表
+    /**
+     * 选中的解题思想对象列表
+     */
     const selectedSolutionIdeas = computed(() => {
       return form.solution_idea_ids
         .map((id) => solutionIdeaList.value.find((s) => s.id === id))
         .filter(Boolean);
     });
 
-    // 选中的问题类别对象列表
+    /**
+     * 选中的问题类别对象列表
+     */
     const selectedQuestionCategories = computed(() => {
       return form.question_category_ids
         .map((id) => questionCategoryList.value.find((c) => c.id === id))
         .filter(Boolean);
     });
 
-    // 选中的更新界面知识点对象列表
+    /**
+     * 更新界面选中的知识点对象列表
+     */
     const selectedUpdateKnowledgePoints = computed(() => {
       return searchCriteria.knowledge_points
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
         .filter(Boolean);
     });
 
-    // 选中的更新界面问题定义对象列表
+    /**
+     * 更新界面选中的问题定义对象列表
+     */
     const selectedUpdateQuestionDefinitions = computed(() => {
       return searchCriteria.question_definition_ids
         .map((id) => questionDefinitionList.value.find((q) => q.id === id))
         .filter(Boolean);
     });
 
-    // 选中的更新界面解题思想对象列表
+    /**
+     * 更新界面选中的解题思想对象列表
+     */
     const selectedUpdateSolutionIdeas = computed(() => {
       return searchCriteria.solution_idea_ids
         .map((id) => solutionIdeaList.value.find((s) => s.id === id))
         .filter(Boolean);
     });
 
-    // 选中的更新界面问题类别对象列表
+    /**
+     * 更新界面选中的问题类别对象列表
+     */
     const selectedUpdateQuestionCategories = computed(() => {
       return searchCriteria.question_category_ids
         .map((id) => questionCategoryList.value.find((c) => c.id === id))
         .filter(Boolean);
     });
 
-    // 选中的更新表单问题定义对象列表
+    /**
+     * 更新表单选中的问题定义对象列表
+     */
     const selectedUpdateFormQuestionDefinitions = computed(() => {
       return updateForm.question_definition_ids
         .map((id) => questionDefinitionList.value.find((q) => q.id === id))
         .filter(Boolean);
     });
 
-    // 选中的更新表单解题思想对象列表
+    /**
+     * 更新表单选中的解题思想对象列表
+     */
     const selectedUpdateFormSolutionIdeas = computed(() => {
       return updateForm.solution_idea_ids
         .map((id) => solutionIdeaList.value.find((s) => s.id === id))
         .filter(Boolean);
     });
 
-    // 选中的更新表单问题类别对象列表
+    /**
+     * 更新表单选中的问题类别对象列表
+     */
     const selectedUpdateFormQuestionCategories = computed(() => {
       return updateForm.question_category_ids
         .map((id) => questionCategoryList.value.find((c) => c.id === id))
         .filter(Boolean);
     });
 
+    /**
+     * 更新表单选中的子知识点对象列表
+     */
     const selectedUpdateFormSubKnowledgePoints = computed(() => {
       return updateForm.sub_knowledge_point
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
         .filter(Boolean);
     });
 
-    // 数学公式渲染函数
+    // ==================== 数学公式处理函数 ====================
+    /**
+     * 渲染数学公式
+     * @param {string} text - 包含数学公式的文本
+     * @returns {string} 渲染后的HTML
+     */
     const renderMath = (text) => {
       if (!text) return "";
 
@@ -1723,7 +1847,11 @@ export default {
       }
     };
 
-    // 预览渲染函数
+    /**
+     * 渲染数学公式预览
+     * @param {string} type - 预览类型
+     * @param {string} text - 要渲染的文本
+     */
     const renderMathPreview = (type, text) => {
       const preview = renderMath(text);
       switch (type) {
@@ -1748,16 +1876,30 @@ export default {
       }
     };
 
-    // 选项预览渲染
+    /**
+     * 渲染选项数学公式预览
+     * @param {number} index - 选项索引
+     * @param {string} text - 选项文本
+     */
     const renderOptionPreview = (index, text) => {
       optionPreviews.value[index] = renderMath(text);
     };
 
+    /**
+     * 渲染更新界面选项数学公式预览
+     * @param {number} index - 选项索引
+     * @param {string} text - 选项文本
+     */
     const renderUpdateOptionPreview = (index, text) => {
       updateOptionPreviews.value[index] = renderMath(text);
     };
 
-    // 方法
+    // ==================== 选项操作方法 ====================
+    /**
+     * 获取选项标签（A, B, C, ...）
+     * @param {number} index - 选项索引
+     * @returns {string} 选项标签
+     */
     const getOptionLabel = (index) => {
       let label = "";
       let n = index;
@@ -1768,6 +1910,9 @@ export default {
       return label;
     };
 
+    /**
+     * 添加选项
+     */
     const addOption = () => {
       if (form.options.length < 10) {
         form.options.push({ text: "", isAnswer: false });
@@ -1775,6 +1920,10 @@ export default {
       }
     };
 
+    /**
+     * 删除选项
+     * @param {number} index - 要删除的选项索引
+     */
     const removeOption = (index) => {
       if (form.options.length > 2) {
         form.options.splice(index, 1);
@@ -1785,6 +1934,9 @@ export default {
       }
     };
 
+    /**
+     * 更新界面添加选项
+     */
     const addUpdateOption = () => {
       if (updateForm.options.length < 10) {
         updateForm.options.push({ text: "", isAnswer: false });
@@ -1792,6 +1944,10 @@ export default {
       }
     };
 
+    /**
+     * 更新界面删除选项
+     * @param {number} index - 要删除的选项索引
+     */
     const removeUpdateOption = (index) => {
       if (updateForm.options.length > 2) {
         updateForm.options.splice(index, 1);
@@ -1805,7 +1961,12 @@ export default {
       }
     };
 
+    // ==================== 题型变更处理 ====================
+    /**
+     * 处理题型变更
+     */
     const handleQuestionTypeChange = () => {
+      // 重置选项
       form.options = [
         { text: "", isAnswer: false },
         { text: "", isAnswer: false },
@@ -1821,6 +1982,9 @@ export default {
       notesPreview.value = "";
     };
 
+    /**
+     * 处理更新界面题型变更
+     */
     const handleUpdateQuestionTypeChange = () => {
       updateForm.options = [
         { text: "", isAnswer: false },
@@ -1837,7 +2001,11 @@ export default {
       updateNotesPreview.value = "";
     };
 
-    // 知识点选择方法
+    // ==================== 知识点选择方法 ====================
+    /**
+     * 选择知识点
+     * @param {Object} kp - 知识点对象
+     */
     const selectKnowledgePoint = (kp) => {
       selectedKnowledgePoint.value = kp;
       form.knowledge_point = kp.id;
@@ -1845,13 +2013,20 @@ export default {
       showKnowledgeDropdown.value = false;
     };
 
+    /**
+     * 清除知识点选择
+     */
     const clearKnowledgePoint = () => {
       selectedKnowledgePoint.value = null;
       form.knowledge_point = null;
       knowledgeSearch.value = "";
     };
 
-    // 问题定义选择方法
+    // ==================== 问题定义选择方法 ====================
+    /**
+     * 选择问题定义
+     * @param {Object} item - 问题定义对象
+     */
     const selectQuestionDefinition = (item) => {
       if (!form.question_definition_ids.includes(item.id)) {
         form.question_definition_ids.push(item.id);
@@ -1860,17 +2035,30 @@ export default {
       showQuestionDefinitionDropdown.value = false;
     };
 
+    /**
+     * 检查问题定义是否已选择
+     * @param {number} id - 问题定义ID
+     * @returns {boolean} 是否已选择
+     */
     const isQuestionDefinitionSelected = (id) => {
       return form.question_definition_ids.includes(id);
     };
 
+    /**
+     * 移除问题定义
+     * @param {number} id - 要移除的问题定义ID
+     */
     const removeQuestionDefinition = (id) => {
       form.question_definition_ids = form.question_definition_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
-    // 解题思想选择方法
+    // ==================== 解题思想选择方法 ====================
+    /**
+     * 选择解题思想
+     * @param {Object} item - 解题思想对象
+     */
     const selectSolutionIdea = (item) => {
       if (!form.solution_idea_ids.includes(item.id)) {
         form.solution_idea_ids.push(item.id);
@@ -1879,15 +2067,28 @@ export default {
       showSolutionIdeaDropdown.value = false;
     };
 
+    /**
+     * 检查解题思想是否已选择
+     * @param {number} id - 解题思想ID
+     * @returns {boolean} 是否已选择
+     */
     const isSolutionIdeaSelected = (id) => {
       return form.solution_idea_ids.includes(id);
     };
 
+    /**
+     * 移除解题思想
+     * @param {number} id - 要移除的解题思想ID
+     */
     const removeSolutionIdea = (id) => {
       form.solution_idea_ids = form.solution_idea_ids.filter((itemId) => itemId !== id);
     };
 
-    // 问题类别选择方法
+    // ==================== 问题类别选择方法 ====================
+    /**
+     * 选择问题类别
+     * @param {Object} item - 问题类别对象
+     */
     const selectQuestionCategory = (item) => {
       if (!form.question_category_ids.includes(item.id)) {
         form.question_category_ids.push(item.id);
@@ -1896,16 +2097,30 @@ export default {
       showQuestionCategoryDropdown.value = false;
     };
 
+    /**
+     * 检查问题类别是否已选择
+     * @param {number} id - 问题类别ID
+     * @returns {boolean} 是否已选择
+     */
     const isQuestionCategorySelected = (id) => {
       return form.question_category_ids.includes(id);
     };
 
+    /**
+     * 移除问题类别
+     * @param {number} id - 要移除的问题类别ID
+     */
     const removeQuestionCategory = (id) => {
       form.question_category_ids = form.question_category_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
+    // ==================== 子知识点选择方法 ====================
+    /**
+     * 选择子知识点
+     * @param {Object} kp - 子知识点对象
+     */
     const selectSubKnowledgePoint = (kp) => {
       if (!form.sub_knowledge_point.includes(kp.id)) {
         form.sub_knowledge_point.push(kp.id);
@@ -1914,15 +2129,28 @@ export default {
       showSubKnowledgeDropdown.value = false;
     };
 
+    /**
+     * 检查子知识点是否已选择
+     * @param {number} id - 子知识点ID
+     * @returns {boolean} 是否已选择
+     */
     const isSubKnowledgeSelected = (id) => {
       return form.sub_knowledge_point.includes(id);
     };
 
+    /**
+     * 移除子知识点
+     * @param {number} id - 要移除的子知识点ID
+     */
     const removeSubKnowledgePoint = (id) => {
       form.sub_knowledge_point = form.sub_knowledge_point.filter((kp) => kp !== id);
     };
 
-    // 更新界面知识点多选方法
+    // ==================== 更新界面知识点多选方法 ====================
+    /**
+     * 更新界面选择知识点
+     * @param {Object} kp - 知识点对象
+     */
     const selectUpdateKnowledgePoint = (kp) => {
       if (!searchCriteria.knowledge_points.includes(kp.id)) {
         searchCriteria.knowledge_points.push(kp.id);
@@ -1931,17 +2159,30 @@ export default {
       showUpdateKnowledgeDropdown.value = false;
     };
 
+    /**
+     * 检查更新界面知识点是否已选择
+     * @param {number} id - 知识点ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateKnowledgeSelected = (id) => {
       return searchCriteria.knowledge_points.includes(id);
     };
 
+    /**
+     * 移除更新界面知识点
+     * @param {number} id - 要移除的知识点ID
+     */
     const removeUpdateKnowledgePoint = (id) => {
       searchCriteria.knowledge_points = searchCriteria.knowledge_points.filter(
         (kp) => kp !== id
       );
     };
 
-    // 更新界面问题定义多选方法
+    // ==================== 更新界面问题定义多选方法 ====================
+    /**
+     * 更新界面选择问题定义
+     * @param {Object} item - 问题定义对象
+     */
     const selectUpdateQuestionDefinition = (item) => {
       if (!searchCriteria.question_definition_ids.includes(item.id)) {
         searchCriteria.question_definition_ids.push(item.id);
@@ -1950,17 +2191,30 @@ export default {
       showUpdateQuestionDefinitionDropdown.value = false;
     };
 
+    /**
+     * 检查更新界面问题定义是否已选择
+     * @param {number} id - 问题定义ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateQuestionDefinitionSelected = (id) => {
       return searchCriteria.question_definition_ids.includes(id);
     };
 
+    /**
+     * 移除更新界面问题定义
+     * @param {number} id - 要移除的问题定义ID
+     */
     const removeUpdateQuestionDefinition = (id) => {
       searchCriteria.question_definition_ids = searchCriteria.question_definition_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
-    // 更新界面解题思想多选方法
+    // ==================== 更新界面解题思想多选方法 ====================
+    /**
+     * 更新界面选择解题思想
+     * @param {Object} item - 解题思想对象
+     */
     const selectUpdateSolutionIdea = (item) => {
       if (!searchCriteria.solution_idea_ids.includes(item.id)) {
         searchCriteria.solution_idea_ids.push(item.id);
@@ -1969,17 +2223,30 @@ export default {
       showUpdateSolutionIdeaDropdown.value = false;
     };
 
+    /**
+     * 检查更新界面解题思想是否已选择
+     * @param {number} id - 解题思想ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateSolutionIdeaSelected = (id) => {
       return searchCriteria.solution_idea_ids.includes(id);
     };
 
+    /**
+     * 移除更新界面解题思想
+     * @param {number} id - 要移除的解题思想ID
+     */
     const removeUpdateSolutionIdea = (id) => {
       searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
-    // 更新界面问题类别多选方法
+    // ==================== 更新界面问题类别多选方法 ====================
+    /**
+     * 更新界面选择问题类别
+     * @param {Object} item - 问题类别对象
+     */
     const selectUpdateQuestionCategory = (item) => {
       if (!searchCriteria.question_category_ids.includes(item.id)) {
         searchCriteria.question_category_ids.push(item.id);
@@ -1988,17 +2255,30 @@ export default {
       showUpdateQuestionCategoryDropdown.value = false;
     };
 
+    /**
+     * 检查更新界面问题类别是否已选择
+     * @param {number} id - 问题类别ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateQuestionCategorySelected = (id) => {
       return searchCriteria.question_category_ids.includes(id);
     };
 
+    /**
+     * 移除更新界面问题类别
+     * @param {number} id - 要移除的问题类别ID
+     */
     const removeUpdateQuestionCategory = (id) => {
       searchCriteria.question_category_ids = searchCriteria.question_category_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
-    // 更新表单知识点选择方法
+    // ==================== 更新表单知识点选择方法 ====================
+    /**
+     * 更新表单选择知识点
+     * @param {Object} kp - 知识点对象
+     */
     const selectUpdateFormKnowledgePoint = (kp) => {
       selectedUpdateFormKnowledgePoint.value = kp;
       updateForm.knowledge_point = kp.id;
@@ -2006,13 +2286,20 @@ export default {
       showUpdateFormKnowledgeDropdown.value = false;
     };
 
+    /**
+     * 清除更新表单知识点选择
+     */
     const clearUpdateFormKnowledgePoint = () => {
       selectedUpdateFormKnowledgePoint.value = null;
       updateForm.knowledge_point = null;
       updateFormKnowledgeSearch.value = "";
     };
 
-    // 更新表单问题定义多选方法
+    // ==================== 更新表单问题定义多选方法 ====================
+    /**
+     * 更新表单选择问题定义
+     * @param {Object} item - 问题定义对象
+     */
     const selectUpdateFormQuestionDefinition = (item) => {
       if (!updateForm.question_definition_ids.includes(item.id)) {
         updateForm.question_definition_ids.push(item.id);
@@ -2021,17 +2308,30 @@ export default {
       showUpdateFormQuestionDefinitionDropdown.value = false;
     };
 
+    /**
+     * 检查更新表单问题定义是否已选择
+     * @param {number} id - 问题定义ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateFormQuestionDefinitionSelected = (id) => {
       return updateForm.question_definition_ids.includes(id);
     };
 
+    /**
+     * 移除更新表单问题定义
+     * @param {number} id - 要移除的问题定义ID
+     */
     const removeUpdateFormQuestionDefinition = (id) => {
       updateForm.question_definition_ids = updateForm.question_definition_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
-    // 更新表单解题思想多选方法
+    // ==================== 更新表单解题思想多选方法 ====================
+    /**
+     * 更新表单选择解题思想
+     * @param {Object} item - 解题思想对象
+     */
     const selectUpdateFormSolutionIdea = (item) => {
       if (!updateForm.solution_idea_ids.includes(item.id)) {
         updateForm.solution_idea_ids.push(item.id);
@@ -2040,17 +2340,30 @@ export default {
       showUpdateFormSolutionIdeaDropdown.value = false;
     };
 
+    /**
+     * 检查更新表单解题思想是否已选择
+     * @param {number} id - 解题思想ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateFormSolutionIdeaSelected = (id) => {
       return updateForm.solution_idea_ids.includes(id);
     };
 
+    /**
+     * 移除更新表单解题思想
+     * @param {number} id - 要移除的解题思想ID
+     */
     const removeUpdateFormSolutionIdea = (id) => {
       updateForm.solution_idea_ids = updateForm.solution_idea_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
-    // 更新表单问题类别多选方法
+    // ==================== 更新表单问题类别多选方法 ====================
+    /**
+     * 更新表单选择问题类别
+     * @param {Object} item - 问题类别对象
+     */
     const selectUpdateFormQuestionCategory = (item) => {
       if (!updateForm.question_category_ids.includes(item.id)) {
         updateForm.question_category_ids.push(item.id);
@@ -2059,16 +2372,30 @@ export default {
       showUpdateFormQuestionCategoryDropdown.value = false;
     };
 
+    /**
+     * 检查更新表单问题类别是否已选择
+     * @param {number} id - 问题类别ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateFormQuestionCategorySelected = (id) => {
       return updateForm.question_category_ids.includes(id);
     };
 
+    /**
+     * 移除更新表单问题类别
+     * @param {number} id - 要移除的问题类别ID
+     */
     const removeUpdateFormQuestionCategory = (id) => {
       updateForm.question_category_ids = updateForm.question_category_ids.filter(
         (itemId) => itemId !== id
       );
     };
 
+    // ==================== 更新表单子知识点选择方法 ====================
+    /**
+     * 更新表单选择子知识点
+     * @param {Object} kp - 子知识点对象
+     */
     const selectUpdateFormSubKnowledgePoint = (kp) => {
       if (!updateForm.sub_knowledge_point.includes(kp.id)) {
         updateForm.sub_knowledge_point.push(kp.id);
@@ -2077,28 +2404,45 @@ export default {
       showUpdateFormSubKnowledgeDropdown.value = false;
     };
 
+    /**
+     * 检查更新表单子知识点是否已选择
+     * @param {number} id - 子知识点ID
+     * @returns {boolean} 是否已选择
+     */
     const isUpdateFormSubKnowledgeSelected = (id) => {
       return updateForm.sub_knowledge_point.includes(id);
     };
 
+    /**
+     * 移除更新表单子知识点
+     * @param {number} id - 要移除的子知识点ID
+     */
     const removeUpdateFormSubKnowledgePoint = (id) => {
       updateForm.sub_knowledge_point = updateForm.sub_knowledge_point.filter(
         (kp) => kp !== id
       );
     };
 
-    // 图片预览方法
+    // ==================== 图片预览方法 ====================
+    /**
+     * 预览图片
+     * @param {string} url - 图片URL
+     */
     const previewImage = (url) => {
       previewImageUrl.value = url;
       showImagePreview.value = true;
     };
 
+    /**
+     * 关闭图片预览
+     */
     const closeImagePreview = () => {
       showImagePreview.value = false;
       previewImageUrl.value = "";
     };
 
-    // 下拉框失焦处理
+    // ==================== 下拉框失焦处理方法 ====================
+    // 这些方法使用setTimeout延迟隐藏下拉框，确保点击选项能够正常触发
     const onKnowledgeBlur = () => {
       setTimeout(() => {
         showKnowledgeDropdown.value = false;
@@ -2183,7 +2527,10 @@ export default {
       }, 200);
     };
 
-    // 过滤方法
+    // ==================== 列表过滤方法 ====================
+    /**
+     * 过滤知识点列表
+     */
     const filterKnowledgePoints = () => {
       if (!knowledgeSearch.value) {
         filteredKnowledgePoints.value = knowledgePointList.value;
@@ -2194,6 +2541,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤子知识点列表
+     */
     const filterSubKnowledgePoints = () => {
       if (!subKnowledgeSearch.value) {
         filteredSubKnowledgePoints.value = knowledgePointList.value;
@@ -2204,6 +2554,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤问题定义列表
+     */
     const filterQuestionDefinitions = () => {
       if (!questionDefinitionSearch.value) {
         filteredQuestionDefinitions.value = questionDefinitionList.value;
@@ -2214,6 +2567,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤解题思想列表
+     */
     const filterSolutionIdeas = () => {
       if (!solutionIdeaSearch.value) {
         filteredSolutionIdeas.value = solutionIdeaList.value;
@@ -2224,6 +2580,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤问题类别列表
+     */
     const filterQuestionCategories = () => {
       if (!questionCategorySearch.value) {
         filteredQuestionCategories.value = questionCategoryList.value;
@@ -2234,6 +2593,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新界面知识点列表
+     */
     const filterUpdateKnowledgePoints = () => {
       if (!updateKnowledgeSearch.value) {
         filteredUpdateKnowledgePoints.value = knowledgePointList.value;
@@ -2244,6 +2606,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新界面问题定义列表
+     */
     const filterUpdateQuestionDefinitions = () => {
       if (!updateQuestionDefinitionSearch.value) {
         filteredUpdateQuestionDefinitions.value = questionDefinitionList.value;
@@ -2257,6 +2622,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新界面解题思想列表
+     */
     const filterUpdateSolutionIdeas = () => {
       if (!updateSolutionIdeaSearch.value) {
         filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
@@ -2267,6 +2635,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新界面问题类别列表
+     */
     const filterUpdateQuestionCategories = () => {
       if (!updateQuestionCategorySearch.value) {
         filteredUpdateQuestionCategories.value = questionCategoryList.value;
@@ -2280,6 +2651,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新表单知识点列表
+     */
     const filterUpdateFormKnowledgePoints = () => {
       if (!updateFormKnowledgeSearch.value) {
         filteredUpdateFormKnowledgePoints.value = knowledgePointList.value;
@@ -2290,6 +2664,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新表单问题定义列表
+     */
     const filterUpdateFormQuestionDefinitions = () => {
       if (!updateFormQuestionDefinitionSearch.value) {
         filteredUpdateFormQuestionDefinitions.value = questionDefinitionList.value;
@@ -2303,6 +2680,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新表单解题思想列表
+     */
     const filterUpdateFormSolutionIdeas = () => {
       if (!updateFormSolutionIdeaSearch.value) {
         filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
@@ -2315,6 +2695,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新表单问题类别列表
+     */
     const filterUpdateFormQuestionCategories = () => {
       if (!updateFormQuestionCategorySearch.value) {
         filteredUpdateFormQuestionCategories.value = questionCategoryList.value;
@@ -2328,6 +2711,9 @@ export default {
       }
     };
 
+    /**
+     * 过滤更新表单子知识点列表
+     */
     const filterUpdateFormSubKnowledgePoints = () => {
       if (!updateFormSubKnowledgeSearch.value) {
         filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
@@ -2341,25 +2727,37 @@ export default {
       }
     };
 
+    // ==================== 图片上传处理 ====================
+    /**
+     * 处理图片上传
+     * @param {Event} event - 文件输入事件
+     */
     const handleImageUpload = (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
+      // 验证文件类型
       if (!file.type.startsWith("image/")) {
         showAlert("文件错误", "请选择图片文件");
         return;
       }
 
+      // 验证文件大小（5MB限制）
       if (file.size > 5 * 1024 * 1024) {
         showAlert("文件过大", "图片大小不能超过5MB");
         return;
       }
 
+      // 创建对象URL用于预览
       form.img_url = URL.createObjectURL(file);
       pendingImageFile.value = file;
-      event.target.value = "";
+      event.target.value = ""; // 重置文件输入
     };
 
+    /**
+     * 处理更新界面图片上传
+     * @param {Event} event - 文件输入事件
+     */
     const handleUpdateImageUpload = (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -2379,17 +2777,26 @@ export default {
       event.target.value = "";
     };
 
+    /**
+     * 移除图片
+     */
     const removeImage = () => {
       form.img_url = "";
       pendingImageFile.value = null;
     };
 
+    /**
+     * 移除更新界面图片
+     */
     const removeUpdateImage = () => {
       updateForm.img_url = "";
       pendingUpdateImageFile.value = null;
     };
 
-    // 保存上传记忆
+    // ==================== 记忆功能 ====================
+    /**
+     * 保存上传记忆到localStorage
+     */
     const saveUploadMemory = () => {
       uploadMemory.value = {
         school_id: form.school_id,
@@ -2402,8 +2809,12 @@ export default {
       localStorage.setItem("uploadMemory", JSON.stringify(uploadMemory.value));
     };
 
-    // 数据加载
+    // ==================== 生命周期和数据加载 ====================
+    /**
+     * 组件挂载时执行
+     */
     onMounted(() => {
+      // 设置axios认证token
       const token = localStorage.getItem("token");
       if (token) {
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
@@ -2411,8 +2822,12 @@ export default {
       loadLists();
     });
 
+    /**
+     * 加载所有数据列表
+     */
     const loadLists = async () => {
       try {
+        // 并行请求所有数据
         const [s, g, sub, kp, qd, si, qc] = await Promise.all([
           axios.get(`${API_BASE}/questions/getSchoolList`),
           axios.get(`${API_BASE}/questions/getGradeList`),
@@ -2423,38 +2838,46 @@ export default {
           axios.get(`${API_BASE}/questions/getQuestionCategoryList`),
         ]);
 
-        // 将学校、年级、科目的ID转换为数字
+        // 处理学校列表数据
         schoolList.value = Object.entries(s.data.data || {}).map(([id, name]) => ({
           id: Number(id),
           name,
         }));
+
+        // 处理年级列表数据
         gradeList.value = Object.entries(g.data.data || {}).map(([id, name]) => ({
           id: Number(id),
           name,
         }));
+
+        // 处理科目列表数据
         subjectList.value = Object.entries(sub.data.data || {}).map(([id, name]) => ({
           id: Number(id),
           name,
         }));
+
+        // 处理知识点列表数据
         knowledgePointList.value = Object.entries(
           kp.data.data || {}
         ).map(([id, name]) => ({ id: parseInt(id), name }));
 
-        // 处理新的三个列表
+        // 处理问题定义列表数据
         questionDefinitionList.value = Object.entries(
           qd.data.data || {}
         ).map(([id, name]) => ({ id: parseInt(id), name }));
 
+        // 处理解题思想列表数据
         solutionIdeaList.value = Object.entries(si.data.data || {}).map(([id, name]) => ({
           id: parseInt(id),
           name,
         }));
 
+        // 处理问题类别列表数据
         questionCategoryList.value = Object.entries(
           qc.data.data || {}
         ).map(([id, name]) => ({ id: parseInt(id), name }));
 
-        // 初始化过滤后的列表
+        // 初始化所有过滤后的列表
         filteredKnowledgePoints.value = knowledgePointList.value;
         filteredSubKnowledgePoints.value = knowledgePointList.value;
         filteredQuestionDefinitions.value = questionDefinitionList.value;
@@ -2477,6 +2900,10 @@ export default {
       }
     };
 
+    // ==================== 新建内容上传方法 ====================
+    /**
+     * 上传知识点
+     */
     const uploadKnowledgePoint = async () => {
       if (!newKnowledgePoint.value.trim()) {
         showAlert("输入错误", "请输入知识点名称");
@@ -2484,6 +2911,7 @@ export default {
       }
 
       try {
+        // 分割输入内容（支持逗号和中文逗号）
         const items = newKnowledgePoint.value
           .split(/[,，]/)
           .map((item) => item.trim())
@@ -2491,13 +2919,16 @@ export default {
         await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
         showAlert("上传成功", "知识点上传成功");
         newKnowledgePoint.value = "";
-        await loadLists();
+        await loadLists(); // 重新加载列表
       } catch (err) {
         console.error("上传知识点失败:", err);
         showAlert("上传失败", "上传知识点失败");
       }
     };
 
+    /**
+     * 上传子知识点
+     */
     const uploadSubKnowledgePoint = async () => {
       if (!newSubKnowledgePoint.value.trim()) {
         showAlert("输入错误", "请输入子知识点名称");
@@ -2519,6 +2950,9 @@ export default {
       }
     };
 
+    /**
+     * 上传问题定义
+     */
     const uploadQuestionDefinition = async () => {
       if (!newQuestionDefinition.value.trim()) {
         showAlert("输入错误", "请输入问题定义");
@@ -2540,6 +2974,9 @@ export default {
       }
     };
 
+    /**
+     * 上传解题思想
+     */
     const uploadSolutionIdea = async () => {
       if (!newSolutionIdea.value.trim()) {
         showAlert("输入错误", "请输入解题思想");
@@ -2561,6 +2998,9 @@ export default {
       }
     };
 
+    /**
+     * 上传问题类别
+     */
     const uploadQuestionCategory = async () => {
       if (!newQuestionCategory.value.trim()) {
         showAlert("输入错误", "请输入问题类别");
@@ -2582,10 +3022,15 @@ export default {
       }
     };
 
+    // ==================== 题目检索和操作 ====================
+    /**
+     * 检索题目
+     */
     const findQuestions = async () => {
       try {
         const payload = {};
 
+        // 构建检索条件，过滤空值
         if (searchCriteria.grade_id !== null)
           payload.grade_id = Number(searchCriteria.grade_id);
         if (searchCriteria.subject_id !== null)
@@ -2629,11 +3074,15 @@ export default {
       }
     };
 
+    /**
+     * 加载题目到更新表单
+     * @param {Object} q - 题目对象
+     */
     const loadQuestionForUpdate = async (q) => {
       selectedQuestion.value = q;
       showUpdateForm.value = true;
 
-      // 重置表单 - 确保ID转换为数字
+      // 重置表单并填充数据
       updateForm.id = q.id;
       updateForm.title = q.title || "";
       updateForm.school_id = q.school_id ? Number(q.school_id) : null;
@@ -2662,7 +3111,7 @@ export default {
       );
       updateForm.img_url = q.img_url || "";
 
-      // 设置知识点
+      // 设置知识点显示
       if (q.knowledge_point) {
         const currentKnowledge = knowledgePointList.value.find(
           (k) => k.id === Number(q.knowledge_point)
@@ -2676,6 +3125,7 @@ export default {
       // 处理选择题选项
       if (q.question_type === "SINGLE" || q.question_type === "MULTIPLE") {
         if (q.options && typeof q.options === "object") {
+          // 对选项按键名排序
           const sortedEntries = Object.entries(q.options).sort(([keyA], [keyB]) => {
             return keyA.localeCompare(keyB);
           });
@@ -2684,6 +3134,7 @@ export default {
             const optionKey = getOptionLabel(index);
             let isAnswer = false;
 
+            // 根据题型设置正确答案
             if (q.question_type === "SINGLE") {
               isAnswer = q.answer === optionKey;
             } else if (q.question_type === "MULTIPLE") {
@@ -2699,6 +3150,7 @@ export default {
             };
           });
 
+          // 设置单选题正确答案索引
           if (q.question_type === "SINGLE") {
             const answerIndex = updateForm.options.findIndex((opt) => opt.isAnswer);
             updateSingleAnswerIndex.value = answerIndex !== -1 ? answerIndex : null;
@@ -2719,6 +3171,7 @@ export default {
         });
       }
 
+      // 滚动到更新表单
       if (updateFormRef.value) {
         updateFormRef.value.scrollIntoView({
           behavior: "smooth",
@@ -2727,6 +3180,9 @@ export default {
       }
     };
 
+    /**
+     * 取消更新
+     */
     const cancelUpdate = () => {
       showUpdateForm.value = false;
       selectedQuestion.value = null;
@@ -2743,16 +3199,26 @@ export default {
       updateOptionPreviews.value = Array(10).fill("");
     };
 
+    /**
+     * 确认删除题目
+     * @param {Object} q - 题目对象
+     */
     const confirmDelete = (q) => {
       questionToDelete.value = q;
       showDeleteConfirm.value = true;
     };
 
+    /**
+     * 取消删除
+     */
     const cancelDelete = () => {
       showDeleteConfirm.value = false;
       questionToDelete.value = null;
     };
 
+    /**
+     * 删除题目
+     */
     const deleteQuestion = async () => {
       if (!questionToDelete.value) return;
 
@@ -2761,6 +3227,7 @@ export default {
         await axios.delete(`${API_BASE}/questions/deleteQuestion/${id}`);
         showAlert("删除成功", "题目删除成功");
 
+        // 从列表中移除已删除的题目
         questionList.value = questionList.value.filter((q) => q.id !== id);
 
         showDeleteConfirm.value = false;
@@ -2771,7 +3238,12 @@ export default {
       }
     };
 
+    // ==================== 表单提交处理 ====================
+    /**
+     * 处理题目提交
+     */
     const handleSubmit = async () => {
+      // 验证题型是否选择
       if (!form.question_type) {
         questionTypeError.value = true;
         const questionTypeElement = document.querySelector(".form-select.error");
@@ -2785,6 +3257,7 @@ export default {
       try {
         submitting.value = true;
 
+        // 如果有待上传的图片，先上传图片
         if (pendingImageFile.value) {
           const fd = new FormData();
           fd.append("file", pendingImageFile.value);
@@ -2804,6 +3277,7 @@ export default {
         let optionsPayload = {};
         let answerPayload = "";
 
+        // 处理选择题选项和答案
         if (form.question_type === "SINGLE" || form.question_type === "MULTIPLE") {
           form.options.forEach((opt, i) => {
             const key = getOptionLabel(i);
@@ -2825,6 +3299,7 @@ export default {
           answerPayload = form.answer;
         }
 
+        // 构建提交数据
         const payload = {
           school_id: form.school_id !== null ? Number(form.school_id) : null,
           grade_id: form.grade_id !== null ? Number(form.grade_id) : null,
@@ -2867,8 +3342,8 @@ export default {
         );
         showAlert("上传成功", res.data.message || "上传成功");
 
-        saveUploadMemory();
-        resetForm();
+        saveUploadMemory(); // 保存用户设置
+        resetForm(); // 重置表单
       } catch (err) {
         console.error("提交失败:", err);
         showAlert("提交失败", err.response?.data?.message || err.message);
@@ -2877,6 +3352,9 @@ export default {
       }
     };
 
+    /**
+     * 处理题目更新提交
+     */
     const handleUpdateSubmit = async () => {
       if (!updateForm.question_type) {
         updateQuestionTypeError.value = true;
@@ -2893,6 +3371,7 @@ export default {
       try {
         submitting.value = true;
 
+        // 处理图片上传
         if (pendingUpdateImageFile.value) {
           const fd = new FormData();
           fd.append("file", pendingUpdateImageFile.value);
@@ -2912,6 +3391,7 @@ export default {
         let optionsPayload = {};
         let answerPayload = "";
 
+        // 处理选择题选项和答案
         if (
           updateForm.question_type === "SINGLE" ||
           updateForm.question_type === "MULTIPLE"
@@ -2936,6 +3416,7 @@ export default {
           answerPayload = updateForm.answer;
         }
 
+        // 构建更新数据
         const payload = {
           id: updateForm.id,
           school_id: updateForm.school_id !== null ? Number(updateForm.school_id) : null,
@@ -2981,8 +3462,8 @@ export default {
 
         const res = await axios.post(`${API_BASE}/questions/updateQuestion`, payload);
         showAlert("更新成功", res.data.message || "更新成功");
-        await silentFindQuestions();
-        cancelUpdate();
+        await silentFindQuestions(); // 静默刷新列表
+        cancelUpdate(); // 关闭更新表单
       } catch (err) {
         console.error("更新失败:", err);
         showAlert("更新失败", err.response?.data?.message || err.message);
@@ -2990,10 +3471,15 @@ export default {
         submitting.value = false;
       }
     };
+
+    /**
+     * 静默检索题目（不显示弹窗）
+     */
     const silentFindQuestions = async () => {
       try {
         const payload = {};
 
+        // 构建检索条件
         if (searchCriteria.grade_id !== null)
           payload.grade_id = Number(searchCriteria.grade_id);
         if (searchCriteria.subject_id !== null)
@@ -3024,15 +3510,19 @@ export default {
         questionList.value = res.data.data || [];
         hasSearched.value = true;
 
-        // 不显示任何弹窗
+        // 静默操作，不显示任何弹窗
       } catch (err) {
         console.error("检索失败:", err);
         questionList.value = [];
         hasSearched.value = true;
-        // 也不显示错误弹窗
+        // 静默操作，不显示错误弹窗
       }
     };
 
+    // ==================== 表单重置和模式切换 ====================
+    /**
+     * 重置上传表单
+     */
     const resetForm = () => {
       Object.assign(form, {
         id: null,
@@ -3067,6 +3557,9 @@ export default {
       optionPreviews.value = Array(10).fill("");
     };
 
+    /**
+     * 进入更新模式
+     */
     const enterUpdateMode = () => {
       updateMode.value = true;
       questionList.value = [];
@@ -3094,6 +3587,9 @@ export default {
       });
     };
 
+    /**
+     * 退出更新模式
+     */
     const exitUpdateMode = () => {
       updateMode.value = false;
       questionList.value = [];
@@ -3101,49 +3597,89 @@ export default {
       hasSearched.value = false;
     };
 
-    // 辅助方法
+    // ==================== 辅助方法 ====================
+    /**
+     * 根据ID获取学校名称
+     * @param {number} id - 学校ID
+     * @returns {string} 学校名称
+     */
     const getSchoolName = (id) => {
       if (id === null) return "-";
       const school = schoolList.value.find((s) => s.id === Number(id));
       return school ? school.name : "-";
     };
 
+    /**
+     * 根据ID获取年级名称
+     * @param {number} id - 年级ID
+     * @returns {string} 年级名称
+     */
     const getGradeName = (id) => {
       if (id === null) return "-";
       const grade = gradeList.value.find((g) => g.id === Number(id));
       return grade ? grade.name : "-";
     };
 
+    /**
+     * 根据ID获取科目名称
+     * @param {number} id - 科目ID
+     * @returns {string} 科目名称
+     */
     const getSubjectName = (id) => {
       if (id === null) return "-";
       const subject = subjectList.value.find((s) => s.id === Number(id));
       return subject ? subject.name : "-";
     };
 
+    /**
+     * 根据ID获取知识点名称
+     * @param {number} id - 知识点ID
+     * @returns {string} 知识点名称
+     */
     const getKnowledgePointName = (id) => {
       if (id === null) return "-";
       const kp = knowledgePointList.value.find((k) => k.id === Number(id));
       return kp ? kp.name : "-";
     };
 
+    /**
+     * 根据ID获取问题定义名称
+     * @param {number} id - 问题定义ID
+     * @returns {string} 问题定义名称
+     */
     const getQuestionDefinitionName = (id) => {
       if (id === null) return "-";
       const item = questionDefinitionList.value.find((q) => q.id === Number(id));
       return item ? item.name : "-";
     };
 
+    /**
+     * 根据ID获取解题思想名称
+     * @param {number} id - 解题思想ID
+     * @returns {string} 解题思想名称
+     */
     const getSolutionIdeaName = (id) => {
       if (id === null) return "-";
       const item = solutionIdeaList.value.find((s) => s.id === Number(id));
       return item ? item.name : "-";
     };
 
+    /**
+     * 根据ID获取问题类别名称
+     * @param {number} id - 问题类别ID
+     * @returns {string} 问题类别名称
+     */
     const getQuestionCategoryName = (id) => {
       if (id === null) return "-";
       const item = questionCategoryList.value.find((c) => c.id === Number(id));
       return item ? item.name : "-";
     };
 
+    /**
+     * 根据题型代码获取题型名称
+     * @param {string} type - 题型代码
+     * @returns {string} 题型名称
+     */
     const getQuestionTypeName = (type) => {
       const types = {
         SINGLE: "单选题",
@@ -3153,6 +3689,11 @@ export default {
       return types[type] || type;
     };
 
+    /**
+     * 根据评分方法代码获取评分方法名称
+     * @param {number} type - 评分方法代码
+     * @returns {string} 评分方法名称
+     */
     const getMarkingTypeName = (type) => {
       const types = {
         0: "自动评分",
@@ -3161,10 +3702,14 @@ export default {
       return types[type] || "-";
     };
 
+    // ==================== 返回所有响应式数据和方法 ====================
     return {
+      // 表单数据
       form,
       updateForm,
       searchCriteria,
+
+      // 数据列表
       schoolList,
       gradeList,
       subjectList,
@@ -3172,62 +3717,94 @@ export default {
       questionDefinitionList,
       solutionIdeaList,
       questionCategoryList,
+
+      // 新建内容输入
       newKnowledgePoint,
       newSubKnowledgePoint,
       newQuestionDefinition,
       newSolutionIdea,
       newQuestionCategory,
+
+      // 选项操作方法
       addOption,
       removeOption,
       addUpdateOption,
       removeUpdateOption,
       getOptionLabel,
+
+      // 答案索引
       singleAnswerIndex,
       updateSingleAnswerIndex,
+
+      // 模式状态
       updateMode,
       enterUpdateMode,
       exitUpdateMode,
+
+      // 提交处理方法
       handleSubmit,
       handleUpdateSubmit,
+
+      // 图片处理方法
       handleImageUpload,
       handleUpdateImageUpload,
       removeImage,
       removeUpdateImage,
+
+      // 搜索关键词
       knowledgeSearch,
       subKnowledgeSearch,
       questionDefinitionSearch,
       solutionIdeaSearch,
       questionCategorySearch,
+
+      // 过滤列表
       filteredKnowledgePoints,
       filteredSubKnowledgePoints,
       filteredQuestionDefinitions,
       filteredSolutionIdeas,
       filteredQuestionCategories,
+
+      // 选中项列表
       selectedSubKnowledgePoints,
       selectedQuestionDefinitions,
       selectedSolutionIdeas,
       selectedQuestionCategories,
+
+      // 上传方法
       uploadKnowledgePoint,
       uploadSubKnowledgePoint,
       uploadQuestionDefinition,
       uploadSolutionIdea,
       uploadQuestionCategory,
+
+      // 题目列表和检索
       questionList,
       findQuestions,
       loadQuestionForUpdate,
       cancelUpdate,
+
+      // 删除相关
       confirmDelete,
       cancelDelete,
       deleteQuestion,
+
+      // 题型变更处理
       handleQuestionTypeChange,
       handleUpdateQuestionTypeChange,
+
+      // 计算属性
       showOptions,
       showUpdateOptions,
+
+      // 状态
       submitting,
       showUpdateForm,
       selectedQuestion,
       showDeleteConfirm,
       questionToDelete,
+
+      // 辅助方法
       getSchoolName,
       getGradeName,
       getSubjectName,
@@ -3237,6 +3814,8 @@ export default {
       getQuestionCategoryName,
       getQuestionTypeName,
       getMarkingTypeName,
+
+      // 更新界面搜索关键词
       updateKnowledgeSearch,
       updateQuestionDefinitionSearch,
       updateSolutionIdeaSearch,
@@ -3246,6 +3825,8 @@ export default {
       updateFormSolutionIdeaSearch,
       updateFormQuestionCategorySearch,
       updateFormSubKnowledgeSearch,
+
+      // 更新界面过滤列表
       filteredUpdateKnowledgePoints,
       filteredUpdateQuestionDefinitions,
       filteredUpdateSolutionIdeas,
@@ -3255,6 +3836,8 @@ export default {
       filteredUpdateFormSolutionIdeas,
       filteredUpdateFormQuestionCategories,
       filteredUpdateFormSubKnowledgePoints,
+
+      // 过滤方法
       filterKnowledgePoints,
       filterSubKnowledgePoints,
       filterQuestionDefinitions,
@@ -3269,6 +3852,8 @@ export default {
       filterUpdateFormSolutionIdeas,
       filterUpdateFormQuestionCategories,
       filterUpdateFormSubKnowledgePoints,
+
+      // 选择方法
       selectKnowledgePoint,
       clearKnowledgePoint,
       selectQuestionDefinition,
@@ -3309,6 +3894,8 @@ export default {
       selectUpdateFormSubKnowledgePoint,
       removeUpdateFormSubKnowledgePoint,
       isUpdateFormSubKnowledgeSelected,
+
+      // 下拉框显示状态
       showKnowledgeDropdown,
       showSubKnowledgeDropdown,
       showQuestionDefinitionDropdown,
@@ -3323,6 +3910,8 @@ export default {
       showUpdateFormSolutionIdeaDropdown,
       showUpdateFormQuestionCategoryDropdown,
       showUpdateFormSubKnowledgeDropdown,
+
+      // 下拉框失焦处理
       onKnowledgeBlur,
       onSubKnowledgeBlur,
       onQuestionDefinitionBlur,
@@ -3337,6 +3926,8 @@ export default {
       onUpdateFormSolutionIdeaBlur,
       onUpdateFormQuestionCategoryBlur,
       onUpdateFormSubKnowledgeBlur,
+
+      // 选中的对象
       selectedKnowledgePoint,
       selectedUpdateFormKnowledgePoint,
       selectedUpdateKnowledgePoints,
@@ -3347,16 +3938,27 @@ export default {
       selectedUpdateFormSolutionIdeas,
       selectedUpdateFormQuestionCategories,
       selectedUpdateFormSubKnowledgePoints,
+
+      // 搜索状态
       hasSearched,
+
+      // DOM引用
       updateFormRef,
+
+      // 图片预览
       previewImage,
       closeImagePreview,
       showImagePreview,
       previewImageUrl,
+
+      // 表单验证
       questionTypeError,
       updateQuestionTypeError,
+
+      // 退出登录
       handleLogout,
       confirmLogout,
+
       // 弹窗相关
       showAlertModal,
       alertModalTitle,
@@ -3365,6 +3967,7 @@ export default {
       showLogoutConfirm,
       cancelLogout,
       silentFindQuestions,
+
       // 数学公式预览相关
       titlePreview,
       answerPreview,
@@ -3381,917 +3984,976 @@ export default {
   },
 };
 </script>
-
 <style scoped>
-/* 样式调整 */
+/* ==================== 全局容器样式 ==================== */
+/* 主容器样式 */
 .container {
-  max-width: 1800px;
-  margin: auto;
-  padding: 20px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  max-width: 1800px; /* 最大宽度，适应大屏幕 */
+  margin: auto; /* 水平居中 */
+  padding: 20px; /* 内边距 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; /* 字体栈，优先使用系统字体 */
 }
 
+/* ==================== 模式选择器样式 ==================== */
 .mode-select {
-  margin-bottom: 30px;
-  display: flex;
-  gap: 10px;
+  margin-bottom: 30px; /* 底部外边距 */
+  display: flex; /* 弹性布局 */
+  gap: 10px; /* 子元素间距 */
 }
 
 .mode-select button {
-  padding: 10px 20px;
-  border: 2px solid #409eff;
-  background: white;
-  color: #409eff;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
+  padding: 10px 20px; /* 内边距 */
+  border: 2px solid #409eff; /* 边框颜色使用主题蓝色 */
+  background: white; /* 背景色 */
+  color: #409eff; /* 文字颜色 */
+  border-radius: 6px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 14px; /* 字体大小 */
+  transition: all 0.3s; /* 过渡动画 */
 }
 
+/* 激活状态的按钮样式 */
 .mode-select button.active {
-  background-color: #409eff;
-  color: white;
+  background-color: #409eff; /* 主题蓝色背景 */
+  color: white; /* 白色文字 */
 }
 
+/* 非激活状态按钮的悬停效果 */
 .mode-select button:hover:not(.active) {
-  background-color: #ecf5ff;
+  background-color: #ecf5ff; /* 浅蓝色背景 */
 }
 
+/* ==================== 表单区域样式 ==================== */
 .form-section,
 .update-section {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  background: white; /* 白色背景 */
+  padding: 30px; /* 内边距 */
+  border-radius: 8px; /* 圆角 */
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); /* 阴影效果 */
 }
 
+/* 标题样式 */
 .form-section h2,
 .update-section h2 {
-  margin-bottom: 25px;
-  color: #303133;
-  font-size: 20px;
-  border-bottom: 1px solid #e4e7ed;
-  padding-bottom: 10px;
+  margin-bottom: 25px; /* 底部外边距 */
+  color: #303133; /* 深灰色文字 */
+  font-size: 20px; /* 字体大小 */
+  border-bottom: 1px solid #e4e7ed; /* 底部边框 */
+  padding-bottom: 10px; /* 底部内边距 */
 }
 
+/* ==================== 搜索条件区域样式 ==================== */
 .search-criteria {
-  margin-bottom: 30px;
+  margin-bottom: 30px; /* 底部外边距 */
 }
 
 .criteria-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  align-items: flex-end;
+  display: flex; /* 弹性布局 */
+  flex-wrap: wrap; /* 允许换行 */
+  gap: 15px; /* 子元素间距 */
+  align-items: flex-end; /* 底部对齐 */
 }
 
 .criteria-item {
-  flex: 1;
-  min-width: 300px;
+  flex: 1; /* 弹性填充 */
+  min-width: 300px; /* 最小宽度 */
 }
 
 .criteria-item label {
-  display: block;
-  margin-bottom: 5px;
-  font-size: 14px;
-  color: #606266;
-  font-weight: 500;
+  display: block; /* 块级显示 */
+  margin-bottom: 5px; /* 底部外边距 */
+  font-size: 14px; /* 字体大小 */
+  color: #606266; /* 中灰色文字 */
+  font-weight: 500; /* 中等字重 */
 }
 
 .search-btn {
-  min-width: 80px;
+  min-width: 80px; /* 搜索按钮最小宽度 */
 }
 
+/* ==================== 搜索结果区域样式 ==================== */
 .search-results {
-  margin-top: 30px;
+  margin-top: 30px; /* 顶部外边距 */
 }
 
 .search-results h3 {
-  margin-bottom: 15px;
-  color: #303133;
+  margin-bottom: 15px; /* 底部外边距 */
+  color: #303133; /* 深灰色文字 */
 }
 
 .results-table-container {
-  overflow-x: auto;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
+  overflow-x: auto; /* 水平滚动 */
+  border: 1px solid #e4e7ed; /* 边框 */
+  border-radius: 4px; /* 圆角 */
 }
 
 .results-table {
-  min-width: 1600px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
+  min-width: 1600px; /* 最小宽度，确保表格内容完整显示 */
+  width: 100%; /* 宽度100% */
+  display: flex; /* 弹性布局 */
+  flex-direction: column; /* 垂直方向 */
 }
 
+/* 表格行样式 */
 .table-header,
 .table-row {
-  display: flex;
+  display: flex; /* 弹性布局 */
   align-items: center; /* 垂直居中 */
-  justify-content: center;
+  justify-content: center; /* 水平居中 */
 }
 
 .table-header {
-  background-color: #d6f0ff;
-  font-weight: 600;
+  background-color: #d6f0ff; /* 浅蓝色表头背景 */
+  font-weight: 600; /* 粗体字重 */
 }
 
 .table-cell {
-  display: flex;
+  display: flex; /* 弹性布局 */
   align-items: center; /* 垂直居中 */
   justify-content: center; /* 水平居中 */
-  padding: 12px 8px;
-  font-size: 14px;
-  color: #606266;
-  box-sizing: border-box;
-  text-align: center;
-  word-break: break-word;
+  padding: 12px 8px; /* 内边距 */
+  font-size: 14px; /* 字体大小 */
+  color: #606266; /* 文字颜色 */
+  box-sizing: border-box; /* 盒模型 */
+  text-align: center; /* 文字居中 */
+  word-break: break-word; /* 单词换行 */
 }
 
 .table-header .table-cell {
-  font-weight: 600;
-  justify-content: center;
-  align-items: center;
+  font-weight: 600; /* 粗体 */
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
 }
 
 .table-row {
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #e4e7ed; /* 底部边框 */
 }
 
 .table-row:last-child {
-  border-bottom: none;
+  border-bottom: none; /* 最后一行无底部边框 */
 }
 
+/* 表格行悬停效果 */
 .table-row:hover {
-  background-color: #f5f7fa;
+  background-color: #f5f7fa; /* 浅灰色背景 */
 }
 
+/* 子知识点单元格样式 */
 .sub-knowledge-cell {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
+  display: flex; /* 弹性布局 */
+  flex-wrap: wrap; /* 允许换行 */
+  gap: 4px; /* 子元素间距 */
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
 }
 
+/* 子知识点标签样式 */
 .sub-knowledge-tag {
-  background: #ecf5ff;
-  color: #409eff;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 11px;
-  border: 1px solid #d9ecff;
-  white-space: nowrap;
-  margin: 2px;
-  display: inline-block;
+  background: #ecf5ff; /* 浅蓝色背景 */
+  color: #409eff; /* 主题蓝色文字 */
+  padding: 2px 6px; /* 内边距 */
+  border-radius: 3px; /* 小圆角 */
+  font-size: 11px; /* 小字体 */
+  border: 1px solid #d9ecff; /* 边框 */
+  white-space: nowrap; /* 不换行 */
+  margin: 2px; /* 外边距 */
+  display: inline-block; /* 行内块显示 */
 }
 
+/* 无子知识点提示样式 */
 .no-sub-knowledge {
-  color: #c0c4cc;
-  font-style: italic;
+  color: #c0c4cc; /* 浅灰色文字 */
+  font-style: italic; /* 斜体 */
 }
 
+/* 题目内容单元格样式 */
 .title-cell {
-  word-break: break-word;
-  line-height: 1.4;
-  text-align: left;
+  word-break: break-word; /* 单词换行 */
+  line-height: 1.4; /* 行高 */
+  text-align: left; /* 左对齐 */
 }
 
 .image-cell {
-  text-align: center;
+  text-align: center; /* 居中对齐 */
 }
 
+/* 缩略图样式 */
 .thumbnail-image {
-  width: 60px;
-  height: 45px;
-  object-fit: cover;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: transform 0.2s;
+  width: 60px; /* 固定宽度 */
+  height: 45px; /* 固定高度 */
+  object-fit: cover; /* 图片填充方式 */
+  border: 1px solid #e4e7ed; /* 边框 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  transition: transform 0.2s; /* 变换过渡 */
 }
 
+/* 缩略图悬停效果 */
 .thumbnail-image:hover {
-  transform: scale(1.1);
+  transform: scale(1.1); /* 放大效果 */
 }
 
 .no-image {
-  color: #c0c4cc;
-  font-style: italic;
+  color: #c0c4cc; /* 浅灰色文字 */
+  font-style: italic; /* 斜体 */
 }
 
+/* 操作按钮单元格样式 */
 .actions-cell {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  min-height: 60px;
+  display: flex; /* 弹性布局 */
+  gap: 8px; /* 按钮间距 */
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
+  height: 100%; /* 高度100% */
+  min-height: 60px; /* 最小高度 */
 }
 
+/* 更新按钮样式 */
 .btn-update {
-  background-color: #409eff;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  white-space: nowrap;
-  transition: background-color 0.3s;
+  background-color: #409eff; /* 主题蓝色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 8px 16px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 14px; /* 字体大小 */
+  white-space: nowrap; /* 不换行 */
+  transition: background-color 0.3s; /* 背景色过渡 */
 }
 
 .btn-update:hover {
-  background-color: #66b1ff;
+  background-color: #66b1ff; /* 悬停时更亮的蓝色 */
 }
 
+/* 删除按钮样式 */
 .btn-delete {
-  background-color: #f56c6c;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  white-space: nowrap;
-  transition: background-color 0.3s;
+  background-color: #f56c6c; /* 红色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 8px 16px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 14px; /* 字体大小 */
+  white-space: nowrap; /* 不换行 */
+  transition: background-color 0.3s; /* 背景色过渡 */
 }
 
 .btn-delete:hover {
-  background-color: #f78989;
+  background-color: #f78989; /* 悬停时更亮的红色 */
 }
 
+/* ==================== 更新表单区域样式 ==================== */
 .update-form-section {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #e4e7ed;
+  margin-top: 30px; /* 顶部外边距 */
+  padding-top: 20px; /* 顶部内边距 */
+  border-top: 1px solid #e4e7ed; /* 顶部边框 */
 }
 
 .update-form-section h3 {
-  margin-bottom: 20px;
-  color: #303133;
+  margin-bottom: 20px; /* 底部外边距 */
+  color: #303133; /* 深灰色文字 */
 }
 
 .update-form {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  display: grid; /* 网格布局 */
+  grid-template-columns: repeat(2, 1fr); /* 两列等宽 */
+  gap: 20px; /* 网格间距 */
 }
 
+/* 跨列的表单组 */
 .update-form .form-group:nth-child(7),
 .update-form .form-group:nth-child(8),
 .update-form .form-group:nth-child(9) {
-  grid-column: 1 / -1;
+  grid-column: 1 / -1; /* 跨所有列 */
 }
 
-/* 弹窗样式 */
+/* ==================== 模态框样式 ==================== */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  position: fixed; /* 固定定位 */
+  top: 0; /* 顶部对齐 */
+  left: 0; /* 左侧对齐 */
+  right: 0; /* 右侧对齐 */
+  bottom: 0; /* 底部对齐 */
+  background: rgba(0, 0, 0, 0.5); /* 半透明黑色背景 */
+  display: flex; /* 弹性布局 */
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
+  z-index: 1000; /* 高z-index确保在最上层 */
 }
 
 .modal-content {
-  background: white;
-  padding: 40px;
-  border-radius: 12px;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  transform: scale(1.05);
-  animation: modalAppear 0.3s ease-out;
+  background: white; /* 白色背景 */
+  padding: 40px; /* 内边距 */
+  border-radius: 12px; /* 大圆角 */
+  max-width: 500px; /* 最大宽度 */
+  width: 90%; /* 宽度90% */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
+  text-align: center; /* 文字居中 */
+  transform: scale(1.05); /* 轻微放大 */
+  animation: modalAppear 0.3s ease-out; /* 出现动画 */
 }
 
+/* 模态框出现动画 */
 @keyframes modalAppear {
   from {
-    opacity: 0;
-    transform: scale(0.8) translateY(-20px);
+    opacity: 0; /* 完全透明 */
+    transform: scale(0.8) translateY(-20px); /* 缩小并上移 */
   }
 
   to {
-    opacity: 1;
-    transform: scale(1.05) translateY(0);
+    opacity: 1; /* 完全不透明 */
+    transform: scale(1.05) translateY(0); /* 正常大小和位置 */
   }
 }
 
 .modal-content h3 {
-  margin-bottom: 20px;
-  color: #303133;
-  font-size: 24px;
-  font-weight: 600;
+  margin-bottom: 20px; /* 底部外边距 */
+  color: #303133; /* 深灰色文字 */
+  font-size: 24px; /* 大字体 */
+  font-weight: 600; /* 粗体 */
 }
 
 .modal-content p {
-  margin-bottom: 30px;
-  color: #606266;
-  font-size: 18px;
-  line-height: 1.5;
+  margin-bottom: 30px; /* 底部外边距 */
+  color: #606266; /* 中灰色文字 */
+  font-size: 18px; /* 字体大小 */
+  line-height: 1.5; /* 行高 */
 }
 
 .modal-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
+  display: flex; /* 弹性布局 */
+  gap: 15px; /* 按钮间距 */
+  justify-content: center; /* 水平居中 */
 }
 
 .modal-actions button {
-  padding: 12px 24px;
-  font-size: 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s;
-  min-width: 100px;
+  padding: 12px 24px; /* 内边距 */
+  font-size: 16px; /* 字体大小 */
+  border-radius: 6px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  transition: all 0.3s; /* 过渡动画 */
+  min-width: 100px; /* 最小宽度 */
 }
 
-/* 图片预览模态框样式 */
+/* ==================== 图片预览模态框样式 ==================== */
 .image-preview-modal {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  transform: scale(1.05);
-  animation: modalAppear 0.3s ease-out;
+  background: white; /* 白色背景 */
+  padding: 30px; /* 内边距 */
+  border-radius: 12px; /* 大圆角 */
+  max-width: 90vw; /* 最大宽度为视口90% */
+  max-height: 90vh; /* 最大高度为视口90% */
+  display: flex; /* 弹性布局 */
+  flex-direction: column; /* 垂直方向 */
+  align-items: center; /* 水平居中 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
+  transform: scale(1.05); /* 轻微放大 */
+  animation: modalAppear 0.3s ease-out; /* 出现动画 */
 }
 
 .full-size-image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 100%; /* 最大宽度100% */
+  max-height: 70vh; /* 最大高度为视口70% */
+  object-fit: contain; /* 保持比例填充 */
+  margin-bottom: 20px; /* 底部外边距 */
+  border-radius: 8px; /* 圆角 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 阴影效果 */
 }
 
 .btn-close {
-  background-color: #f56c6c;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  min-width: 100px;
-  transition: background-color 0.3s;
+  background-color: #f56c6c; /* 红色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 12px 24px; /* 内边距 */
+  border-radius: 6px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 16px; /* 字体大小 */
+  min-width: 100px; /* 最小宽度 */
+  transition: background-color 0.3s; /* 背景色过渡 */
 }
 
 .btn-close:hover {
-  background-color: #f78989;
+  background-color: #f78989; /* 悬停时更亮的红色 */
 }
 
-/* 统一弹窗提示样式 */
+/* ==================== 统一弹窗提示样式 ==================== */
 .alert-modal-content {
-  background: white;
-  padding: 40px;
-  border-radius: 12px;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  transform: scale(1.05);
-  animation: modalAppear 0.3s ease-out;
+  background: white; /* 白色背景 */
+  padding: 40px; /* 内边距 */
+  border-radius: 12px; /* 大圆角 */
+  max-width: 500px; /* 最大宽度 */
+  width: 90%; /* 宽度90% */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
+  text-align: center; /* 文字居中 */
+  transform: scale(1.05); /* 轻微放大 */
+  animation: modalAppear 0.3s ease-out; /* 出现动画 */
 }
 
 .alert-modal-title {
-  margin-bottom: 20px;
-  color: #303133;
-  font-size: 24px;
-  font-weight: 600;
+  margin-bottom: 20px; /* 底部外边距 */
+  color: #303133; /* 深灰色文字 */
+  font-size: 24px; /* 大字体 */
+  font-weight: 600; /* 粗体 */
 }
 
 .alert-modal-message {
-  margin-bottom: 0;
-  color: #606266;
-  font-size: 18px;
-  line-height: 1.5;
+  margin-bottom: 0; /* 无底部外边距 */
+  color: #606266; /* 中灰色文字 */
+  font-size: 18px; /* 字体大小 */
+  line-height: 1.5; /* 行高 */
 }
 
+/* ==================== 表单组件样式 ==================== */
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 20px; /* 底部外边距 */
 }
 
 .form-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 700;
-  color: black;
+  display: block; /* 块级显示 */
+  margin-bottom: 8px; /* 底部外边距 */
+  font-weight: 700; /* 粗体 */
+  color: black; /* 黑色文字 */
 }
 
+/* 必填字段标记 */
 .form-label.required::after {
-  content: " *";
-  color: #f56c6c;
+  content: " *"; /* 星号内容 */
+  color: #f56c6c; /* 红色 */
 }
 
+/* 表单控件通用样式 */
 .form-select,
 .form-input,
 .form-textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.3s;
-  box-sizing: border-box;
+  width: 100%; /* 宽度100% */
+  padding: 10px 12px; /* 内边距 */
+  border: 1px solid #dcdfe6; /* 边框 */
+  border-radius: 4px; /* 圆角 */
+  font-size: 14px; /* 字体大小 */
+  transition: border-color 0.3s; /* 边框颜色过渡 */
+  box-sizing: border-box; /* 盒模型 */
 }
 
+/* 表单控件焦点状态 */
 .form-select:focus,
 .form-input:focus,
 .form-textarea:focus {
-  outline: none;
-  border-color: #409eff;
+  outline: none; /* 去除默认轮廓 */
+  border-color: #409eff; /* 主题蓝色边框 */
 }
 
+/* 下拉选择框特定样式 */
 .form-select {
-  background-color: white;
-  border: 2px solid #e4e7ed;
-  border-radius: 6px;
-  padding: 10px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  background-color: white; /* 白色背景 */
+  border: 2px solid #e4e7ed; /* 边框 */
+  border-radius: 6px; /* 圆角 */
+  padding: 10px; /* 内边距 */
+  font-size: 16px; /* 字体大小 */
+  cursor: pointer; /* 鼠标手型 */
+  transition: all 0.3s ease; /* 过渡动画 */
 }
 
 .form-select:hover {
-  border-color: #409eff;
-  background-color: #f5f7fa;
+  border-color: #409eff; /* 悬停时主题蓝色边框 */
+  background-color: #f5f7fa; /* 浅灰色背景 */
 }
 
 .form-select:focus {
-  border-color: #409eff;
-  background-color: #fff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  border-color: #409eff; /* 焦点时主题蓝色边框 */
+  background-color: #fff; /* 白色背景 */
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2); /* 蓝色发光效果 */
 }
 
+/* 错误状态的下拉框 */
 .form-select.error {
-  border-color: #f56c6c;
-  background-color: #fef0f0;
+  border-color: #f56c6c; /* 红色边框 */
+  background-color: #fef0f0; /* 浅红色背景 */
 }
 
 .form-select.error:focus {
-  border-color: #f56c6c;
-  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2);
+  border-color: #f56c6c; /* 红色边框 */
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2); /* 红色发光效果 */
 }
 
+/* 错误消息样式 */
 .error-message {
-  color: #f56c6c;
-  font-size: 12px;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
+  color: #f56c6c; /* 红色文字 */
+  font-size: 12px; /* 小字体 */
+  margin-top: 4px; /* 顶部外边距 */
+  display: flex; /* 弹性布局 */
+  align-items: center; /* 垂直居中 */
 }
 
 .error-message::before {
-  content: "⚠ ";
-  margin-right: 4px;
+  content: "⚠ "; /* 警告图标 */
+  margin-right: 4px; /* 右侧间距 */
 }
 
 .form-textarea {
-  resize: vertical;
-  min-height: 80px;
+  resize: vertical; /* 允许垂直调整大小 */
+  min-height: 80px; /* 最小高度 */
 }
 
+/* ==================== 可搜索选择框样式 ==================== */
 .searchable-select {
-  position: relative;
+  position: relative; /* 相对定位，为下拉列表提供定位上下文 */
 }
 
 .dropdown-list {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #ffffff;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 250px;
-  overflow-y: auto;
-  z-index: 1000;
-  font-size: 14px;
+  position: absolute; /* 绝对定位 */
+  top: 100%; /* 位于父元素底部 */
+  left: 0; /* 左侧对齐 */
+  right: 0; /* 右侧对齐 */
+  background: #ffffff; /* 白色背景 */
+  border: 1px solid #dcdfe6; /* 边框 */
+  border-radius: 8px; /* 圆角 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+  max-height: 250px; /* 最大高度 */
+  overflow-y: auto; /* 垂直滚动 */
+  z-index: 1000; /* 高z-index确保在最上层 */
+  font-size: 14px; /* 字体大小 */
 }
 
 .dropdown-item {
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: white;
-  color: #303133;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 10px 12px; /* 内边距 */
+  cursor: pointer; /* 鼠标手型 */
+  transition: all 0.2s ease; /* 过渡动画 */
+  border-bottom: 1px solid #f0f0f0; /* 底部边框 */
+  background-color: white; /* 白色背景 */
+  color: #303133; /* 文字颜色 */
+  display: flex; /* 弹性布局 */
+  justify-content: space-between; /* 两端对齐 */
+  align-items: center; /* 垂直居中 */
 }
 
 .dropdown-item:hover {
-  background-color: #409eff;
-  color: white;
+  background-color: #409eff; /* 悬停时主题蓝色背景 */
+  color: white; /* 白色文字 */
 }
 
 .dropdown-item:last-child {
-  border-bottom: none;
+  border-bottom: none; /* 最后一项无底部边框 */
 }
 
 .selected-mark {
-  color: #409eff;
-  font-weight: bold;
+  color: #409eff; /* 主题蓝色 */
+  font-weight: bold; /* 粗体 */
 }
 
 .search-input {
-  margin-bottom: 0;
-  border-radius: 4px;
+  margin-bottom: 0; /* 无底部外边距 */
+  border-radius: 4px; /* 圆角 */
 }
 
+/* ==================== 选中项显示样式 ==================== */
 .selected-item {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: #f0f9ff;
-  border: 1px solid #bae7ff;
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
+  margin-top: 8px; /* 顶部外边距 */
+  padding: 8px 12px; /* 内边距 */
+  background: #f0f9ff; /* 浅蓝色背景 */
+  border: 1px solid #bae7ff; /* 边框 */
+  border-radius: 4px; /* 圆角 */
+  display: flex; /* 弹性布局 */
+  justify-content: space-between; /* 两端对齐 */
+  align-items: center; /* 垂直居中 */
+  font-size: 14px; /* 字体大小 */
 }
 
 .selected-items {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  margin-top: 8px; /* 顶部外边距 */
+  display: flex; /* 弹性布局 */
+  flex-wrap: wrap; /* 允许换行 */
+  gap: 8px; /* 子元素间距 */
+  align-items: center; /* 垂直居中 */
 }
 
 .selected-tag {
-  background: #ecf5ff;
-  color: #409eff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  border: 1px solid #d9ecff;
-  cursor: pointer;
-  transition: background-color 0.3s;
+  background: #ecf5ff; /* 浅蓝色背景 */
+  color: #409eff; /* 主题蓝色文字 */
+  padding: 4px 8px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  font-size: 12px; /* 小字体 */
+  border: 1px solid #d9ecff; /* 边框 */
+  cursor: pointer; /* 鼠标手型 */
+  transition: background-color 0.3s; /* 背景色过渡 */
 }
 
 .selected-tag:hover {
-  background-color: #d9ecff;
+  background-color: #d9ecff; /* 悬停时更深的蓝色背景 */
 }
 
 .selected-tags-label {
-  font-size: 13px;
-  color: #909399;
+  font-size: 13px; /* 字体大小 */
+  color: #909399; /* 浅灰色文字 */
 }
 
+/* ==================== 无结果提示样式 ==================== */
 .no-results {
-  text-align: center;
-  padding: 40px;
-  color: #909399;
-  font-size: 16px;
-  background: #fafafa;
-  border-radius: 4px;
-  margin-top: 20px;
+  text-align: center; /* 文字居中 */
+  padding: 40px; /* 内边距 */
+  color: #909399; /* 浅灰色文字 */
+  font-size: 16px; /* 字体大小 */
+  background: #fafafa; /* 浅灰色背景 */
+  border-radius: 4px; /* 圆角 */
+  margin-top: 20px; /* 顶部外边距 */
 }
 
 .no-results p {
-  margin: 0;
+  margin: 0; /* 无外边距 */
 }
 
+/* 多选下拉框样式 */
 .searchable-select .form-select[multiple] {
-  height: 80px;
-  padding: 5px;
+  height: 80px; /* 固定高度 */
+  padding: 5px; /* 内边距 */
 }
 
 .searchable-select .form-select[multiple] option {
-  padding: 5px 8px;
+  padding: 5px 8px; /* 选项内边距 */
 }
 
+/* ==================== 新建知识点输入区域样式 ==================== */
 .new-knowledge-input {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  display: flex; /* 弹性布局 */
+  gap: 10px; /* 子元素间距 */
+  margin-top: 10px; /* 顶部外边距 */
 }
 
 .new-knowledge-input .form-input {
-  flex: 1;
+  flex: 1; /* 弹性填充 */
 }
 
+/* ==================== 按钮样式系统 ==================== */
+/* 主要按钮样式 */
 .btn-primary {
-  background-color: #409eff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
+  background-color: #409eff; /* 主题蓝色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 10px 20px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 14px; /* 字体大小 */
+  transition: background-color 0.3s; /* 背景色过渡 */
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #66b1ff;
+  background-color: #66b1ff; /* 悬停时更亮的蓝色 */
 }
 
 .btn-primary:disabled {
-  background-color: #a0cfff;
-  cursor: not-allowed;
+  background-color: #a0cfff; /* 禁用时浅蓝色 */
+  cursor: not-allowed; /* 禁用光标 */
 }
 
+/* 次要按钮样式 */
 .btn-secondary {
-  background-color: #f4f4f5;
-  color: #606266;
-  border: 1px solid #d3d4d6;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.3s;
+  background-color: #f4f4f5; /* 浅灰色背景 */
+  color: #606266; /* 中灰色文字 */
+  border: 1px solid #d3d4d6; /* 边框 */
+  padding: 8px 16px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 13px; /* 字体大小 */
+  transition: all 0.3s; /* 过渡动画 */
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: #e9e9eb;
+  background-color: #e9e9eb; /* 悬停时更深的灰色 */
 }
 
 .btn-secondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  opacity: 0.6; /* 半透明 */
+  cursor: not-allowed; /* 禁用光标 */
 }
 
+/* 高亮按钮样式（用于新建等操作） */
 .btn-highlight {
-  background-color: #67c23a;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.3s;
-  font-weight: 500;
+  background-color: #67c23a; /* 绿色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 8px 16px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 13px; /* 字体大小 */
+  transition: all 0.3s; /* 过渡动画 */
+  font-weight: 500; /* 中等字重 */
 }
 
 .btn-highlight:hover:not(:disabled) {
-  background-color: #85ce61;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(103, 194, 58, 0.3);
+  background-color: #85ce61; /* 悬停时更亮的绿色 */
+  transform: translateY(-1px); /* 上移效果 */
+  box-shadow: 0 2px 6px rgba(103, 194, 58, 0.3); /* 阴影效果 */
 }
 
 .btn-highlight:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+  opacity: 0.6; /* 半透明 */
+  cursor: not-allowed; /* 禁用光标 */
+  transform: none; /* 无变换 */
+  box-shadow: none; /* 无阴影 */
 }
 
+/* 移除按钮样式 */
 .btn-remove {
-  background-color: #f56c6c;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
+  background-color: #f56c6c; /* 红色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 6px 12px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 12px; /* 小字体 */
 }
 
 .btn-remove:hover {
-  background-color: #f78989;
+  background-color: #f78989; /* 悬停时更亮的红色 */
 }
 
+/* ==================== 图片上传区域样式 ==================== */
 .image-upload-section {
-  margin-top: 15px;
+  margin-top: 15px; /* 顶部外边距 */
 }
 
 .upload-controls {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 10px;
+  display: flex; /* 弹性布局 */
+  gap: 10px; /* 子元素间距 */
+  align-items: center; /* 垂直居中 */
+  margin-bottom: 10px; /* 底部外边距 */
 }
 
 .file-input {
-  display: none;
+  display: none; /* 隐藏文件输入 */
 }
 
 .image-preview {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-top: 10px;
+  display: flex; /* 弹性布局 */
+  align-items: center; /* 垂直居中 */
+  gap: 15px; /* 子元素间距 */
+  margin-top: 10px; /* 顶部外边距 */
 }
 
 .preview-image {
-  max-width: 200px;
-  max-height: 150px;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
+  max-width: 200px; /* 最大宽度 */
+  max-height: 150px; /* 最大高度 */
+  border: 1px solid #e4e7ed; /* 边框 */
+  border-radius: 4px; /* 圆角 */
 }
 
+/* ==================== 选项列表样式 ==================== */
 .options-list {
-  margin-bottom: 15px;
+  margin-bottom: 15px; /* 底部外边距 */
 }
 
 .option-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 15px;
-  padding: 10px;
-  background: #fafafa;
-  border-radius: 4px;
+  display: flex; /* 弹性布局 */
+  align-items: flex-start; /* 顶部对齐 */
+  gap: 10px; /* 子元素间距 */
+  margin-bottom: 15px; /* 底部外边距 */
+  padding: 10px; /* 内边距 */
+  background: #fafafa; /* 浅灰色背景 */
+  border-radius: 4px; /* 圆角 */
 }
 
 .option-label {
-  font-weight: 500;
-  min-width: 30px;
-  color: #409eff;
-  margin-top: 8px;
+  font-weight: 500; /* 中等字重 */
+  min-width: 30px; /* 最小宽度 */
+  color: #409eff; /* 主题蓝色 */
+  margin-top: 8px; /* 顶部外边距 */
 }
 
 .option-input-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  flex: 1; /* 弹性填充 */
+  display: flex; /* 弹性布局 */
+  flex-direction: column; /* 垂直方向 */
 }
 
 .option-input {
-  margin-bottom: 4px;
+  margin-bottom: 4px; /* 底部外边距 */
 }
 
 .option-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
+  display: flex; /* 弹性布局 */
+  align-items: center; /* 垂直居中 */
+  gap: 10px; /* 子元素间距 */
+  margin-top: 8px; /* 顶部外边距 */
 }
 
 .radio-input,
 .checkbox-input {
-  margin: 0;
+  margin: 0; /* 无外边距 */
 }
 
 .radio-label,
 .checkbox-label {
-  font-size: 13px;
-  color: #606266;
-  white-space: nowrap;
+  font-size: 13px; /* 小字体 */
+  color: #606266; /* 中灰色文字 */
+  white-space: nowrap; /* 不换行 */
 }
 
+/* ==================== 表单操作区域样式 ==================== */
 .form-actions {
-  display: flex;
-  gap: 15px;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #e4e7ed;
-  grid-column: 1 / -1;
+  display: flex; /* 弹性布局 */
+  gap: 15px; /* 子元素间距 */
+  margin-top: 30px; /* 顶部外边距 */
+  padding-top: 20px; /* 顶部内边距 */
+  border-top: 1px solid #e4e7ed; /* 顶部边框 */
+  grid-column: 1 / -1; /* 网格布局中跨所有列 */
 }
 
 .submit-btn {
-  flex: 1;
+  flex: 1; /* 弹性填充 */
 }
 
-/* 数学公式预览样式 */
+/* ==================== 数学公式预览样式 ==================== */
 .math-preview {
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  padding: 10px;
-  margin-top: 8px;
-  background: #f8f9fa;
-  min-height: 40px;
-  line-height: 1.5;
+  border: 1px solid #e4e7ed; /* 边框 */
+  border-radius: 4px; /* 圆角 */
+  padding: 10px; /* 内边距 */
+  margin-top: 8px; /* 顶部外边距 */
+  background: #f8f9fa; /* 浅灰色背景 */
+  min-height: 40px; /* 最小高度 */
+  line-height: 1.5; /* 行高 */
 }
 
 .math-preview.small {
-  min-height: 30px;
-  padding: 6px 8px;
-  font-size: 13px;
+  min-height: 30px; /* 较小高度 */
+  padding: 6px 8px; /* 较小内边距 */
+  font-size: 13px; /* 较小字体 */
 }
 
 .math-error {
-  color: #f56c6c;
-  background: #fef0f0;
-  padding: 2px 4px;
-  border-radius: 2px;
-  border: 1px solid #fbc4c4;
+  color: #f56c6c; /* 红色文字 */
+  background: #fef0f0; /* 浅红色背景 */
+  padding: 2px 4px; /* 内边距 */
+  border-radius: 2px; /* 小圆角 */
+  border: 1px solid #fbc4c4; /* 红色边框 */
 }
 
-/* 确保 KaTeX 公式正确显示 */
+/* ==================== KaTeX 公式样式 ==================== */
+/* 深度选择器，确保样式能应用到子组件中的KaTeX元素 */
 :deep(.katex) {
-  font-size: 1.1em;
+  font-size: 1.1em; /* 稍大的字体 */
 }
 
 :deep(.katex-display) {
-  margin: 0.5em 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  margin: 0.5em 0; /* 外边距 */
+  overflow-x: auto; /* 水平滚动 */
+  overflow-y: hidden; /* 垂直隐藏 */
 }
 
-/* 调整表格列宽设置 */
-/* 按顺序指定每列固定宽度 */
+/* ==================== 表格列宽设置 ==================== */
+/* 按顺序为每个表格列设置固定宽度 */
 .table-cell:nth-child(1) {
-  width: 40px;
-}
-.table-cell:nth-child(2) {
-  width: 120px;
-}
-.table-cell:nth-child(3) {
-  width: 80px;
-}
-.table-cell:nth-child(4) {
-  width: 80px;
-}
-.table-cell:nth-child(5) {
-  width: 100px;
-}
-.table-cell:nth-child(6) {
-  width: 100px;
-}
-.table-cell:nth-child(7) {
-  width: 150px;
-}
-.table-cell:nth-child(8) {
-  width: 120px;
-}
-.table-cell:nth-child(9) {
-  width: 120px;
-}
-.table-cell:nth-child(10) {
-  width: 120px;
-}
-.table-cell:nth-child(11) {
-  width: 150px;
-}
-.table-cell:nth-child(12) {
-  width: 60px;
-}
-.table-cell:nth-child(13) {
-  width: 280px;
-}
-.table-cell:nth-child(14) {
-  width: 80px;
-}
-.table-cell:nth-child(15) {
-  width: 80px;
+  width: 40px; /* ID列 */
 }
 
+.table-cell:nth-child(2) {
+  width: 120px; /* 学校列 */
+}
+
+.table-cell:nth-child(3) {
+  width: 80px; /* 年级列 */
+}
+
+.table-cell:nth-child(4) {
+  width: 80px; /* 科目列 */
+}
+
+.table-cell:nth-child(5) {
+  width: 100px; /* 题型列 */
+}
+
+.table-cell:nth-child(6) {
+  width: 100px; /* 评分方法列 */
+}
+
+.table-cell:nth-child(7) {
+  width: 150px; /* 知识点列 */
+}
+
+.table-cell:nth-child(8) {
+  width: 120px; /* 问题定义列 */
+}
+
+.table-cell:nth-child(9) {
+  width: 120px; /* 解题思想列 */
+}
+
+.table-cell:nth-child(10) {
+  width: 120px; /* 问题类别列 */
+}
+
+.table-cell:nth-child(11) {
+  width: 150px; /* 子知识点列 */
+}
+
+.table-cell:nth-child(12) {
+  width: 60px; /* 难度列 */
+}
+
+.table-cell:nth-child(13) {
+  width: 280px; /* 题目内容列 */
+}
+
+.table-cell:nth-child(14) {
+  width: 80px; /* 图片列 */
+}
+
+.table-cell:nth-child(15) {
+  width: 80px; /* 操作列 */
+}
+
+/* 表格行边框 */
 .table-row {
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid #e4e7ed; /* 底部边框 */
 }
 
 .table-header {
-  border-bottom: 2px solid #e4e7ed;
+  border-bottom: 2px solid #e4e7ed; /* 更粗的底部边框 */
 }
 
 .table-row:last-child {
-  border-bottom: none;
+  border-bottom: none; /* 最后一行无边框 */
 }
 
 .actions-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 60px;
+  display: flex; /* 弹性布局 */
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
+  height: 100%; /* 高度100% */
+  min-height: 60px; /* 最小高度 */
 }
 
 .sub-knowledge-tag {
-  margin: 2px;
+  margin: 2px; /* 外边距 */
 }
 
+/* ==================== 退出登录按钮样式 ==================== */
 .logout-btn {
-  background-color: #f56c6c;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-  float: right;
+  background-color: #f56c6c; /* 红色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 10px 20px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 14px; /* 字体大小 */
+  transition: background-color 0.3s; /* 背景色过渡 */
+  float: right; /* 右浮动 */
 }
 
 .logout-btn:hover {
-  background-color: red;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(245, 108, 108, 0.3);
+  background-color: red; /* 悬停时更红的红色 */
+  transform: translateY(-1px); /* 上移效果 */
+  box-shadow: 0 2px 6px rgba(245, 108, 108, 0.3); /* 阴影效果 */
 }
 
-/* 响应式调整 */
+/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
+  /* 在小屏幕上将选项项改为垂直布局 */
   .option-item {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: column; /* 垂直方向 */
+    align-items: stretch; /* 拉伸对齐 */
   }
 
   .option-actions {
-    justify-content: flex-start;
-    margin-top: 10px;
+    justify-content: flex-start; /* 左对齐 */
+    margin-top: 10px; /* 顶部外边距 */
   }
 }
 </style>
