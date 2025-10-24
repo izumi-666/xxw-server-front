@@ -522,6 +522,19 @@
           </select>
         </div>
 
+        <!-- 备注（remark） -->
+        <div class="form-group">
+          <label class="form-label">备注：</label>
+          <textarea
+            v-model="form.remark"
+            placeholder="请输入备注信息，数学公式使用 $公式$"
+            class="form-textarea"
+            rows="3"
+            @input="renderMathPreview('remark', form.remark)"
+          ></textarea>
+          <div class="math-preview" v-html="remarkPreview"></div>
+        </div>
+
         <!-- 提交按钮 -->
         <div class="form-actions">
           <button type="submit" class="btn-primary submit-btn" :disabled="submitting">
@@ -801,6 +814,7 @@
               <div class="table-cell">子知识点</div>
               <div class="table-cell">难度</div>
               <div class="table-cell">题目内容</div>
+              <div class="table-cell">备注</div>
               <div class="table-cell">图片</div>
               <div class="table-cell">操作</div>
             </div>
@@ -879,6 +893,8 @@
               <div class="table-cell">{{ q.difficulty_level }}星</div>
               <!-- 题目内容单元格（截断显示） -->
               <div class="table-cell title-cell">{{ q.title }}</div>
+              <!-- 备注 -->
+              <div class="table-cell title-cell">{{ q.remark }}</div>
               <!-- 图片预览单元格 -->
               <div class="table-cell image-cell">
                 <img
@@ -1012,6 +1028,56 @@
               >
                 清除
               </button>
+            </div>
+          </div>
+          <!-- 子知识点选择 -->
+          <div class="form-group">
+            <label class="form-label">子知识点：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="updateFormSubKnowledgeSearch"
+                placeholder="输入关键字搜索子知识点..."
+                class="form-input search-input"
+                @input="filterUpdateFormSubKnowledgePoints"
+                @focus="showUpdateFormSubKnowledgeDropdown = true"
+                @blur="onUpdateFormSubKnowledgeBlur"
+              />
+              <div
+                v-if="
+                  showUpdateFormSubKnowledgeDropdown &&
+                  filteredUpdateFormSubKnowledgePoints.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="kp in filteredUpdateFormSubKnowledgePoints"
+                  :key="kp.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateFormSubKnowledgePoint(kp)"
+                >
+                  {{ kp.name }}
+                  <span
+                    v-if="isUpdateFormSubKnowledgeSelected(kp.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div
+              class="selected-items"
+              v-if="selectedUpdateFormSubKnowledgePoints.length"
+            >
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="kp in selectedUpdateFormSubKnowledgePoints"
+                :key="kp.id"
+                class="selected-tag"
+                @click="removeUpdateFormSubKnowledgePoint(kp.id)"
+              >
+                {{ kp.name }} ×
+              </span>
             </div>
           </div>
 
@@ -1287,10 +1353,10 @@
 
           <!-- 主观题答案 -->
           <div v-if="updateForm.question_type === 'SUBJECTIVE'" class="form-group">
-            <label class="form-label required">答案/参考答案：</label>
+            <label class="form-label required">参考答案：</label>
             <textarea
               v-model="updateForm.answer"
-              placeholder="请输入答案或参考答案，数学公式使用 $公式$ "
+              placeholder="请输入参考答案，数学公式使用 $公式$ "
               class="form-textarea"
               rows="4"
               @input="renderMathPreview('updateAnswer', updateForm.answer)"
@@ -1312,55 +1378,17 @@
             <div class="math-preview" v-html="updateNotesPreview"></div>
           </div>
 
-          <!-- 子知识点选择 -->
+          <!-- 备注（更新表单） -->
           <div class="form-group">
-            <label class="form-label">子知识点：</label>
-            <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormSubKnowledgeSearch"
-                placeholder="输入关键字搜索子知识点..."
-                class="form-input search-input"
-                @input="filterUpdateFormSubKnowledgePoints"
-                @focus="showUpdateFormSubKnowledgeDropdown = true"
-                @blur="onUpdateFormSubKnowledgeBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormSubKnowledgeDropdown &&
-                  filteredUpdateFormSubKnowledgePoints.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="kp in filteredUpdateFormSubKnowledgePoints"
-                  :key="kp.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormSubKnowledgePoint(kp)"
-                >
-                  {{ kp.name }}
-                  <span
-                    v-if="isUpdateFormSubKnowledgeSelected(kp.id)"
-                    class="selected-mark"
-                    >✓</span
-                  >
-                </div>
-              </div>
-            </div>
-            <div
-              class="selected-items"
-              v-if="selectedUpdateFormSubKnowledgePoints.length"
-            >
-              <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="kp in selectedUpdateFormSubKnowledgePoints"
-                :key="kp.id"
-                class="selected-tag"
-                @click="removeUpdateFormSubKnowledgePoint(kp.id)"
-              >
-                {{ kp.name }} ×
-              </span>
-            </div>
+            <label class="form-label">备注：</label>
+            <textarea
+              v-model="updateForm.remark"
+              placeholder="请输入备注，数学公式使用 $公式$ "
+              class="form-textarea"
+              rows="3"
+              @input="renderMathPreview('updateRemark', updateForm.remark)"
+            ></textarea>
+            <div class="math-preview" v-html="updateRemarkPreview"></div>
           </div>
 
           <!-- 更新操作按钮 -->
@@ -1437,12 +1465,14 @@ export default {
     const answerPreview = ref(""); // 答案预览
     const notesPreview = ref(""); // 解析预览
     const optionPreviews = ref(Array(10).fill("")); // 选项预览数组
+    const remarkPreview = ref(""); // 备注预览
 
     // 更新界面的数学公式预览
-    const updateTitlePreview = ref("");
-    const updateAnswerPreview = ref("");
-    const updateNotesPreview = ref("");
-    const updateOptionPreviews = ref(Array(10).fill(""));
+    const updateTitlePreview = ref(""); // 更新题目内容预览
+    const updateAnswerPreview = ref(""); // 更新答案预览
+    const updateNotesPreview = ref(""); // 更新解析预览
+    const updateOptionPreviews = ref(Array(10).fill("")); // 更新选项预览数组
+    const updateRemarkPreview = ref(""); // 更新备注预览
 
     // ==================== 弹窗和提示相关状态 ====================
     const showAlertModal = ref(false); // 是否显示提示弹窗
@@ -1856,22 +1886,28 @@ export default {
       const preview = renderMath(text);
       switch (type) {
         case "title":
-          titlePreview.value = preview;
+          titlePreview.value = preview; // 题目内容预览
           break;
         case "answer":
-          answerPreview.value = preview;
+          answerPreview.value = preview; // 答案预览
           break;
         case "notes":
-          notesPreview.value = preview;
+          notesPreview.value = preview; // 解析预览
+          break;
+        case "remark":
+          remarkPreview.value = preview; // 备注预览
           break;
         case "updateTitle":
-          updateTitlePreview.value = preview;
+          updateTitlePreview.value = preview; // 更新题目内容预览
           break;
         case "updateAnswer":
-          updateAnswerPreview.value = preview;
+          updateAnswerPreview.value = preview; // 更新答案预览
           break;
         case "updateNotes":
-          updateNotesPreview.value = preview;
+          updateNotesPreview.value = preview; // 更新解析预览
+          break;
+        case "updateRemark":
+          updateRemarkPreview.value = preview; // 更新备注预览
           break;
       }
     };
@@ -3163,6 +3199,7 @@ export default {
       renderMathPreview("updateTitle", updateForm.title);
       renderMathPreview("updateAnswer", updateForm.answer);
       renderMathPreview("updateNotes", updateForm.notes);
+      renderMathPreview("updateRemark", updateForm.remark);
 
       // 初始化选项预览
       if (updateForm.options && updateForm.options.length) {
@@ -3196,6 +3233,7 @@ export default {
       updateTitlePreview.value = "";
       updateAnswerPreview.value = "";
       updateNotesPreview.value = "";
+      updateRemarkPreview.value = "";
       updateOptionPreviews.value = Array(10).fill("");
     };
 
@@ -3973,10 +4011,12 @@ export default {
       answerPreview,
       notesPreview,
       optionPreviews,
+      remarkPreview,
       updateTitlePreview,
       updateAnswerPreview,
       updateNotesPreview,
       updateOptionPreviews,
+      updateRemarkPreview,
       renderMathPreview,
       renderOptionPreview,
       renderUpdateOptionPreview,
@@ -4099,7 +4139,7 @@ export default {
 .table-row {
   display: flex; /* 弹性布局 */
   align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
+  justify-content: flex-start; /* 水平居中 */
 }
 
 .table-header {
@@ -4108,9 +4148,8 @@ export default {
 }
 
 .table-cell {
-  display: flex; /* 弹性布局 */
-  align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
+  /* align-items: center; /* 垂直居中 
+  justify-content: center; 水平居中  （之前无备注列时dispaly使用flex时使用此两行） */
   padding: 12px 8px; /* 内边距 */
   font-size: 14px; /* 字体大小 */
   color: #606266; /* 文字颜色 */
@@ -4160,7 +4199,7 @@ export default {
   display: inline-block; /* 行内块显示 */
 }
 
-/* 无子知识点提示样式 */
+/* 无子知识点提示样式 （问题定义，解题思想，问题类别也同样适用此标签）*/
 .no-sub-knowledge {
   color: #c0c4cc; /* 浅灰色文字 */
   font-style: italic; /* 斜体 */
@@ -4848,23 +4887,23 @@ export default {
 }
 
 .table-cell:nth-child(3) {
-  width: 80px; /* 年级列 */
+  width: 60px; /* 年级列 */
 }
 
 .table-cell:nth-child(4) {
-  width: 80px; /* 科目列 */
+  width: 50px; /* 科目列 */
 }
 
 .table-cell:nth-child(5) {
-  width: 100px; /* 题型列 */
+  width: 60px; /* 题型列 */
 }
 
 .table-cell:nth-child(6) {
-  width: 100px; /* 评分方法列 */
+  width: 80px; /* 评分方法列 */
 }
 
 .table-cell:nth-child(7) {
-  width: 150px; /* 知识点列 */
+  width: 120px; /* 知识点列 */
 }
 
 .table-cell:nth-child(8) {
@@ -4884,19 +4923,23 @@ export default {
 }
 
 .table-cell:nth-child(12) {
-  width: 60px; /* 难度列 */
+  width: 40px; /* 难度列 */
 }
 
 .table-cell:nth-child(13) {
-  width: 280px; /* 题目内容列 */
+  width: 250px; /* 题目内容列 */
 }
 
 .table-cell:nth-child(14) {
-  width: 80px; /* 图片列 */
+  width: 150px; /* 备注列 */
 }
 
 .table-cell:nth-child(15) {
-  width: 80px; /* 操作列 */
+  width: 120px; /* 图片列 */
+}
+
+.table-cell:nth-child(16) {
+  width: 150px; /* 操作列 */
 }
 
 /* 表格行边框 */
