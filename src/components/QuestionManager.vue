@@ -893,6 +893,9 @@
               <div class="table-cell">{{ q.difficulty_level }}星</div>
               <!-- 题目内容单元格（截断显示） -->
               <div class="table-cell title-cell">{{ q.title }}</div>
+              <!-- 备注 -->
+              <div class="table-cell title-cell">{{ q.remark }}</div>
+              <!-- 图片预览单元格 -->
               <div class="table-cell image-cell">
                 <img
                   v-if="q.img_url"
@@ -1375,7 +1378,7 @@
             <div class="math-preview" v-html="updateNotesPreview"></div>
           </div>
 
-          <!-- 子知识点 -->
+          <!-- 备注（更新表单） -->
           <div class="form-group">
             <label class="form-label">备注：</label>
             <textarea
@@ -1456,17 +1459,20 @@ export default {
   setup() {
     const router = useRouter();
 
-    // 数学公式预览相关状态
-    const titlePreview = ref("");
-    const answerPreview = ref("");
-    const notesPreview = ref("");
-    const optionPreviews = ref(Array(10).fill(""));
+    // ==================== 数学公式预览相关状态 ====================
+    // 上传界面的数学公式预览
+    const titlePreview = ref(""); // 题目内容预览
+    const answerPreview = ref(""); // 答案预览
+    const notesPreview = ref(""); // 解析预览
+    const optionPreviews = ref(Array(10).fill("")); // 选项预览数组
+    const remarkPreview = ref(""); // 备注预览
 
-    // 更新界面的预览
-    const updateTitlePreview = ref("");
-    const updateAnswerPreview = ref("");
-    const updateNotesPreview = ref("");
-    const updateOptionPreviews = ref(Array(10).fill(""));
+    // 更新界面的数学公式预览
+    const updateTitlePreview = ref(""); // 更新题目内容预览
+    const updateAnswerPreview = ref(""); // 更新答案预览
+    const updateNotesPreview = ref(""); // 更新解析预览
+    const updateOptionPreviews = ref(Array(10).fill("")); // 更新选项预览数组
+    const updateRemarkPreview = ref(""); // 更新备注预览
 
     // ==================== 弹窗和提示相关状态 ====================
     const showAlertModal = ref(false); // 是否显示提示弹窗
@@ -4133,7 +4139,7 @@ export default {
 .table-row {
   display: flex; /* 弹性布局 */
   align-items: center; /* 垂直居中 */
-  justify-content: center;
+  justify-content: flex-start; /* 水平居中 */
 }
 
 .table-header {
@@ -4142,15 +4148,14 @@ export default {
 }
 
 .table-cell {
-  display: flex;
-  align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
-  padding: 12px 8px;
-  font-size: 14px;
-  color: #606266;
-  box-sizing: border-box;
-  text-align: center;
-  word-break: break-word;
+  /* align-items: center; /* 垂直居中 
+  justify-content: center; 水平居中  （之前无备注列时dispaly使用flex时使用此两行） */
+  padding: 12px 8px; /* 内边距 */
+  font-size: 14px; /* 字体大小 */
+  color: #606266; /* 文字颜色 */
+  box-sizing: border-box; /* 盒模型 */
+  text-align: center; /* 文字居中 */
+  word-break: break-word; /* 单词换行 */
 }
 
 .table-header .table-cell {
@@ -4194,6 +4199,7 @@ export default {
   display: inline-block; /* 行内块显示 */
 }
 
+/* 无子知识点提示样式 （问题定义，解题思想，问题类别也同样适用此标签）*/
 .no-sub-knowledge {
   color: #c0c4cc; /* 浅灰色文字 */
   font-style: italic; /* 斜体 */
@@ -4881,23 +4887,23 @@ export default {
 }
 
 .table-cell:nth-child(3) {
-  width: 80px;
+  width: 60px; /* 年级列 */
 }
 
 .table-cell:nth-child(4) {
-  width: 80px;
+  width: 50px; /* 科目列 */
 }
 
 .table-cell:nth-child(5) {
-  width: 100px;
+  width: 60px; /* 题型列 */
 }
 
 .table-cell:nth-child(6) {
-  width: 100px;
+  width: 80px; /* 评分方法列 */
 }
 
 .table-cell:nth-child(7) {
-  width: 150px;
+  width: 120px; /* 知识点列 */
 }
 
 .table-cell:nth-child(8) {
@@ -4917,21 +4923,26 @@ export default {
 }
 
 .table-cell:nth-child(12) {
-  width: 60px;
+  width: 40px; /* 难度列 */
 }
 
 .table-cell:nth-child(13) {
-  width: 280px;
+  width: 250px; /* 题目内容列 */
 }
 
 .table-cell:nth-child(14) {
-  width: 80px;
+  width: 150px; /* 备注列 */
 }
 
 .table-cell:nth-child(15) {
-  width: 80px;
+  width: 120px; /* 图片列 */
 }
 
+.table-cell:nth-child(16) {
+  width: 150px; /* 操作列 */
+}
+
+/* 表格行边框 */
 .table-row {
   border-bottom: 1px solid #e4e7ed; /* 底部边框 */
 }
