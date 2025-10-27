@@ -37,6 +37,17 @@
             </option>
           </select>
         </div>
+        <!-- 年级选择 -->
+        <div class="form-group">
+          <label class="form-label  ">年级：</label>
+          <select v-model="form.grade_id" class="form-select">
+            <option :value="null">全部</option>
+            <!-- 遍历年级列表 -->
+            <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
+              {{ grade.name }}
+            </option> 
+          </select>
+        </div>  
 
         <!-- 科目选择 -->
         <div class="form-group">
