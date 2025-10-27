@@ -50,23 +50,64 @@
           </select>
         </div>
 
-        <!-- 题型选择 -->
+        <!-- 问题类别选择区域 -->
         <div class="form-group">
-          <label class="form-label required">题型：</label>
-          <select
-            v-model="form.question_type"
-            class="form-select"
-            :class="{ error: questionTypeError }"
-            @change="handleQuestionTypeChange"
-            required
-          >
-            <option :value="null">请选择题型</option>
-            <option value="SINGLE">单选题</option>
-            <option value="MULTIPLE">多选题</option>
-            <option value="SUBJECTIVE">主观题</option>
-          </select>
-          <!-- 错误提示 -->
-          <div v-if="questionTypeError" class="error-message">请选择题型</div>
+          <label class="form-label required">问题类别：</label>
+          <div class="searchable-select">
+            <input
+              type="text"
+              v-model="questionCategorySearch"
+              placeholder="输入关键字搜索问题类别..."
+              class="form-input search-input"
+              @input="filterQuestionCategories"
+              @focus="showQuestionCategoryDropdown = true"
+              @blur="onQuestionCategoryBlur"
+            />
+            <div
+              v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length"
+              class="dropdown-list"
+            >
+              <div
+                v-for="item in filteredQuestionCategories"
+                :key="item.id"
+                class="dropdown-item"
+                @mousedown="selectQuestionCategory(item)"
+              >
+                {{ item.name }}
+                <span
+                  v-if="
+                    selectedQuestionCategory && selectedQuestionCategory.id === item.id
+                  "
+                  class="selected-mark"
+                  >✓</span
+                >
+              </div>
+            </div>
+          </div>
+          <div class="selected-item" v-if="selectedQuestionCategory">
+            已选择: {{ selectedQuestionCategory.name }}
+            <button type="button" @click="clearQuestionCategory" class="btn-remove">
+              清除
+            </button>
+          </div>
+
+          <div class="new-knowledge-input">
+            <input
+              type="text"
+              v-model="newQuestionCategory"
+              placeholder="新建问题类别（多个用逗号分隔）"
+              class="form-input"
+              @keypress.enter="uploadQuestionCategory"
+            />
+            <button
+              type="button"
+              @click="uploadQuestionCategory"
+              class="btn-highlight"
+              :disabled="!newQuestionCategory.trim()"
+            >
+              新增问题类别
+            </button>
+          </div>
         </div>
 
         <!-- 题目内容输入区域 -->
@@ -115,8 +156,8 @@
           </div>
         </div>
 
-        <!-- 选择题选项区域（仅在选择题型时显示） -->
-        <div v-if="showOptions" class="form-group">
+        <!-- 单选题选项区域（仅在问题类别为单选题时显示） -->
+        <div v-if="showSingleOptions" class="form-group">
           <label class="form-label">选项：</label>
           <div class="options-list">
             <!-- 遍历选项列表 -->
@@ -130,39 +171,24 @@
                   :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
                   class="form-input option-input"
                   @input="renderOptionPreview(index, opt.text)"
-                  required
                 />
                 <!-- 选项数学公式预览 -->
                 <div class="math-preview small" v-html="optionPreviews[index]"></div>
               </div>
               <div class="option-actions">
                 <!-- 单选题正确答案选择 -->
-                <template v-if="form.question_type === 'SINGLE'">
-                  <input
-                    type="radio"
-                    name="singleAnswer"
-                    :value="index"
-                    v-model="singleAnswerIndex"
-                    :id="`upload-single-answer-${index}`"
-                    class="radio-input"
-                    required
-                  />
-                  <label class="radio-label" :for="`upload-single-answer-${index}`"
-                    >正确答案</label
-                  >
-                </template>
-                <!-- 多选题正确答案选择 -->
-                <template v-else-if="form.question_type === 'MULTIPLE'">
-                  <input
-                    type="checkbox"
-                    v-model="opt.isAnswer"
-                    :id="`upload-multiple-answer-${index}`"
-                    class="checkbox-input"
-                  />
-                  <label class="checkbox-label" :for="`upload-multiple-answer-${index}`"
-                    >正确答案</label
-                  >
-                </template>
+                <input
+                  type="radio"
+                  name="singleAnswer"
+                  :value="index"
+                  v-model="singleAnswerIndex"
+                  :id="`upload-single-answer-${index}`"
+                  class="radio-input"
+                  required
+                />
+                <label class="radio-label" :for="`upload-single-answer-${index}`"
+                  >正确答案</label
+                >
                 <!-- 删除选项按钮 -->
                 <button
                   type="button"
@@ -179,8 +205,54 @@
           <button type="button" @click="addOption" class="btn-secondary">添加选项</button>
         </div>
 
-        <!-- 主观题答案区域 -->
-        <div v-if="form.question_type === 'SUBJECTIVE'" class="form-group">
+        <!-- 多选题选项区域（仅在问题类别为多选题时显示） -->
+        <div v-if="showMultipleOptions" class="form-group">
+          <label class="form-label">选项：</label>
+          <div class="options-list">
+            <!-- 遍历选项列表 -->
+            <div v-for="(opt, index) in form.options" :key="index" class="option-item">
+              <span class="option-label">{{ getOptionLabel(index) }}.</span>
+              <div class="option-input-container">
+                <!-- 选项文本输入 -->
+                <input
+                  type="text"
+                  v-model="opt.text"
+                  :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                  class="form-input option-input"
+                  @input="renderOptionPreview(index, opt.text)"
+                />
+                <!-- 选项数学公式预览 -->
+                <div class="math-preview small" v-html="optionPreviews[index]"></div>
+              </div>
+              <div class="option-actions">
+                <!-- 多选题正确答案选择 -->
+                <input
+                  type="checkbox"
+                  v-model="opt.isAnswer"
+                  :id="`upload-multiple-answer-${index}`"
+                  class="checkbox-input"
+                />
+                <label class="checkbox-label" :for="`upload-multiple-answer-${index}`"
+                  >正确答案</label
+                >
+                <!-- 删除选项按钮 -->
+                <button
+                  type="button"
+                  @click="removeOption(index)"
+                  class="btn-remove"
+                  :disabled="form.options.length <= 2"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- 添加选项按钮 -->
+          <button type="button" @click="addOption" class="btn-secondary">添加选项</button>
+        </div>
+
+        <!-- 主观题答案区域（在问题类别不是选择题时显示） -->
+        <div v-if="showSubjectiveAnswer" class="form-group">
           <label class="form-label required">参考答案：</label>
           <textarea
             v-model="form.answer"
@@ -262,7 +334,7 @@
           </div>
         </div>
 
-        <!-- 子知识点选择区域（结构与知识点类似） -->
+        <!-- 子知识点选择区域 -->
         <div class="form-group">
           <label class="form-label">子知识点：</label>
           <div class="searchable-select">
@@ -323,7 +395,7 @@
           </div>
         </div>
 
-        <!-- 问题定义选择区域（结构与知识点类似） -->
+        <!-- 问题定义选择区域 -->
         <div class="form-group">
           <label class="form-label">问题定义：</label>
           <div class="searchable-select">
@@ -383,7 +455,7 @@
           </div>
         </div>
 
-        <!-- 解题思想选择区域（结构与知识点类似） -->
+        <!-- 解题思想选择区域 -->
         <div class="form-group">
           <label class="form-label">解题思想：</label>
           <div class="searchable-select">
@@ -439,66 +511,6 @@
               :disabled="!newSolutionIdea.trim()"
             >
               新增解题思想
-            </button>
-          </div>
-        </div>
-
-        <!-- 问题类别选择区域（结构与知识点类似） -->
-        <div class="form-group">
-          <label class="form-label">问题类别：</label>
-          <div class="searchable-select">
-            <input
-              type="text"
-              v-model="questionCategorySearch"
-              placeholder="输入关键字搜索问题类别..."
-              class="form-input search-input"
-              @input="filterQuestionCategories"
-              @focus="showQuestionCategoryDropdown = true"
-              @blur="onQuestionCategoryBlur"
-            />
-            <div
-              v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="item in filteredQuestionCategories"
-                :key="item.id"
-                class="dropdown-item"
-                @mousedown="selectQuestionCategory(item)"
-              >
-                {{ item.name }}
-                <span v-if="isQuestionCategorySelected(item.id)" class="selected-mark"
-                  >✓</span
-                >
-              </div>
-            </div>
-          </div>
-          <div class="selected-items" v-if="selectedQuestionCategories.length">
-            <span class="selected-tags-label">已选择：</span>
-            <span
-              v-for="item in selectedQuestionCategories"
-              :key="item.id"
-              class="selected-tag"
-              @click="removeQuestionCategory(item.id)"
-            >
-              {{ item.name }} ×
-            </span>
-          </div>
-          <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newQuestionCategory"
-              placeholder="新建问题类别（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadQuestionCategory"
-            />
-            <button
-              type="button"
-              @click="uploadQuestionCategory"
-              class="btn-highlight"
-              :disabled="!newQuestionCategory.trim()"
-            >
-              新增问题类别
             </button>
           </div>
         </div>
@@ -572,15 +584,52 @@
             </select>
           </div>
 
-          <!-- 题型筛选 -->
+          <!-- 问题类别筛选（多选） -->
           <div class="criteria-item">
-            <label>题型：</label>
-            <select v-model="searchCriteria.question_type" class="form-select">
-              <option :value="null">全部</option>
-              <option value="SINGLE">单选题</option>
-              <option value="MULTIPLE">多选题</option>
-              <option value="SUBJECTIVE">主观题</option>
-            </select>
+            <label>问题类别：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="updateQuestionCategorySearch"
+                placeholder="输入关键字搜索问题类别..."
+                class="form-input search-input"
+                @input="filterUpdateQuestionCategories"
+                @focus="showUpdateQuestionCategoryDropdown = true"
+                @blur="onUpdateQuestionCategoryBlur"
+              />
+              <div
+                v-if="
+                  showUpdateQuestionCategoryDropdown &&
+                  filteredUpdateQuestionCategories.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateQuestionCategories"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateQuestionCategory(item)"
+                >
+                  {{ item.name }}
+                  <span
+                    v-if="isUpdateQuestionCategorySelected(item.id)"
+                    class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-items" v-if="selectedUpdateQuestionCategories.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="item in selectedUpdateQuestionCategories"
+                :key="item.id"
+                class="selected-tag"
+                @click="removeUpdateQuestionCategory(item.id)"
+              >
+                {{ item.name }} ×
+              </span>
+            </div>
           </div>
 
           <!-- 知识点筛选（多选） -->
@@ -719,54 +768,6 @@
             </div>
           </div>
 
-          <!-- 问题类别筛选（多选） -->
-          <div class="criteria-item">
-            <label>问题类别：</label>
-            <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateQuestionCategorySearch"
-                placeholder="输入关键字搜索问题类别..."
-                class="form-input search-input"
-                @input="filterUpdateQuestionCategories"
-                @focus="showUpdateQuestionCategoryDropdown = true"
-                @blur="onUpdateQuestionCategoryBlur"
-              />
-              <div
-                v-if="
-                  showUpdateQuestionCategoryDropdown &&
-                  filteredUpdateQuestionCategories.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateQuestionCategories"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateQuestionCategory(item)"
-                >
-                  {{ item.name }}
-                  <span
-                    v-if="isUpdateQuestionCategorySelected(item.id)"
-                    class="selected-mark"
-                    >✓</span
-                  >
-                </div>
-              </div>
-            </div>
-            <div class="selected-items" v-if="selectedUpdateQuestionCategories.length">
-              <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="item in selectedUpdateQuestionCategories"
-                :key="item.id"
-                class="selected-tag"
-                @click="removeUpdateQuestionCategory(item.id)"
-              >
-                {{ item.name }} ×
-              </span>
-            </div>
-          </div>
-
           <!-- 难度筛选 -->
           <div class="criteria-item">
             <label>难度：</label>
@@ -805,12 +806,11 @@
               <div class="table-cell">学校</div>
               <div class="table-cell">年级</div>
               <div class="table-cell">科目</div>
-              <div class="table-cell">题型</div>
+              <div class="table-cell">问题类别</div>
               <div class="table-cell">评分方法</div>
               <div class="table-cell">知识点</div>
               <div class="table-cell">问题定义</div>
               <div class="table-cell">解题思想</div>
-              <div class="table-cell">问题类别</div>
               <div class="table-cell">子知识点</div>
               <div class="table-cell">难度</div>
               <div class="table-cell">题目内容</div>
@@ -824,9 +824,13 @@
               <div class="table-cell">{{ getSchoolName(q.school_id) }}</div>
               <div class="table-cell">{{ getGradeName(q.grade_id) }}</div>
               <div class="table-cell">{{ getSubjectName(q.subject_id) }}</div>
-              <div class="table-cell">{{ getQuestionTypeName(q.question_type) }}</div>
+              <div class="table-cell">
+                {{ getQuestionCategoryName(q.question_category_id) }}
+              </div>
               <div class="table-cell">{{ getMarkingTypeName(q.marking_type) }}</div>
-              <div class="table-cell">{{ getKnowledgePointName(q.knowledge_point) }}</div>
+              <div class="table-cell">
+                {{ getKnowledgePointName(q.knowledge_point_id) }}
+              </div>
               <!-- 问题定义单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
@@ -859,32 +863,17 @@
                   无
                 </span>
               </div>
-              <!-- 问题类别单元格（多值显示） -->
-              <div class="table-cell sub-knowledge-cell">
-                <span
-                  v-for="catId in q.question_category_ids || []"
-                  :key="catId"
-                  class="tag-item"
-                >
-                  {{ getQuestionCategoryName(catId) }}
-                </span>
-                <span
-                  v-if="!(q.question_category_ids && q.question_category_ids.length)"
-                  class="no-sub-knowledge"
-                  >无</span
-                >
-              </div>
               <!-- 子知识点单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
-                  v-for="subId in q.sub_knowledge_point || []"
+                  v-for="subId in q.sub_knowledge_point_ids || []"
                   :key="subId"
                   class="sub-knowledge-tag"
                 >
                   {{ getKnowledgePointName(subId) }}
                 </span>
                 <span
-                  v-if="!(q.sub_knowledge_point && q.sub_knowledge_point.length)"
+                  v-if="!(q.sub_knowledge_point_ids && q.sub_knowledge_point_ids.length)"
                   class="no-sub-knowledge"
                 >
                   无
@@ -931,7 +920,7 @@
         <form @submit.prevent="handleUpdateSubmit" class="update-form">
           <!-- 学校选择 -->
           <div class="form-group">
-            <label class="form-label required">学校：</label>
+            <label class="form-label">学校：</label>
             <select v-model="updateForm.school_id" class="form-select" required>
               <option :value="null">请选择学校</option>
               <option v-for="school in schoolList" :key="school.id" :value="school.id">
@@ -942,7 +931,7 @@
 
           <!-- 年级选择 -->
           <div class="form-group">
-            <label class="form-label required">年级：</label>
+            <label class="form-label">年级：</label>
             <select v-model="updateForm.grade_id" class="form-select" required>
               <option :value="null">请选择年级</option>
               <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
@@ -953,7 +942,7 @@
 
           <!-- 科目选择 -->
           <div class="form-group">
-            <label class="form-label required">科目：</label>
+            <label class="form-label">科目：</label>
             <select v-model="updateForm.subject_id" class="form-select" required>
               <option :value="null">请选择科目</option>
               <option v-for="sub in subjectList" :key="sub.id" :value="sub.id">
@@ -962,27 +951,59 @@
             </select>
           </div>
 
-          <!-- 题型选择 -->
+          <!-- 问题类别选择（单选） -->
           <div class="form-group">
-            <label class="form-label required">题型：</label>
-            <select
-              v-model="updateForm.question_type"
-              class="form-select"
-              :class="{ error: updateQuestionTypeError }"
-              @change="handleUpdateQuestionTypeChange"
-              required
-            >
-              <option :value="null">请选择题型</option>
-              <option value="SINGLE">单选题</option>
-              <option value="MULTIPLE">多选题</option>
-              <option value="SUBJECTIVE">主观题</option>
-            </select>
-            <div v-if="updateQuestionTypeError" class="error-message">请选择题型</div>
+            <label class="form-label">问题类别：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="updateFormQuestionCategorySearch"
+                placeholder="输入关键字搜索问题类别..."
+                class="form-input search-input"
+                @input="filterUpdateFormQuestionCategories"
+                @focus="showUpdateFormQuestionCategoryDropdown = true"
+                @blur="onUpdateFormQuestionCategoryBlur"
+              />
+              <div
+                v-if="
+                  showUpdateFormQuestionCategoryDropdown &&
+                  filteredUpdateFormQuestionCategories.length
+                "
+                class="dropdown-list"
+              >
+                <div
+                  v-for="item in filteredUpdateFormQuestionCategories"
+                  :key="item.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateFormQuestionCategory(item)"
+                >
+                  {{ item.name }}
+                  <span
+                    v-if="
+                      selectedUpdateFormQuestionCategory &&
+                      selectedUpdateFormQuestionCategory.id === item.id
+                    "
+                    class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-item" v-if="selectedUpdateFormQuestionCategory">
+              已选择: {{ selectedUpdateFormQuestionCategory.name }}
+              <button
+                type="button"
+                @click="clearUpdateFormQuestionCategory"
+                class="btn-remove"
+              >
+                清除
+              </button>
+            </div>
           </div>
 
           <!-- 评分方法选择 -->
           <div class="form-group">
-            <label class="form-label required">评分方法：</label>
+            <label class="form-label">评分方法：</label>
             <select v-model="updateForm.marking_type" class="form-select" required>
               <option value="0">自动评分</option>
               <option value="1">人工评分</option>
@@ -1180,57 +1201,6 @@
             </div>
           </div>
 
-          <!-- 问题类别选择 -->
-          <div class="form-group">
-            <label class="form-label">问题类别：</label>
-            <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormQuestionCategorySearch"
-                placeholder="输入关键字搜索问题类别..."
-                class="form-input search-input"
-                @input="filterUpdateFormQuestionCategories"
-                @focus="showUpdateFormQuestionCategoryDropdown = true"
-                @blur="onUpdateFormQuestionCategoryBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormQuestionCategoryDropdown &&
-                  filteredUpdateFormQuestionCategories.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateFormQuestionCategories"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormQuestionCategory(item)"
-                >
-                  {{ item.name }}
-                  <span
-                    v-if="isUpdateFormQuestionCategorySelected(item.id)"
-                    class="selected-mark"
-                    >✓</span
-                  >
-                </div>
-              </div>
-            </div>
-            <div
-              class="selected-items"
-              v-if="selectedUpdateFormQuestionCategories.length"
-            >
-              <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="item in selectedUpdateFormQuestionCategories"
-                :key="item.id"
-                class="selected-tag"
-                @click="removeUpdateFormQuestionCategory(item.id)"
-              >
-                {{ item.name }} ×
-              </span>
-            </div>
-          </div>
-
           <!-- 难度选择 -->
           <div class="form-group">
             <label class="form-label">难度：</label>
@@ -1281,8 +1251,8 @@
             </div>
           </div>
 
-          <!-- 选择题选项 -->
-          <div v-if="showUpdateOptions" class="form-group">
+          <!-- 单选题选项区域 -->
+          <div v-if="showUpdateSingleOptions" class="form-group">
             <label class="form-label">选项：</label>
             <div class="options-list">
               <div
@@ -1307,32 +1277,18 @@
                 </div>
                 <div class="option-actions">
                   <!-- 单选题答案选择 -->
-                  <template v-if="updateForm.question_type === 'SINGLE'">
-                    <input
-                      type="radio"
-                      name="updateSingleAnswer"
-                      :value="index"
-                      v-model="updateSingleAnswerIndex"
-                      :id="`update-single-answer-${index}`"
-                      class="radio-input"
-                      required
-                    />
-                    <label class="radio-label" :for="`update-single-answer-${index}`"
-                      >正确答案</label
-                    >
-                  </template>
-                  <!-- 多选题答案选择 -->
-                  <template v-else-if="updateForm.question_type === 'MULTIPLE'">
-                    <input
-                      type="checkbox"
-                      v-model="opt.isAnswer"
-                      :id="`update-multiple-answer-${index}`"
-                      class="checkbox-input"
-                    />
-                    <label class="checkbox-label" :for="`update-multiple-answer-${index}`"
-                      >正确答案</label
-                    >
-                  </template>
+                  <input
+                    type="radio"
+                    name="updateSingleAnswer"
+                    :value="index"
+                    v-model="updateSingleAnswerIndex"
+                    :id="`update-single-answer-${index}`"
+                    class="radio-input"
+                    required
+                  />
+                  <label class="radio-label" :for="`update-single-answer-${index}`"
+                    >正确答案</label
+                  >
                   <!-- 删除选项按钮 -->
                   <button
                     type="button"
@@ -1351,8 +1307,61 @@
             </button>
           </div>
 
-          <!-- 主观题答案 -->
-          <div v-if="updateForm.question_type === 'SUBJECTIVE'" class="form-group">
+          <!-- 多选题选项区域 -->
+          <div v-if="showUpdateMultipleOptions" class="form-group">
+            <label class="form-label">选项：</label>
+            <div class="options-list">
+              <div
+                v-for="(opt, index) in updateForm.options"
+                :key="index"
+                class="option-item"
+              >
+                <span class="option-label">{{ getOptionLabel(index) }}.</span>
+                <div class="option-input-container">
+                  <input
+                    type="text"
+                    v-model="opt.text"
+                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                    class="form-input option-input"
+                    @input="renderUpdateOptionPreview(index, opt.text)"
+                    required
+                  />
+                  <div
+                    class="math-preview small"
+                    v-html="updateOptionPreviews[index]"
+                  ></div>
+                </div>
+                <div class="option-actions">
+                  <!-- 多选题答案选择 -->
+                  <input
+                    type="checkbox"
+                    v-model="opt.isAnswer"
+                    :id="`update-multiple-answer-${index}`"
+                    class="checkbox-input"
+                  />
+                  <label class="checkbox-label" :for="`update-multiple-answer-${index}`"
+                    >正确答案</label
+                  >
+                  <!-- 删除选项按钮 -->
+                  <button
+                    type="button"
+                    @click="removeUpdateOption(index)"
+                    class="btn-remove"
+                    :disabled="updateForm.options.length <= 2"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- 添加选项按钮 -->
+            <button type="button" @click="addUpdateOption" class="btn-secondary">
+              添加选项
+            </button>
+          </div>
+
+          <!-- 主观题答案区域 -->
+          <div v-if="showUpdateSubjectiveAnswer" class="form-group">
             <label class="form-label required">参考答案：</label>
             <textarea
               v-model="updateForm.answer"
@@ -1561,10 +1570,6 @@ export default {
     const showImagePreview = ref(false); // 图片预览显示状态
     const previewImageUrl = ref(""); // 预览图片的URL
 
-    // ==================== 表单验证状态 ====================
-    const questionTypeError = ref(false); // 题型选择错误状态
-    const updateQuestionTypeError = ref(false); // 更新界面题型选择错误状态
-
     // ==================== 记忆上传设置 ====================
     // 从localStorage读取或初始化上传记忆
     const uploadMemory = ref(
@@ -1572,7 +1577,6 @@ export default {
         school_id: null,
         grade_id: null,
         subject_id: null,
-        question_type: null,
         marking_type: 0,
         difficulty_level: null,
       }
@@ -1584,12 +1588,11 @@ export default {
       school_id: uploadMemory.value.school_id,
       grade_id: uploadMemory.value.grade_id,
       subject_id: uploadMemory.value.subject_id,
-      question_type: uploadMemory.value.question_type,
+      question_category_id: null, // 问题类别ID（单选）
       marking_type: uploadMemory.value.marking_type,
-      knowledge_point: null, // 知识点ID
+      knowledge_point_id: null, // 知识点ID
       question_definition_ids: [], // 问题定义ID数组
       solution_idea_ids: [], // 解题思想ID数组
-      question_category_ids: [], // 问题类别ID数组
       difficulty_level: uploadMemory.value.difficulty_level,
       title: "", // 题目内容
       options: [
@@ -1602,7 +1605,7 @@ export default {
       answer: "", // 答案
       notes: "", // 解析
       remark: "", // 备注
-      sub_knowledge_point: [], // 子知识点ID数组
+      sub_knowledge_point_ids: [], // 子知识点ID数组
       img_url: "", // 图片URL
     });
 
@@ -1612,12 +1615,11 @@ export default {
       school_id: null,
       grade_id: null,
       subject_id: null,
-      question_type: null,
+      question_category_id: null, // 问题类别ID（单选）
       marking_type: 0,
-      knowledge_point: null,
+      knowledge_point_id: null,
       question_definition_ids: [],
       solution_idea_ids: [],
-      question_category_ids: [],
       difficulty_level: null,
       title: "",
       options: [
@@ -1629,7 +1631,7 @@ export default {
       answer: "",
       notes: "",
       remark: "",
-      sub_knowledge_point: [],
+      sub_knowledge_point_ids: [],
       img_url: "",
     });
 
@@ -1637,11 +1639,10 @@ export default {
     const searchCriteria = reactive({
       grade_id: null,
       subject_id: null,
-      question_type: null,
-      knowledge_points: [], // 知识点ID数组
+      question_category_ids: [], // 改为数组，支持多选
+      knowledge_point_ids: [], // 知识点ID数组
       question_definition_ids: [], // 问题定义ID数组
       solution_idea_ids: [], // 解题思想ID数组
-      question_category_ids: [], // 问题类别ID数组
       difficulty_level: null,
       title: "", // 题目关键词
     });
@@ -1701,7 +1702,9 @@ export default {
 
     // ==================== 选中的对象状态 ====================
     const selectedKnowledgePoint = ref(null); // 选中的知识点
+    const selectedQuestionCategory = ref(null); // 选中的问题类别
     const selectedUpdateFormKnowledgePoint = ref(null); // 更新表单选中的知识点
+    const selectedUpdateFormQuestionCategory = ref(null); // 更新表单选中的问题类别
 
     // ==================== 过滤后的列表状态 ====================
     // 上传界面的过滤列表
@@ -1726,25 +1729,74 @@ export default {
 
     // ==================== 计算属性 ====================
     /**
-     * 是否显示选择题选项区域
+     * 是否显示单选题选项区域
      */
-    const showOptions = computed(
-      () => form.question_type === "SINGLE" || form.question_type === "MULTIPLE"
-    );
+    const showSingleOptions = computed(() => {
+      if (!selectedQuestionCategory.value) return false;
+      const name = selectedQuestionCategory.value.name;
+      return name === "单选题" || name.includes("单选");
+    });
 
     /**
-     * 更新界面是否显示选择题选项区域
+     * 是否显示多选题选项区域
      */
-    const showUpdateOptions = computed(
-      () =>
-        updateForm.question_type === "SINGLE" || updateForm.question_type === "MULTIPLE"
-    );
+    const showMultipleOptions = computed(() => {
+      if (!selectedQuestionCategory.value) return false;
+      const name = selectedQuestionCategory.value.name;
+      return name === "多选题" || name.includes("多选");
+    });
+
+    /**
+     * 是否显示主观题答案区域
+     */
+    const showSubjectiveAnswer = computed(() => {
+      if (!selectedQuestionCategory.value) return true; // 默认显示主观题区域
+      const name = selectedQuestionCategory.value.name;
+      return !(
+        name === "单选题" ||
+        name.includes("单选") ||
+        name === "多选题" ||
+        name.includes("多选")
+      );
+    });
+
+    /**
+     * 更新界面是否显示单选题选项区域
+     */
+    const showUpdateSingleOptions = computed(() => {
+      if (!selectedUpdateFormQuestionCategory.value) return false;
+      const name = selectedUpdateFormQuestionCategory.value.name;
+      return name === "单选题" || name.includes("单选");
+    });
+
+    /**
+     * 更新界面是否显示多选题选项区域
+     */
+    const showUpdateMultipleOptions = computed(() => {
+      if (!selectedUpdateFormQuestionCategory.value) return false;
+      const name = selectedUpdateFormQuestionCategory.value.name;
+      return name === "多选题" || name.includes("多选");
+    });
+
+    /**
+     * 更新界面是否显示主观题答案区域
+     */
+    const showUpdateSubjectiveAnswer = computed(() => {
+      if (!selectedUpdateFormQuestionCategory.value) return true; // 默认显示主观题区域
+      const name = selectedUpdateFormQuestionCategory.value.name;
+      return !(
+        name === "单选题" ||
+        name.includes("单选") ||
+        name === "多选题" ||
+        name.includes("多选")
+      );
+    });
 
     /**
      * 选中的子知识点对象列表
      */
     const selectedSubKnowledgePoints = computed(() => {
-      return form.sub_knowledge_point
+      return form.sub_knowledge_point_ids
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
         .filter(Boolean);
     });
@@ -1768,19 +1820,10 @@ export default {
     });
 
     /**
-     * 选中的问题类别对象列表
-     */
-    const selectedQuestionCategories = computed(() => {
-      return form.question_category_ids
-        .map((id) => questionCategoryList.value.find((c) => c.id === id))
-        .filter(Boolean);
-    });
-
-    /**
      * 更新界面选中的知识点对象列表
      */
     const selectedUpdateKnowledgePoints = computed(() => {
-      return searchCriteria.knowledge_points
+      return searchCriteria.knowledge_point_ids
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
         .filter(Boolean);
     });
@@ -1831,19 +1874,10 @@ export default {
     });
 
     /**
-     * 更新表单选中的问题类别对象列表
-     */
-    const selectedUpdateFormQuestionCategories = computed(() => {
-      return updateForm.question_category_ids
-        .map((id) => questionCategoryList.value.find((c) => c.id === id))
-        .filter(Boolean);
-    });
-
-    /**
      * 更新表单选中的子知识点对象列表
      */
     const selectedUpdateFormSubKnowledgePoints = computed(() => {
-      return updateForm.sub_knowledge_point
+      return updateForm.sub_knowledge_point_ids
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
         .filter(Boolean);
     });
@@ -1964,7 +1998,7 @@ export default {
       if (form.options.length > 2) {
         form.options.splice(index, 1);
         optionPreviews.value.splice(index, 1);
-        if (form.question_type === "SINGLE" && singleAnswerIndex.value === index) {
+        if (singleAnswerIndex.value === index) {
           singleAnswerIndex.value = null;
         }
       }
@@ -1988,20 +2022,17 @@ export default {
       if (updateForm.options.length > 2) {
         updateForm.options.splice(index, 1);
         updateOptionPreviews.value.splice(index, 1);
-        if (
-          updateForm.question_type === "SINGLE" &&
-          updateSingleAnswerIndex.value === index
-        ) {
+        if (updateSingleAnswerIndex.value === index) {
           updateSingleAnswerIndex.value = null;
         }
       }
     };
 
-    // ==================== 题型变更处理 ====================
+    // ==================== 问题类别变更处理 ====================
     /**
-     * 处理题型变更
+     * 处理问题类别变更
      */
-    const handleQuestionTypeChange = () => {
+    const handleQuestionCategoryChange = () => {
       // 重置选项
       form.options = [
         { text: "", isAnswer: false },
@@ -2011,7 +2042,6 @@ export default {
       ];
       singleAnswerIndex.value = null;
       form.answer = "";
-      questionTypeError.value = false;
       optionPreviews.value = Array(10).fill("");
       titlePreview.value = "";
       answerPreview.value = "";
@@ -2019,9 +2049,9 @@ export default {
     };
 
     /**
-     * 处理更新界面题型变更
+     * 处理更新界面问题类别变更
      */
-    const handleUpdateQuestionTypeChange = () => {
+    const handleUpdateQuestionCategoryChange = () => {
       updateForm.options = [
         { text: "", isAnswer: false },
         { text: "", isAnswer: false },
@@ -2030,7 +2060,6 @@ export default {
       ];
       updateSingleAnswerIndex.value = null;
       updateForm.answer = "";
-      updateQuestionTypeError.value = false;
       updateOptionPreviews.value = Array(10).fill("");
       updateTitlePreview.value = "";
       updateAnswerPreview.value = "";
@@ -2044,7 +2073,7 @@ export default {
      */
     const selectKnowledgePoint = (kp) => {
       selectedKnowledgePoint.value = kp;
-      form.knowledge_point = kp.id;
+      form.knowledge_point_id = kp.id;
       knowledgeSearch.value = kp.name;
       showKnowledgeDropdown.value = false;
     };
@@ -2054,8 +2083,31 @@ export default {
      */
     const clearKnowledgePoint = () => {
       selectedKnowledgePoint.value = null;
-      form.knowledge_point = null;
+      form.knowledge_point_id = null;
       knowledgeSearch.value = "";
+    };
+
+    // ==================== 问题类别选择方法（改为单选） ====================
+    /**
+     * 选择问题类别
+     * @param {Object} item - 问题类别对象
+     */
+    const selectQuestionCategory = (item) => {
+      selectedQuestionCategory.value = item;
+      form.question_category_id = item.id;
+      questionCategorySearch.value = item.name;
+      showQuestionCategoryDropdown.value = false;
+      handleQuestionCategoryChange();
+    };
+
+    /**
+     * 清除问题类别选择
+     */
+    const clearQuestionCategory = () => {
+      selectedQuestionCategory.value = null;
+      form.question_category_id = null;
+      questionCategorySearch.value = "";
+      handleQuestionCategoryChange();
     };
 
     // ==================== 问题定义选择方法 ====================
@@ -2120,46 +2172,14 @@ export default {
       form.solution_idea_ids = form.solution_idea_ids.filter((itemId) => itemId !== id);
     };
 
-    // ==================== 问题类别选择方法 ====================
-    /**
-     * 选择问题类别
-     * @param {Object} item - 问题类别对象
-     */
-    const selectQuestionCategory = (item) => {
-      if (!form.question_category_ids.includes(item.id)) {
-        form.question_category_ids.push(item.id);
-      }
-      questionCategorySearch.value = "";
-      showQuestionCategoryDropdown.value = false;
-    };
-
-    /**
-     * 检查问题类别是否已选择
-     * @param {number} id - 问题类别ID
-     * @returns {boolean} 是否已选择
-     */
-    const isQuestionCategorySelected = (id) => {
-      return form.question_category_ids.includes(id);
-    };
-
-    /**
-     * 移除问题类别
-     * @param {number} id - 要移除的问题类别ID
-     */
-    const removeQuestionCategory = (id) => {
-      form.question_category_ids = form.question_category_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
     // ==================== 子知识点选择方法 ====================
     /**
      * 选择子知识点
      * @param {Object} kp - 子知识点对象
      */
     const selectSubKnowledgePoint = (kp) => {
-      if (!form.sub_knowledge_point.includes(kp.id)) {
-        form.sub_knowledge_point.push(kp.id);
+      if (!form.sub_knowledge_point_ids.includes(kp.id)) {
+        form.sub_knowledge_point_ids.push(kp.id);
       }
       subKnowledgeSearch.value = "";
       showSubKnowledgeDropdown.value = false;
@@ -2171,7 +2191,7 @@ export default {
      * @returns {boolean} 是否已选择
      */
     const isSubKnowledgeSelected = (id) => {
-      return form.sub_knowledge_point.includes(id);
+      return form.sub_knowledge_point_ids.includes(id);
     };
 
     /**
@@ -2179,7 +2199,9 @@ export default {
      * @param {number} id - 要移除的子知识点ID
      */
     const removeSubKnowledgePoint = (id) => {
-      form.sub_knowledge_point = form.sub_knowledge_point.filter((kp) => kp !== id);
+      form.sub_knowledge_point_ids = form.sub_knowledge_point_ids.filter(
+        (kp) => kp !== id
+      );
     };
 
     // ==================== 更新界面知识点多选方法 ====================
@@ -2188,8 +2210,8 @@ export default {
      * @param {Object} kp - 知识点对象
      */
     const selectUpdateKnowledgePoint = (kp) => {
-      if (!searchCriteria.knowledge_points.includes(kp.id)) {
-        searchCriteria.knowledge_points.push(kp.id);
+      if (!searchCriteria.knowledge_point_ids.includes(kp.id)) {
+        searchCriteria.knowledge_point_ids.push(kp.id);
       }
       updateKnowledgeSearch.value = "";
       showUpdateKnowledgeDropdown.value = false;
@@ -2201,7 +2223,7 @@ export default {
      * @returns {boolean} 是否已选择
      */
     const isUpdateKnowledgeSelected = (id) => {
-      return searchCriteria.knowledge_points.includes(id);
+      return searchCriteria.knowledge_point_ids.includes(id);
     };
 
     /**
@@ -2209,7 +2231,7 @@ export default {
      * @param {number} id - 要移除的知识点ID
      */
     const removeUpdateKnowledgePoint = (id) => {
-      searchCriteria.knowledge_points = searchCriteria.knowledge_points.filter(
+      searchCriteria.knowledge_point_ids = searchCriteria.knowledge_point_ids.filter(
         (kp) => kp !== id
       );
     };
@@ -2310,6 +2332,14 @@ export default {
       );
     };
 
+    /**
+     * 清除更新界面问题类别选择
+     */
+    const clearUpdateQuestionCategory = () => {
+      searchCriteria.question_category_ids = [];
+      updateQuestionCategorySearch.value = "";
+    };
+
     // ==================== 更新表单知识点选择方法 ====================
     /**
      * 更新表单选择知识点
@@ -2317,7 +2347,7 @@ export default {
      */
     const selectUpdateFormKnowledgePoint = (kp) => {
       selectedUpdateFormKnowledgePoint.value = kp;
-      updateForm.knowledge_point = kp.id;
+      updateForm.knowledge_point_id = kp.id;
       updateFormKnowledgeSearch.value = kp.name;
       showUpdateFormKnowledgeDropdown.value = false;
     };
@@ -2327,8 +2357,31 @@ export default {
      */
     const clearUpdateFormKnowledgePoint = () => {
       selectedUpdateFormKnowledgePoint.value = null;
-      updateForm.knowledge_point = null;
+      updateForm.knowledge_point_id = null;
       updateFormKnowledgeSearch.value = "";
+    };
+
+    // ==================== 更新表单问题类别单选方法 ====================
+    /**
+     * 更新表单选择问题类别
+     * @param {Object} item - 问题类别对象
+     */
+    const selectUpdateFormQuestionCategory = (item) => {
+      selectedUpdateFormQuestionCategory.value = item;
+      updateForm.question_category_id = item.id;
+      updateFormQuestionCategorySearch.value = item.name;
+      showUpdateFormQuestionCategoryDropdown.value = false;
+      handleUpdateQuestionCategoryChange();
+    };
+
+    /**
+     * 清除更新表单问题类别选择
+     */
+    const clearUpdateFormQuestionCategory = () => {
+      selectedUpdateFormQuestionCategory.value = null;
+      updateForm.question_category_id = null;
+      updateFormQuestionCategorySearch.value = "";
+      handleUpdateQuestionCategoryChange();
     };
 
     // ==================== 更新表单问题定义多选方法 ====================
@@ -2395,46 +2448,14 @@ export default {
       );
     };
 
-    // ==================== 更新表单问题类别多选方法 ====================
-    /**
-     * 更新表单选择问题类别
-     * @param {Object} item - 问题类别对象
-     */
-    const selectUpdateFormQuestionCategory = (item) => {
-      if (!updateForm.question_category_ids.includes(item.id)) {
-        updateForm.question_category_ids.push(item.id);
-      }
-      updateFormQuestionCategorySearch.value = "";
-      showUpdateFormQuestionCategoryDropdown.value = false;
-    };
-
-    /**
-     * 检查更新表单问题类别是否已选择
-     * @param {number} id - 问题类别ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateFormQuestionCategorySelected = (id) => {
-      return updateForm.question_category_ids.includes(id);
-    };
-
-    /**
-     * 移除更新表单问题类别
-     * @param {number} id - 要移除的问题类别ID
-     */
-    const removeUpdateFormQuestionCategory = (id) => {
-      updateForm.question_category_ids = updateForm.question_category_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
     // ==================== 更新表单子知识点选择方法 ====================
     /**
      * 更新表单选择子知识点
      * @param {Object} kp - 子知识点对象
      */
     const selectUpdateFormSubKnowledgePoint = (kp) => {
-      if (!updateForm.sub_knowledge_point.includes(kp.id)) {
-        updateForm.sub_knowledge_point.push(kp.id);
+      if (!updateForm.sub_knowledge_point_ids.includes(kp.id)) {
+        updateForm.sub_knowledge_point_ids.push(kp.id);
       }
       updateFormSubKnowledgeSearch.value = "";
       showUpdateFormSubKnowledgeDropdown.value = false;
@@ -2446,7 +2467,7 @@ export default {
      * @returns {boolean} 是否已选择
      */
     const isUpdateFormSubKnowledgeSelected = (id) => {
-      return updateForm.sub_knowledge_point.includes(id);
+      return updateForm.sub_knowledge_point_ids.includes(id);
     };
 
     /**
@@ -2454,7 +2475,7 @@ export default {
      * @param {number} id - 要移除的子知识点ID
      */
     const removeUpdateFormSubKnowledgePoint = (id) => {
-      updateForm.sub_knowledge_point = updateForm.sub_knowledge_point.filter(
+      updateForm.sub_knowledge_point_ids = updateForm.sub_knowledge_point_ids.filter(
         (kp) => kp !== id
       );
     };
@@ -2838,7 +2859,6 @@ export default {
         school_id: form.school_id,
         grade_id: form.grade_id,
         subject_id: form.subject_id,
-        question_type: form.question_type,
         marking_type: form.marking_type,
         difficulty_level: form.difficulty_level,
       };
@@ -3071,10 +3091,13 @@ export default {
           payload.grade_id = Number(searchCriteria.grade_id);
         if (searchCriteria.subject_id !== null)
           payload.subject_id = Number(searchCriteria.subject_id);
-        if (searchCriteria.question_type !== null)
-          payload.question_type = searchCriteria.question_type;
-        if (searchCriteria.knowledge_points.length > 0)
-          payload.knowledge_points = searchCriteria.knowledge_points.map((id) =>
+        if (searchCriteria.question_category_ids.length > 0)
+          // 改为数组判断
+          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
+            Number(id)
+          );
+        if (searchCriteria.knowledge_point_ids.length > 0)
+          payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
             Number(id)
           );
         if (searchCriteria.question_definition_ids.length > 0)
@@ -3083,10 +3106,6 @@ export default {
           );
         if (searchCriteria.solution_idea_ids.length > 0)
           payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.question_category_ids.length > 0)
-          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
             Number(id)
           );
         if (searchCriteria.difficulty_level !== null)
@@ -3124,17 +3143,18 @@ export default {
       updateForm.school_id = q.school_id ? Number(q.school_id) : null;
       updateForm.grade_id = q.grade_id ? Number(q.grade_id) : null;
       updateForm.subject_id = q.subject_id ? Number(q.subject_id) : null;
-      updateForm.question_type = q.question_type;
+      updateForm.question_category_id = q.question_category_id
+        ? Number(q.question_category_id)
+        : null;
       updateForm.marking_type = q.marking_type || 0;
-      updateForm.knowledge_point = q.knowledge_point ? Number(q.knowledge_point) : null;
+      updateForm.knowledge_point_id = q.knowledge_point_id
+        ? Number(q.knowledge_point_id)
+        : null;
       updateForm.question_definition_ids = q.question_definition_ids
         ? q.question_definition_ids.map((id) => Number(id))
         : [];
       updateForm.solution_idea_ids = q.solution_idea_ids
         ? q.solution_idea_ids.map((id) => Number(id))
-        : [];
-      updateForm.question_category_ids = q.question_category_ids
-        ? q.question_category_ids.map((id) => Number(id))
         : [];
       updateForm.difficulty_level = q.difficulty_level
         ? Number(q.difficulty_level)
@@ -3142,15 +3162,15 @@ export default {
       updateForm.answer = q.answer || "";
       updateForm.notes = q.notes || "";
       updateForm.remark = q.remark || "";
-      updateForm.sub_knowledge_point = (q.sub_knowledge_point || []).map((id) =>
+      updateForm.sub_knowledge_point_ids = (q.sub_knowledge_point_ids || []).map((id) =>
         Number(id)
       );
       updateForm.img_url = q.img_url || "";
 
       // 设置知识点显示
-      if (q.knowledge_point) {
+      if (q.knowledge_point_id) {
         const currentKnowledge = knowledgePointList.value.find(
-          (k) => k.id === Number(q.knowledge_point)
+          (k) => k.id === Number(q.knowledge_point_id)
         );
         if (currentKnowledge) {
           selectedUpdateFormKnowledgePoint.value = currentKnowledge;
@@ -3158,8 +3178,26 @@ export default {
         }
       }
 
+      // 设置问题类别显示
+      if (q.question_category_id) {
+        const currentQuestionCategory = questionCategoryList.value.find(
+          (c) => c.id === Number(q.question_category_id)
+        );
+        if (currentQuestionCategory) {
+          selectedUpdateFormQuestionCategory.value = currentQuestionCategory;
+          updateFormQuestionCategorySearch.value = currentQuestionCategory.name;
+        }
+      }
+
       // 处理选择题选项
-      if (q.question_type === "SINGLE" || q.question_type === "MULTIPLE") {
+      const questionCategoryName = selectedUpdateFormQuestionCategory.value?.name;
+      if (
+        questionCategoryName &&
+        (questionCategoryName === "单选题" ||
+          questionCategoryName.includes("单选") ||
+          questionCategoryName === "多选题" ||
+          questionCategoryName.includes("多选"))
+      ) {
         if (q.options && typeof q.options === "object") {
           // 对选项按键名排序
           const sortedEntries = Object.entries(q.options).sort(([keyA], [keyB]) => {
@@ -3170,10 +3208,16 @@ export default {
             const optionKey = getOptionLabel(index);
             let isAnswer = false;
 
-            // 根据题型设置正确答案
-            if (q.question_type === "SINGLE") {
+            // 根据问题类别设置正确答案
+            if (
+              questionCategoryName === "单选题" ||
+              questionCategoryName.includes("单选")
+            ) {
               isAnswer = q.answer === optionKey;
-            } else if (q.question_type === "MULTIPLE") {
+            } else if (
+              questionCategoryName === "多选题" ||
+              questionCategoryName.includes("多选")
+            ) {
               if (q.answer) {
                 const answers = q.answer.split(",").map((a) => a.trim());
                 isAnswer = answers.includes(optionKey);
@@ -3187,7 +3231,10 @@ export default {
           });
 
           // 设置单选题正确答案索引
-          if (q.question_type === "SINGLE") {
+          if (
+            questionCategoryName === "单选题" ||
+            questionCategoryName.includes("单选")
+          ) {
             const answerIndex = updateForm.options.findIndex((opt) => opt.isAnswer);
             updateSingleAnswerIndex.value = answerIndex !== -1 ? answerIndex : null;
           }
@@ -3229,7 +3276,7 @@ export default {
       updateFormQuestionCategorySearch.value = "";
       updateFormSubKnowledgeSearch.value = "";
       selectedUpdateFormKnowledgePoint.value = null;
-      updateQuestionTypeError.value = false;
+      selectedUpdateFormQuestionCategory.value = null;
       updateTitlePreview.value = "";
       updateAnswerPreview.value = "";
       updateNotesPreview.value = "";
@@ -3281,14 +3328,9 @@ export default {
      * 处理题目提交
      */
     const handleSubmit = async () => {
-      // 验证题型是否选择
-      if (!form.question_type) {
-        questionTypeError.value = true;
-        const questionTypeElement = document.querySelector(".form-select.error");
-        if (questionTypeElement) {
-          questionTypeElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          questionTypeElement.focus();
-        }
+      // 验证问题类别是否选择
+      if (!form.question_category_id) {
+        showAlert("输入错误", "请选择问题类别");
         return;
       }
 
@@ -3315,19 +3357,33 @@ export default {
         let optionsPayload = {};
         let answerPayload = "";
 
+        const questionCategoryName = selectedQuestionCategory.value?.name;
+
         // 处理选择题选项和答案
-        if (form.question_type === "SINGLE" || form.question_type === "MULTIPLE") {
+        if (
+          questionCategoryName &&
+          (questionCategoryName === "单选题" ||
+            questionCategoryName.includes("单选") ||
+            questionCategoryName === "多选题" ||
+            questionCategoryName.includes("多选"))
+        ) {
           form.options.forEach((opt, i) => {
             const key = getOptionLabel(i);
             optionsPayload[`option_${key}`] = opt.text;
           });
 
-          if (form.question_type === "SINGLE") {
+          if (
+            questionCategoryName === "单选题" ||
+            questionCategoryName.includes("单选")
+          ) {
             answerPayload =
               singleAnswerIndex.value !== null
                 ? getOptionLabel(singleAnswerIndex.value)
                 : "";
-          } else if (form.question_type === "MULTIPLE") {
+          } else if (
+            questionCategoryName === "多选题" ||
+            questionCategoryName.includes("多选")
+          ) {
             answerPayload = form.options
               .map((opt, i) => (opt.isAnswer ? getOptionLabel(i) : null))
               .filter(Boolean)
@@ -3342,10 +3398,11 @@ export default {
           school_id: form.school_id !== null ? Number(form.school_id) : null,
           grade_id: form.grade_id !== null ? Number(form.grade_id) : null,
           subject_id: form.subject_id !== null ? Number(form.subject_id) : null,
-          question_type: form.question_type,
+          question_category_id:
+            form.question_category_id !== null ? Number(form.question_category_id) : null,
           marking_type: form.marking_type,
-          knowledge_point:
-            form.knowledge_point !== null ? Number(form.knowledge_point) : null,
+          knowledge_point_id:
+            form.knowledge_point_id !== null ? Number(form.knowledge_point_id) : null,
           question_definition_ids:
             form.question_definition_ids.length > 0
               ? form.question_definition_ids.map((id) => Number(id))
@@ -3354,22 +3411,22 @@ export default {
             form.solution_idea_ids.length > 0
               ? form.solution_idea_ids.map((id) => Number(id))
               : null,
-          question_category_ids:
-            form.question_category_ids.length > 0
-              ? form.question_category_ids.map((id) => Number(id))
-              : null,
           difficulty_level:
             form.difficulty_level !== null ? Number(form.difficulty_level) : null,
           title: form.title,
-          ...(form.question_type === "SINGLE" || form.question_type === "MULTIPLE"
+          ...(questionCategoryName &&
+          (questionCategoryName === "单选题" ||
+            questionCategoryName.includes("单选") ||
+            questionCategoryName === "多选题" ||
+            questionCategoryName.includes("多选"))
             ? { options: optionsPayload }
             : {}),
           answer: answerPayload,
           notes: form.notes,
           remark: form.remark,
-          sub_knowledge_point:
-            form.sub_knowledge_point.length > 0
-              ? form.sub_knowledge_point.map((id) => Number(id))
+          sub_knowledge_point_ids:
+            form.sub_knowledge_point_ids.length > 0
+              ? form.sub_knowledge_point_ids.map((id) => Number(id))
               : null,
           img_url: form.img_url,
         };
@@ -3394,15 +3451,8 @@ export default {
      * 处理题目更新提交
      */
     const handleUpdateSubmit = async () => {
-      if (!updateForm.question_type) {
-        updateQuestionTypeError.value = true;
-        const questionTypeElement = document.querySelector(
-          ".update-form .form-select.error"
-        );
-        if (questionTypeElement) {
-          questionTypeElement.scrollIntoView({ behavior: "smooth", block: "center" });
-          questionTypeElement.focus();
-        }
+      if (!updateForm.question_category_id) {
+        showAlert("验证错误", "请选择问题类别");
         return;
       }
 
@@ -3429,22 +3479,33 @@ export default {
         let optionsPayload = {};
         let answerPayload = "";
 
+        const questionCategoryName = selectedUpdateFormQuestionCategory.value?.name;
+
         // 处理选择题选项和答案
         if (
-          updateForm.question_type === "SINGLE" ||
-          updateForm.question_type === "MULTIPLE"
+          questionCategoryName &&
+          (questionCategoryName === "单选题" ||
+            questionCategoryName.includes("单选") ||
+            questionCategoryName === "多选题" ||
+            questionCategoryName.includes("多选"))
         ) {
           updateForm.options.forEach((opt, i) => {
             const key = getOptionLabel(i);
             optionsPayload[`option_${key}`] = opt.text;
           });
 
-          if (updateForm.question_type === "SINGLE") {
+          if (
+            questionCategoryName === "单选题" ||
+            questionCategoryName.includes("单选")
+          ) {
             answerPayload =
               updateSingleAnswerIndex.value !== null
                 ? getOptionLabel(updateSingleAnswerIndex.value)
                 : "";
-          } else if (updateForm.question_type === "MULTIPLE") {
+          } else if (
+            questionCategoryName === "多选题" ||
+            questionCategoryName.includes("多选")
+          ) {
             answerPayload = updateForm.options
               .map((opt, i) => (opt.isAnswer ? getOptionLabel(i) : null))
               .filter(Boolean)
@@ -3461,11 +3522,14 @@ export default {
           grade_id: updateForm.grade_id !== null ? Number(updateForm.grade_id) : null,
           subject_id:
             updateForm.subject_id !== null ? Number(updateForm.subject_id) : null,
-          question_type: updateForm.question_type,
+          question_category_id:
+            updateForm.question_category_id !== null
+              ? Number(updateForm.question_category_id)
+              : null,
           marking_type: updateForm.marking_type,
-          knowledge_point:
-            updateForm.knowledge_point !== null
-              ? Number(updateForm.knowledge_point)
+          knowledge_point_id:
+            updateForm.knowledge_point_id !== null
+              ? Number(updateForm.knowledge_point_id)
               : null,
           question_definition_ids:
             updateForm.question_definition_ids.length > 0
@@ -3475,25 +3539,24 @@ export default {
             updateForm.solution_idea_ids.length > 0
               ? updateForm.solution_idea_ids.map((id) => Number(id))
               : null,
-          question_category_ids:
-            updateForm.question_category_ids.length > 0
-              ? updateForm.question_category_ids.map((id) => Number(id))
-              : null,
           difficulty_level:
             updateForm.difficulty_level !== null
               ? Number(updateForm.difficulty_level)
               : null,
           title: updateForm.title,
-          ...(updateForm.question_type === "SINGLE" ||
-          updateForm.question_type === "MULTIPLE"
+          ...(questionCategoryName &&
+          (questionCategoryName === "单选题" ||
+            questionCategoryName.includes("单选") ||
+            questionCategoryName === "多选题" ||
+            questionCategoryName.includes("多选"))
             ? { options: optionsPayload }
             : {}),
           answer: answerPayload,
           notes: updateForm.notes,
           remark: updateForm.remark,
-          sub_knowledge_point:
-            updateForm.sub_knowledge_point.length > 0
-              ? updateForm.sub_knowledge_point.map((id) => Number(id))
+          sub_knowledge_point_ids:
+            updateForm.sub_knowledge_point_ids.length > 0
+              ? updateForm.sub_knowledge_point_ids.map((id) => Number(id))
               : null,
           img_url: updateForm.img_url,
         };
@@ -3522,10 +3585,13 @@ export default {
           payload.grade_id = Number(searchCriteria.grade_id);
         if (searchCriteria.subject_id !== null)
           payload.subject_id = Number(searchCriteria.subject_id);
-        if (searchCriteria.question_type !== null)
-          payload.question_type = searchCriteria.question_type;
-        if (searchCriteria.knowledge_points.length > 0)
-          payload.knowledge_points = searchCriteria.knowledge_points.map((id) =>
+        if (searchCriteria.question_category_ids.length > 0)
+          // 改为数组判断
+          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
+            Number(id)
+          );
+        if (searchCriteria.knowledge_point_ids.length > 0)
+          payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
             Number(id)
           );
         if (searchCriteria.question_definition_ids.length > 0)
@@ -3534,10 +3600,6 @@ export default {
           );
         if (searchCriteria.solution_idea_ids.length > 0)
           payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.question_category_ids.length > 0)
-          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
             Number(id)
           );
         if (searchCriteria.difficulty_level !== null)
@@ -3574,10 +3636,10 @@ export default {
         answer: "",
         notes: "",
         remark: "",
-        sub_knowledge_point: [],
+        sub_knowledge_point_ids: [],
         question_definition_ids: [],
         solution_idea_ids: [],
-        question_category_ids: [],
+        question_category_id: null,
         img_url: "",
       });
       singleAnswerIndex.value = null;
@@ -3588,7 +3650,7 @@ export default {
       questionCategorySearch.value = "";
       pendingImageFile.value = null;
       selectedKnowledgePoint.value = null;
-      questionTypeError.value = false;
+      selectedQuestionCategory.value = null;
       titlePreview.value = "";
       answerPreview.value = "";
       notesPreview.value = "";
@@ -3607,19 +3669,18 @@ export default {
       updateQuestionDefinitionSearch.value = "";
       updateSolutionIdeaSearch.value = "";
       updateQuestionCategorySearch.value = "";
-      searchCriteria.knowledge_points = [];
+      searchCriteria.knowledge_point_ids = [];
       searchCriteria.question_definition_ids = [];
       searchCriteria.solution_idea_ids = [];
-      searchCriteria.question_category_ids = [];
+      searchCriteria.question_category_ids = []; // 改为数组
       hasSearched.value = false;
       Object.assign(searchCriteria, {
         grade_id: null,
         subject_id: null,
-        question_type: null,
-        knowledge_points: [],
+        question_category_ids: [], // 改为数组
+        knowledge_point_ids: [],
         question_definition_ids: [],
         solution_idea_ids: [],
-        question_category_ids: [],
         difficulty_level: null,
         title: "",
       });
@@ -3714,20 +3775,6 @@ export default {
     };
 
     /**
-     * 根据题型代码获取题型名称
-     * @param {string} type - 题型代码
-     * @returns {string} 题型名称
-     */
-    const getQuestionTypeName = (type) => {
-      const types = {
-        SINGLE: "单选题",
-        MULTIPLE: "多选题",
-        SUBJECTIVE: "主观题",
-      };
-      return types[type] || type;
-    };
-
-    /**
      * 根据评分方法代码获取评分方法名称
      * @param {number} type - 评分方法代码
      * @returns {string} 评分方法名称
@@ -3807,7 +3854,7 @@ export default {
       selectedSubKnowledgePoints,
       selectedQuestionDefinitions,
       selectedSolutionIdeas,
-      selectedQuestionCategories,
+      selectedQuestionCategory,
 
       // 上传方法
       uploadKnowledgePoint,
@@ -3827,13 +3874,17 @@ export default {
       cancelDelete,
       deleteQuestion,
 
-      // 题型变更处理
-      handleQuestionTypeChange,
-      handleUpdateQuestionTypeChange,
+      // 问题类别变更处理
+      handleQuestionCategoryChange,
+      handleUpdateQuestionCategoryChange,
 
       // 计算属性
-      showOptions,
-      showUpdateOptions,
+      showSingleOptions,
+      showMultipleOptions,
+      showSubjectiveAnswer,
+      showUpdateSingleOptions,
+      showUpdateMultipleOptions,
+      showUpdateSubjectiveAnswer,
 
       // 状态
       submitting,
@@ -3850,7 +3901,6 @@ export default {
       getQuestionDefinitionName,
       getSolutionIdeaName,
       getQuestionCategoryName,
-      getQuestionTypeName,
       getMarkingTypeName,
 
       // 更新界面搜索关键词
@@ -3901,8 +3951,7 @@ export default {
       removeSolutionIdea,
       isSolutionIdeaSelected,
       selectQuestionCategory,
-      removeQuestionCategory,
-      isQuestionCategorySelected,
+      clearQuestionCategory,
       selectSubKnowledgePoint,
       removeSubKnowledgePoint,
       isSubKnowledgeSelected,
@@ -3918,6 +3967,7 @@ export default {
       selectUpdateQuestionCategory,
       removeUpdateQuestionCategory,
       isUpdateQuestionCategorySelected,
+      clearUpdateQuestionCategory,
       selectUpdateFormKnowledgePoint,
       clearUpdateFormKnowledgePoint,
       selectUpdateFormQuestionDefinition,
@@ -3927,8 +3977,7 @@ export default {
       removeUpdateFormSolutionIdea,
       isUpdateFormSolutionIdeaSelected,
       selectUpdateFormQuestionCategory,
-      removeUpdateFormQuestionCategory,
-      isUpdateFormQuestionCategorySelected,
+      clearUpdateFormQuestionCategory,
       selectUpdateFormSubKnowledgePoint,
       removeUpdateFormSubKnowledgePoint,
       isUpdateFormSubKnowledgeSelected,
@@ -3968,13 +4017,13 @@ export default {
       // 选中的对象
       selectedKnowledgePoint,
       selectedUpdateFormKnowledgePoint,
+      selectedUpdateFormQuestionCategory,
       selectedUpdateKnowledgePoints,
       selectedUpdateQuestionDefinitions,
       selectedUpdateSolutionIdeas,
       selectedUpdateQuestionCategories,
       selectedUpdateFormQuestionDefinitions,
       selectedUpdateFormSolutionIdeas,
-      selectedUpdateFormQuestionCategories,
       selectedUpdateFormSubKnowledgePoints,
 
       // 搜索状态
@@ -3988,10 +4037,6 @@ export default {
       closeImagePreview,
       showImagePreview,
       previewImageUrl,
-
-      // 表单验证
-      questionTypeError,
-      updateQuestionTypeError,
 
       // 退出登录
       handleLogout,
@@ -4024,6 +4069,7 @@ export default {
   },
 };
 </script>
+
 <style scoped>
 /* ==================== 全局容器样式 ==================== */
 /* 主容器样式 */
@@ -4883,11 +4929,11 @@ export default {
 }
 
 .table-cell:nth-child(2) {
-  width: 120px; /* 学校列 */
+  width: 140px; /* 学校列 */
 }
 
 .table-cell:nth-child(3) {
-  width: 60px; /* 年级列 */
+  width: 80px; /* 年级列 */
 }
 
 .table-cell:nth-child(4) {
@@ -4895,11 +4941,11 @@ export default {
 }
 
 .table-cell:nth-child(5) {
-  width: 60px; /* 题型列 */
+  width: 120px; /* 问题类别列 */
 }
 
 .table-cell:nth-child(6) {
-  width: 80px; /* 评分方法列 */
+  width: 90px; /* 评分方法列 */
 }
 
 .table-cell:nth-child(7) {
@@ -4915,30 +4961,26 @@ export default {
 }
 
 .table-cell:nth-child(10) {
-  width: 120px; /* 问题类别列 */
+  width: 120px; /* 子知识点列 */
 }
 
 .table-cell:nth-child(11) {
-  width: 150px; /* 子知识点列 */
+  width: 60px; /* 难度列 */
 }
 
 .table-cell:nth-child(12) {
-  width: 40px; /* 难度列 */
-}
-
-.table-cell:nth-child(13) {
   width: 250px; /* 题目内容列 */
 }
 
-.table-cell:nth-child(14) {
+.table-cell:nth-child(13) {
   width: 150px; /* 备注列 */
 }
 
-.table-cell:nth-child(15) {
+.table-cell:nth-child(14) {
   width: 120px; /* 图片列 */
 }
 
-.table-cell:nth-child(16) {
+.table-cell:nth-child(15) {
   width: 150px; /* 操作列 */
 }
 
