@@ -28,7 +28,7 @@
       <form @submit.prevent="handleSubmit">
         <!-- 学校选择 -->
         <div class="form-group">
-          <label class="form-label">学校：</label>
+          <label class="form-label required">学校：</label>
           <select v-model="form.school_id" class="form-select">
             <option :value="null">全部</option>
             <!-- 遍历学校列表 -->
@@ -39,19 +39,19 @@
         </div>
         <!-- 年级选择 -->
         <div class="form-group">
-          <label class="form-label  ">年级：</label>
+          <label class="form-label required">年级：</label>
           <select v-model="form.grade_id" class="form-select">
             <option :value="null">全部</option>
             <!-- 遍历年级列表 -->
             <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
               {{ grade.name }}
-            </option> 
+            </option>
           </select>
-        </div>  
+        </div>
 
         <!-- 科目选择 -->
         <div class="form-group">
-          <label class="form-label">科目：</label>
+          <label class="form-label required">科目：</label>
           <select v-model="form.subject_id" class="form-select">
             <option :value="null">全部</option>
             <!-- 遍历科目列表 -->
@@ -92,6 +92,15 @@
                   class="selected-mark"
                   >✓</span
                 >
+                <!-- 删除问题类别按钮 -->
+                <button
+                  type="button"
+                  @mousedown.stop="confirmDeleteQuestionCategory(item)"
+                  class="btn-remove-small"
+                  title="删除问题类别"
+                >
+                  ×
+                </button>
               </div>
             </div>
           </div>
@@ -159,7 +168,12 @@
             </div>
             <!-- 图片预览 -->
             <div v-if="form.img_url" class="image-preview">
-              <img :src="form.img_url" alt="预览" class="preview-image" />
+              <img
+                :src="form.img_url"
+                alt="预览"
+                class="preview-image"
+                @click="previewImage(form.img_url)"
+              />
               <button type="button" @click="removeImage" class="btn-remove">
                 移除图片
               </button>
@@ -264,7 +278,7 @@
 
         <!-- 主观题答案区域（在问题类别不是选择题时显示） -->
         <div v-if="showSubjectiveAnswer" class="form-group">
-          <label class="form-label required">参考答案：</label>
+          <label class="form-label">参考答案：</label>
           <textarea
             v-model="form.answer"
             placeholder="请输入参考答案，数学公式使用 $公式$ "
@@ -315,6 +329,15 @@
                 @mousedown="selectKnowledgePoint(kp)"
               >
                 {{ kp.name }}
+                <!-- 删除知识点按钮 -->
+                <button
+                  type="button"
+                  @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
+                  class="btn-remove-small"
+                  title="删除知识点"
+                >
+                  ×
+                </button>
               </div>
             </div>
           </div>
@@ -371,6 +394,15 @@
                 {{ kp.name }}
                 <!-- 已选择标记 -->
                 <span v-if="isSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
+                <!-- 删除子知识点按钮 -->
+                <button
+                  type="button"
+                  @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
+                  class="btn-remove-small"
+                  title="删除子知识点"
+                >
+                  ×
+                </button>
               </div>
             </div>
           </div>
@@ -406,66 +438,6 @@
           </div>
         </div>
 
-        <!-- 问题定义选择区域 -->
-        <div class="form-group">
-          <label class="form-label">问题定义：</label>
-          <div class="searchable-select">
-            <input
-              type="text"
-              v-model="questionDefinitionSearch"
-              placeholder="输入关键字搜索问题定义..."
-              class="form-input search-input"
-              @input="filterQuestionDefinitions"
-              @focus="showQuestionDefinitionDropdown = true"
-              @blur="onQuestionDefinitionBlur"
-            />
-            <div
-              v-if="showQuestionDefinitionDropdown && filteredQuestionDefinitions.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="item in filteredQuestionDefinitions"
-                :key="item.id"
-                class="dropdown-item"
-                @mousedown="selectQuestionDefinition(item)"
-              >
-                {{ item.name }}
-                <span v-if="isQuestionDefinitionSelected(item.id)" class="selected-mark"
-                  >✓</span
-                >
-              </div>
-            </div>
-          </div>
-          <div class="selected-items" v-if="selectedQuestionDefinitions.length">
-            <span class="selected-tags-label">已选择：</span>
-            <span
-              v-for="item in selectedQuestionDefinitions"
-              :key="item.id"
-              class="selected-tag"
-              @click="removeQuestionDefinition(item.id)"
-            >
-              {{ item.name }} ×
-            </span>
-          </div>
-          <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newQuestionDefinition"
-              placeholder="新建问题定义（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadQuestionDefinition"
-            />
-            <button
-              type="button"
-              @click="uploadQuestionDefinition"
-              class="btn-highlight"
-              :disabled="!newQuestionDefinition.trim()"
-            >
-              新增问题定义
-            </button>
-          </div>
-        </div>
-
         <!-- 解题思想选择区域 -->
         <div class="form-group">
           <label class="form-label">解题思想：</label>
@@ -493,6 +465,15 @@
                 <span v-if="isSolutionIdeaSelected(item.id)" class="selected-mark"
                   >✓</span
                 >
+                <!-- 删除解题思想按钮 -->
+                <button
+                  type="button"
+                  @mousedown.stop="confirmDeleteSolutionIdea(item)"
+                  class="btn-remove-small"
+                  title="删除解题思想"
+                >
+                  ×
+                </button>
               </div>
             </div>
           </div>
@@ -560,8 +541,13 @@
 
         <!-- 提交按钮 -->
         <div class="form-actions">
-          <button type="submit" class="btn-primary submit-btn" :disabled="submitting">
-            {{ submitting ? "提交中..." : "提交题目" }}
+          <button
+            type="button"
+            @click="showPreview"
+            class="btn-primary submit-btn"
+            :disabled="submitting"
+          >
+            {{ submitting ? "提交中..." : "预览并提交" }}
           </button>
         </div>
       </form>
@@ -627,6 +613,15 @@
                     class="selected-mark"
                     >✓</span
                   >
+                  <!-- 删除问题类别按钮（更新界面） -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteQuestionCategory(item)"
+                    class="btn-remove-small"
+                    title="删除问题类别"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
@@ -670,6 +665,15 @@
                   <span v-if="isUpdateKnowledgeSelected(kp.id)" class="selected-mark"
                     >✓</span
                   >
+                  <!-- 删除知识点按钮（更新界面） -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
+                    class="btn-remove-small"
+                    title="删除知识点"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
@@ -685,51 +689,57 @@
               </span>
             </div>
           </div>
-
-          <!-- 问题定义筛选（多选） -->
+          <!-- 子知识点筛选（多选） -->
           <div class="criteria-item">
-            <label>问题定义：</label>
+            <label>子知识点：</label>
             <div class="searchable-select">
               <input
                 type="text"
-                v-model="updateQuestionDefinitionSearch"
-                placeholder="输入关键字搜索问题定义..."
+                v-model="updateSubKnowledgeSearch"
+                placeholder="输入关键字搜索子知识点..."
                 class="form-input search-input"
-                @input="filterUpdateQuestionDefinitions"
-                @focus="showUpdateQuestionDefinitionDropdown = true"
-                @blur="onUpdateQuestionDefinitionBlur"
+                @input="filterUpdateSubKnowledgePoints"
+                @focus="showUpdateSubKnowledgeDropdown = true"
+                @blur="onUpdateSubKnowledgeBlur"
               />
               <div
                 v-if="
-                  showUpdateQuestionDefinitionDropdown &&
-                  filteredUpdateQuestionDefinitions.length
+                  showUpdateSubKnowledgeDropdown &&
+                  filteredUpdateSubKnowledgePoints.length
                 "
                 class="dropdown-list"
               >
                 <div
-                  v-for="item in filteredUpdateQuestionDefinitions"
-                  :key="item.id"
+                  v-for="kp in filteredUpdateSubKnowledgePoints"
+                  :key="kp.id"
                   class="dropdown-item"
-                  @mousedown="selectUpdateQuestionDefinition(item)"
+                  @mousedown="selectUpdateSubKnowledgePoint(kp)"
                 >
-                  {{ item.name }}
-                  <span
-                    v-if="isUpdateQuestionDefinitionSelected(item.id)"
-                    class="selected-mark"
+                  {{ kp.name }}
+                  <span v-if="isUpdateSubKnowledgeSelected(kp.id)" class="selected-mark"
                     >✓</span
                   >
+                  <!-- 删除子知识点按钮 -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
+                    class="btn-remove-small"
+                    title="删除子知识点"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
-            <div class="selected-items" v-if="selectedUpdateQuestionDefinitions.length">
+            <div class="selected-items" v-if="selectedUpdateSubKnowledgePoints.length">
               <span class="selected-tags-label">已选择：</span>
               <span
-                v-for="item in selectedUpdateQuestionDefinitions"
-                :key="item.id"
+                v-for="kp in selectedUpdateSubKnowledgePoints"
+                :key="kp.id"
                 class="selected-tag"
-                @click="removeUpdateQuestionDefinition(item.id)"
+                @click="removeUpdateSubKnowledgePoint(kp.id)"
               >
-                {{ item.name }} ×
+                {{ kp.name }} ×
               </span>
             </div>
           </div>
@@ -763,6 +773,15 @@
                   <span v-if="isUpdateSolutionIdeaSelected(item.id)" class="selected-mark"
                     >✓</span
                   >
+                  <!-- 删除解题思想按钮（更新界面） -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteSolutionIdea(item)"
+                    class="btn-remove-small"
+                    title="删除解题思想"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
@@ -808,7 +827,61 @@
 
       <!-- 检索结果区域 -->
       <div v-if="questionList.length" class="search-results">
-        <h3>检索结果 (共 {{ questionList.length }} 条)</h3>
+        <h3>检索结果 (共 {{ totalItems }} 条)</h3>
+        <!-- 分页控件 -->
+        <div class="pagination-controls">
+          <!-- 首页按钮 -->
+          <button
+            @click="goToFirstPage"
+            :disabled="searchCriteria.page_num <= 1"
+            class="pagination-btn"
+          >
+            首页
+          </button>
+          <!-- 上一页按钮 -->
+          <button
+            @click="changePage(searchCriteria.page_num - 1)"
+            :disabled="searchCriteria.page_num <= 1"
+            class="pagination-btn"
+          >
+            上一页
+          </button>
+
+          <span
+            >第 {{ searchCriteria.page_num }} 页，共 {{ totalPages }} 页 ({{
+              totalItems
+            }}
+            条)</span
+          >
+
+          <!-- 下一页按钮 -->
+          <button
+            @click="changePage(searchCriteria.page_num + 1)"
+            :disabled="searchCriteria.page_num >= totalPages"
+            class="pagination-btn"
+          >
+            下一页
+          </button>
+          <!-- 末页按钮 -->
+          <button
+            @click="goToLastPage"
+            :disabled="searchCriteria.page_num >= totalPages"
+            class="pagination-btn"
+          >
+            末页
+          </button>
+
+          <input
+            type="number"
+            v-model.number="pageInput"
+            min="1"
+            :max="totalPages"
+            placeholder="页码"
+            @keyup.enter="goToPage"
+            class="page-input"
+          />
+          <button @click="goToPage" class="pagination-btn">跳转</button>
+        </div>
         <div class="results-table-container">
           <div class="results-table">
             <!-- 表格头部 -->
@@ -820,7 +893,6 @@
               <div class="table-cell">问题类别</div>
               <div class="table-cell">评分方法</div>
               <div class="table-cell">知识点</div>
-              <div class="table-cell">问题定义</div>
               <div class="table-cell">解题思想</div>
               <div class="table-cell">子知识点</div>
               <div class="table-cell">难度</div>
@@ -841,22 +913,6 @@
               <div class="table-cell">{{ getMarkingTypeName(q.marking_type) }}</div>
               <div class="table-cell">
                 {{ getKnowledgePointName(q.knowledge_point_id) }}
-              </div>
-              <!-- 问题定义单元格（多值显示） -->
-              <div class="table-cell sub-knowledge-cell">
-                <span
-                  v-for="defId in q.question_definition_ids"
-                  :key="defId"
-                  class="sub-knowledge-tag"
-                >
-                  {{ getQuestionDefinitionName(defId) }}
-                </span>
-                <span
-                  v-if="!(q.question_definition_ids && q.question_definition_ids.length)"
-                  class="no-sub-knowledge"
-                >
-                  无
-                </span>
               </div>
               <!-- 解题思想单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
@@ -997,6 +1053,15 @@
                     class="selected-mark"
                     >✓</span
                   >
+                  <!-- 删除问题类别按钮（更新表单） -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteQuestionCategory(item)"
+                    class="btn-remove-small"
+                    title="删除问题类别"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
@@ -1048,6 +1113,15 @@
                   @mousedown="selectUpdateFormKnowledgePoint(kp)"
                 >
                   {{ kp.name }}
+                  <!-- 删除知识点按钮（更新表单） -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
+                    class="btn-remove-small"
+                    title="删除知识点"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
@@ -1059,6 +1133,24 @@
                 class="btn-remove"
               >
                 清除
+              </button>
+            </div>
+            <!-- 新增知识点功能 -->
+            <div class="new-knowledge-input">
+              <input
+                type="text"
+                v-model="newUpdateFormKnowledgePoint"
+                placeholder="新建知识点（多个用逗号分隔）"
+                class="form-input"
+                @keypress.enter="uploadUpdateFormKnowledgePoint"
+              />
+              <button
+                type="button"
+                @click="uploadUpdateFormKnowledgePoint"
+                class="btn-highlight"
+                :disabled="!newUpdateFormKnowledgePoint.trim()"
+              >
+                新增知识点
               </button>
             </div>
           </div>
@@ -1094,6 +1186,15 @@
                     class="selected-mark"
                     >✓</span
                   >
+                  <!-- 删除子知识点按钮（更新表单） -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
+                    class="btn-remove-small"
+                    title="删除子知识点"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
@@ -1111,56 +1212,23 @@
                 {{ kp.name }} ×
               </span>
             </div>
-          </div>
-
-          <!-- 问题定义选择 -->
-          <div class="form-group">
-            <label class="form-label">问题定义：</label>
-            <div class="searchable-select">
+            <!-- 新增子知识点功能 -->
+            <div class="new-knowledge-input">
               <input
                 type="text"
-                v-model="updateFormQuestionDefinitionSearch"
-                placeholder="输入关键字搜索问题定义..."
-                class="form-input search-input"
-                @input="filterUpdateFormQuestionDefinitions"
-                @focus="showUpdateFormQuestionDefinitionDropdown = true"
-                @blur="onUpdateFormQuestionDefinitionBlur"
+                v-model="newUpdateFormSubKnowledgePoint"
+                placeholder="新建子知识点（多个用逗号分隔）"
+                class="form-input"
+                @keypress.enter="uploadUpdateFormSubKnowledgePoint"
               />
-              <div
-                v-if="
-                  showUpdateFormQuestionDefinitionDropdown &&
-                  filteredUpdateFormQuestionDefinitions.length
-                "
-                class="dropdown-list"
+              <button
+                type="button"
+                @click="uploadUpdateFormSubKnowledgePoint"
+                class="btn-highlight"
+                :disabled="!newUpdateFormSubKnowledgePoint.trim()"
               >
-                <div
-                  v-for="item in filteredUpdateFormQuestionDefinitions"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormQuestionDefinition(item)"
-                >
-                  {{ item.name }}
-                  <span
-                    v-if="isUpdateFormQuestionDefinitionSelected(item.id)"
-                    class="selected-mark"
-                    >✓</span
-                  >
-                </div>
-              </div>
-            </div>
-            <div
-              class="selected-items"
-              v-if="selectedUpdateFormQuestionDefinitions.length"
-            >
-              <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="item in selectedUpdateFormQuestionDefinitions"
-                :key="item.id"
-                class="selected-tag"
-                @click="removeUpdateFormQuestionDefinition(item.id)"
-              >
-                {{ item.name }} ×
-              </span>
+                新增子知识点
+              </button>
             </div>
           </div>
 
@@ -1196,6 +1264,15 @@
                     class="selected-mark"
                     >✓</span
                   >
+                  <!-- 删除解题思想按钮（更新表单） -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteSolutionIdea(item)"
+                    class="btn-remove-small"
+                    title="删除解题思想"
+                  >
+                    ×
+                  </button>
                 </div>
               </div>
             </div>
@@ -1209,6 +1286,24 @@
               >
                 {{ item.name }} ×
               </span>
+            </div>
+            <!-- 新增解题思想功能 -->
+            <div class="new-knowledge-input">
+              <input
+                type="text"
+                v-model="newUpdateFormSolutionIdea"
+                placeholder="新建解题思想（多个用逗号分隔）"
+                class="form-input"
+                @keypress.enter="uploadUpdateFormSolutionIdea"
+              />
+              <button
+                type="button"
+                @click="uploadUpdateFormSolutionIdea"
+                class="btn-highlight"
+                :disabled="!newUpdateFormSolutionIdea.trim()"
+              >
+                新增解题思想
+              </button>
             </div>
           </div>
 
@@ -1254,7 +1349,12 @@
                 </button>
               </div>
               <div v-if="updateForm.img_url" class="image-preview">
-                <img :src="updateForm.img_url" alt="预览" class="preview-image" />
+                <img
+                  :src="updateForm.img_url"
+                  alt="预览"
+                  class="preview-image"
+                  @click="previewImage(updateForm.img_url)"
+                />
                 <button type="button" @click="removeUpdateImage" class="btn-remove">
                   移除图片
                 </button>
@@ -1373,7 +1473,7 @@
 
           <!-- 主观题答案区域 -->
           <div v-if="showUpdateSubjectiveAnswer" class="form-group">
-            <label class="form-label required">参考答案：</label>
+            <label class="form-label">参考答案：</label>
             <textarea
               v-model="updateForm.answer"
               placeholder="请输入参考答案，数学公式使用 $公式$ "
@@ -1413,8 +1513,13 @@
 
           <!-- 更新操作按钮 -->
           <div class="form-actions">
-            <button type="submit" class="btn-primary submit-btn" :disabled="submitting">
-              {{ submitting ? "更新中..." : "更新题目" }}
+            <button
+              type="button"
+              @click="showUpdatePreview"
+              class="btn-primary submit-btn"
+              :disabled="submitting"
+            >
+              {{ submitting ? "更新中..." : "预览并更新" }}
             </button>
             <button type="button" @click="cancelUpdate" class="btn-secondary">
               取消
@@ -1440,7 +1545,6 @@
     <div v-if="showImagePreview" class="modal-overlay" @click="closeImagePreview">
       <div class="image-preview-modal" @click.stop>
         <img :src="previewImageUrl" alt="预览" class="full-size-image" />
-        <button @click="closeImagePreview" class="btn-close">关闭</button>
       </div>
     </div>
 
@@ -1451,16 +1555,242 @@
         <p class="alert-modal-message">{{ alertModalMessage }}</p>
       </div>
     </div>
-  </div>
 
-  <!-- ==================== 退出登录确认对话框 ==================== -->
-  <div v-if="showLogoutConfirm" class="modal-overlay">
-    <div class="modal-content">
-      <h3>确认退出</h3>
-      <p>确定要退出登录吗？</p>
-      <div class="modal-actions">
-        <button @click="handleLogout" class="btn-delete">确认退出</button>
-        <button @click="cancelLogout" class="btn-secondary">取消</button>
+    <!-- ==================== 题目预览模态框 ==================== -->
+    <div
+      v-if="showPreviewModal"
+      class="modal-overlay preview-modal-overlay"
+      @click="closePreview"
+    >
+      <div class="preview-modal-content">
+        <h3 class="preview-modal-title">
+          {{ previewMode === "upload" ? "题目上传预览" : "题目更新预览" }}
+        </h3>
+
+        <div class="preview-content">
+          <!-- 基本信息 -->
+          <div class="preview-section">
+            <h4>基本信息</h4>
+            <div class="preview-grid">
+              <div class="preview-item">
+                <label>学校:</label>
+                <span>{{ getPreviewSchoolName() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>年级:</label>
+                <span>{{ getPreviewGradeName() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>科目:</label>
+                <span>{{ getPreviewSubjectName() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>问题类别:</label>
+                <span>{{ getPreviewQuestionCategoryName() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>难度:</label>
+                <span>{{ getPreviewDifficultyLevel() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>评分方法:</label>
+                <span>{{ getPreviewMarkingType() }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 知识点相关 -->
+          <div class="preview-section">
+            <h4>知识点信息</h4>
+            <div class="preview-grid">
+              <div class="preview-item">
+                <label>知识点:</label>
+                <span>{{ getPreviewKnowledgePointName() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>子知识点:</label>
+                <span>{{ getPreviewSubKnowledgePoints() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>解题思想:</label>
+                <span>{{ getPreviewSolutionIdeas() }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 题目内容 -->
+          <div class="preview-section">
+            <h4>题目内容</h4>
+            <div class="preview-text-content" v-html="getPreviewTitle()"></div>
+            <div v-if="getPreviewImageUrl()" class="preview-image">
+              <img :src="getPreviewImageUrl()" alt="题目图片" class="preview-img" />
+            </div>
+          </div>
+
+          <!-- 选项（选择题） -->
+          <div v-if="showPreviewOptions()" class="preview-section">
+            <h4>选项</h4>
+            <div class="preview-options">
+              <div
+                v-for="(opt, index) in getPreviewOptions()"
+                :key="index"
+                class="preview-option"
+                :class="{ 'correct-answer': isPreviewOptionCorrect(index) }"
+              >
+                <span class="option-label">{{ getOptionLabel(index) }}.</span>
+                <span class="option-text" v-html="renderMath(opt.text)"></span>
+                <span v-if="isPreviewOptionCorrect(index)" class="correct-badge"
+                  >正确答案</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- 答案（主观题） -->
+          <div v-if="showPreviewSubjectiveAnswer()" class="preview-section">
+            <h4>参考答案</h4>
+            <div class="preview-text-content" v-html="getPreviewAnswer()"></div>
+          </div>
+
+          <!-- 解析 -->
+          <div v-if="getPreviewNotes()" class="preview-section">
+            <h4>解析</h4>
+            <div class="preview-text-content" v-html="getPreviewNotes()"></div>
+          </div>
+
+          <!-- 备注 -->
+          <div v-if="getPreviewRemark()" class="preview-section">
+            <h4>备注</h4>
+            <div class="preview-text-content" v-html="getPreviewRemark()"></div>
+          </div>
+        </div>
+
+        <div class="preview-actions">
+          <button @click="confirmSubmit" class="btn-primary">
+            {{ previewMode === "upload" ? "确认提交" : "确认更新" }}
+          </button>
+          <button @click="closePreview" class="btn-secondary">返回修改</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 删除知识点/解题思想/问题类别确认对话框 ==================== -->
+    <div v-if="showDeleteEntityConfirm" class="modal-overlay">
+      <div class="modal-content delete-entity-modal">
+        <h3>确认删除</h3>
+        <p>确定要删除{{ deleteEntityType }} "{{ deleteEntityData?.name }}" 吗？</p>
+
+        <!-- 显示依赖的题目列表 -->
+        <div v-if="dependentQuestions.length > 0" class="dependent-questions">
+          <h4>
+            以下题目使用了该{{ deleteEntityType }}（共
+            {{ dependentQuestionsTotalItems }} 条）：
+          </h4>
+
+          <!-- 分页控件 -->
+          <div class="pagination-controls">
+            <button
+              @click="goToDependentFirstPage"
+              :disabled="dependentQuestionsPageNum <= 1"
+              class="pagination-btn"
+            >
+              首页
+            </button>
+            <button
+              @click="changeDependentPage(dependentQuestionsPageNum - 1)"
+              :disabled="dependentQuestionsPageNum <= 1"
+              class="pagination-btn"
+            >
+              上一页
+            </button>
+
+            <span
+              >第 {{ dependentQuestionsPageNum }} 页，共
+              {{ dependentQuestionsTotalPages }} 页 ({{
+                dependentQuestionsTotalItems
+              }}
+              条)</span
+            >
+
+            <button
+              @click="changeDependentPage(dependentQuestionsPageNum + 1)"
+              :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
+              class="pagination-btn"
+            >
+              下一页
+            </button>
+            <button
+              @click="goToDependentLastPage"
+              :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
+              class="pagination-btn"
+            >
+              末页
+            </button>
+
+            <input
+              type="number"
+              v-model.number="dependentQuestionsPageInput"
+              min="1"
+              :max="dependentQuestionsTotalPages"
+              placeholder="页码"
+              @keyup.enter="goToDependentPage"
+              class="page-input"
+            />
+            <button @click="goToDependentPage" class="pagination-btn">跳转</button>
+          </div>
+
+          <div class="dependent-list">
+            <div v-for="q in dependentQuestions" :key="q.id" class="dependent-question">
+              <div class="dependent-question-preview">
+                <div class="dependent-question-header">
+                  <span class="dependent-question-id">ID: {{ q.id }}</span>
+                  <span class="dependent-question-type">{{
+                    getQuestionCategoryName(q.question_category_id)
+                  }}</span>
+                </div>
+                <div
+                  class="dependent-question-content"
+                  v-html="renderMath(q.title)"
+                ></div>
+                <div class="dependent-question-actions">
+                  <button @click="deleteDependentQuestion(q)" class="btn-delete">
+                    删除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            v-if="dependentQuestions.length > 0"
+            @click="deleteAllDependentQuestions"
+            class="btn-delete delete-all-btn"
+          >
+            全部删除（共 {{ dependentQuestionsTotalItems }} 道题目）
+          </button>
+          <button
+            @click="deleteEntity"
+            class="btn-delete"
+            :disabled="dependentQuestions.length > 0"
+          >
+            确认删除
+          </button>
+          <button @click="cancelDeleteEntity" class="btn-secondary">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 退出登录确认对话框 ==================== -->
+    <div v-if="showLogoutConfirm" class="modal-overlay">
+      <div class="modal-content">
+        <h3>确认退出</h3>
+        <p>确定要退出登录吗？</p>
+        <div class="modal-actions">
+          <button @click="handleLogout" class="btn-delete">确认退出</button>
+          <button @click="cancelLogout" class="btn-secondary">取消</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1478,6 +1808,23 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 export default {
   setup() {
     const router = useRouter();
+
+    // ==================== 新增删除实体相关状态 ====================
+    const showDeleteEntityConfirm = ref(false); // 删除实体确认框显示状态
+    const deleteEntityType = ref(""); // 删除的实体类型：knowledgePoint, solutionIdea, questionCategory
+    const deleteEntityData = ref(null); // 要删除的实体数据
+    const dependentQuestions = ref([]); // 依赖的题目列表
+
+    // ==================== 新增依赖题目分页相关状态 ====================
+    const dependentQuestionsPageNum = ref(1); // 依赖题目当前页码
+    const dependentQuestionsPageSize = ref(5); // 依赖题目每页数量
+    const dependentQuestionsTotalPages = ref(1); // 依赖题目总页数
+    const dependentQuestionsTotalItems = ref(0); // 依赖题目总条目数
+    const dependentQuestionsPageInput = ref(1); // 依赖题目页码输入
+
+    // ==================== 新增预览功能相关状态 ====================
+    const showPreviewModal = ref(false); // 预览模态框显示状态
+    const previewMode = ref("upload"); // 预览模式：upload 或 update
 
     // ==================== 数学公式预览相关状态 ====================
     // 上传界面的数学公式预览
@@ -1560,16 +1907,21 @@ export default {
     const gradeList = ref([]); // 年级列表
     const subjectList = ref([]); // 科目列表
     const knowledgePointList = ref([]); // 知识点列表
-    const questionDefinitionList = ref([]); // 问题定义列表
     const solutionIdeaList = ref([]); // 解题思想列表
     const questionCategoryList = ref([]); // 问题类别列表
 
     // ==================== 新建内容输入状态 ====================
     const newKnowledgePoint = ref(""); // 新建知识点输入
     const newSubKnowledgePoint = ref(""); // 新建子知识点输入
-    const newQuestionDefinition = ref(""); // 新建问题定义输入
     const newSolutionIdea = ref(""); // 新建解题思想输入
     const newQuestionCategory = ref(""); // 新建问题类别输入
+
+    // 更新界面的新建内容输入状态
+    const newUpdateKnowledgePoint = ref(""); // 更新界面新建知识点
+    const newUpdateSolutionIdea = ref(""); // 更新界面新建解题思想
+    const newUpdateFormKnowledgePoint = ref(""); // 更新表单新建知识点
+    const newUpdateFormSubKnowledgePoint = ref(""); // 更新表单新建子知识点
+    const newUpdateFormSolutionIdea = ref(""); // 更新表单新建解题思想
 
     // ==================== 其他状态 ====================
     const questionList = ref([]); // 题目列表
@@ -1599,10 +1951,9 @@ export default {
       school_id: uploadMemory.value.school_id,
       grade_id: uploadMemory.value.grade_id,
       subject_id: uploadMemory.value.subject_id,
-      question_category_id: null, // 问题类别ID（单选）
+      question_category_id: uploadMemory.value.question_category_id, // 问题类别ID（单选）
       marking_type: uploadMemory.value.marking_type,
       knowledge_point_id: null, // 知识点ID
-      question_definition_ids: [], // 问题定义ID数组
       solution_idea_ids: [], // 解题思想ID数组
       difficulty_level: uploadMemory.value.difficulty_level,
       title: "", // 题目内容
@@ -1629,7 +1980,6 @@ export default {
       question_category_id: null, // 问题类别ID（单选）
       marking_type: 0,
       knowledge_point_id: null,
-      question_definition_ids: [],
       solution_idea_ids: [],
       difficulty_level: null,
       title: "",
@@ -1652,10 +2002,12 @@ export default {
       subject_id: null,
       question_category_ids: [], // 改为数组，支持多选
       knowledge_point_ids: [], // 知识点ID数组
-      question_definition_ids: [], // 问题定义ID数组
+      sub_knowledge_point_ids: [], // 子知识点ID数组
       solution_idea_ids: [], // 解题思想ID数组
       difficulty_level: null,
       title: "", // 题目关键词
+      page_num: 1, // 当前页码，默认第一页
+      page_size: 10, // 每页数量，默认10条
     });
 
     // ==================== 选择题答案索引 ====================
@@ -1673,19 +2025,17 @@ export default {
     // 上传界面的搜索关键词
     const knowledgeSearch = ref("");
     const subKnowledgeSearch = ref("");
-    const questionDefinitionSearch = ref("");
     const solutionIdeaSearch = ref("");
     const questionCategorySearch = ref("");
 
     // 更新界面检索条件的搜索关键词
     const updateKnowledgeSearch = ref("");
-    const updateQuestionDefinitionSearch = ref("");
+    const updateSubKnowledgeSearch = ref("");
     const updateSolutionIdeaSearch = ref("");
     const updateQuestionCategorySearch = ref("");
 
     // 更新表单的搜索关键词
     const updateFormKnowledgeSearch = ref("");
-    const updateFormQuestionDefinitionSearch = ref("");
     const updateFormSolutionIdeaSearch = ref("");
     const updateFormQuestionCategorySearch = ref("");
     const updateFormSubKnowledgeSearch = ref("");
@@ -1694,19 +2044,17 @@ export default {
     // 上传界面的下拉框显示状态
     const showKnowledgeDropdown = ref(false);
     const showSubKnowledgeDropdown = ref(false);
-    const showQuestionDefinitionDropdown = ref(false);
     const showSolutionIdeaDropdown = ref(false);
     const showQuestionCategoryDropdown = ref(false);
 
     // 更新界面检索条件的下拉框显示状态
     const showUpdateKnowledgeDropdown = ref(false);
-    const showUpdateQuestionDefinitionDropdown = ref(false);
+    const showUpdateSubKnowledgeDropdown = ref(false);
     const showUpdateSolutionIdeaDropdown = ref(false);
     const showUpdateQuestionCategoryDropdown = ref(false);
 
     // 更新表单的下拉框显示状态
     const showUpdateFormKnowledgeDropdown = ref(false);
-    const showUpdateFormQuestionDefinitionDropdown = ref(false);
     const showUpdateFormSolutionIdeaDropdown = ref(false);
     const showUpdateFormQuestionCategoryDropdown = ref(false);
     const showUpdateFormSubKnowledgeDropdown = ref(false);
@@ -1721,22 +2069,25 @@ export default {
     // 上传界面的过滤列表
     const filteredKnowledgePoints = ref([]);
     const filteredSubKnowledgePoints = ref([]);
-    const filteredQuestionDefinitions = ref([]);
     const filteredSolutionIdeas = ref([]);
     const filteredQuestionCategories = ref([]);
 
     // 更新界面检索条件的过滤列表
     const filteredUpdateKnowledgePoints = ref([]);
-    const filteredUpdateQuestionDefinitions = ref([]);
+    const filteredUpdateSubKnowledgePoints = ref([]);
     const filteredUpdateSolutionIdeas = ref([]);
     const filteredUpdateQuestionCategories = ref([]);
 
     // 更新表单的过滤列表
     const filteredUpdateFormKnowledgePoints = ref([]);
-    const filteredUpdateFormQuestionDefinitions = ref([]);
     const filteredUpdateFormSolutionIdeas = ref([]);
     const filteredUpdateFormQuestionCategories = ref([]);
     const filteredUpdateFormSubKnowledgePoints = ref([]);
+
+    // ==================== 分页相关状态 ====================
+    const totalPages = ref(1); // 总页数
+    const totalItems = ref(0); // 总条目数
+    const pageInput = ref(1); // 页码输入
 
     // ==================== 计算属性 ====================
     /**
@@ -1813,15 +2164,6 @@ export default {
     });
 
     /**
-     * 选中的问题定义对象列表
-     */
-    const selectedQuestionDefinitions = computed(() => {
-      return form.question_definition_ids
-        .map((id) => questionDefinitionList.value.find((q) => q.id === id))
-        .filter(Boolean);
-    });
-
-    /**
      * 选中的解题思想对象列表
      */
     const selectedSolutionIdeas = computed(() => {
@@ -1840,11 +2182,11 @@ export default {
     });
 
     /**
-     * 更新界面选中的问题定义对象列表
+     * 更新界面选中的子知识点对象列表
      */
-    const selectedUpdateQuestionDefinitions = computed(() => {
-      return searchCriteria.question_definition_ids
-        .map((id) => questionDefinitionList.value.find((q) => q.id === id))
+    const selectedUpdateSubKnowledgePoints = computed(() => {
+      return searchCriteria.sub_knowledge_point_ids
+        .map((id) => knowledgePointList.value.find((k) => k.id === id))
         .filter(Boolean);
     });
 
@@ -1863,15 +2205,6 @@ export default {
     const selectedUpdateQuestionCategories = computed(() => {
       return searchCriteria.question_category_ids
         .map((id) => questionCategoryList.value.find((c) => c.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新表单选中的问题定义对象列表
-     */
-    const selectedUpdateFormQuestionDefinitions = computed(() => {
-      return updateForm.question_definition_ids
-        .map((id) => questionDefinitionList.value.find((q) => q.id === id))
         .filter(Boolean);
     });
 
@@ -1975,6 +2308,575 @@ export default {
       updateOptionPreviews.value[index] = renderMath(text);
     };
 
+    // ==================== 新增删除实体相关方法 ====================
+    /**
+     * 确认删除知识点
+     * @param {Object} knowledgePoint - 知识点对象
+     */
+    const confirmDeleteKnowledgePoint = async (knowledgePoint) => {
+      deleteEntityType.value = "知识点";
+      deleteEntityData.value = knowledgePoint;
+      dependentQuestionsPageNum.value = 1;
+      dependentQuestionsPageInput.value = 1;
+      await loadDependentQuestions();
+      showDeleteEntityConfirm.value = true;
+    };
+
+    /**
+     * 确认删除知识点
+     * @param {Object} SubknowledgePoint - 子知识点对象
+     */
+    const confirmDeleteSubKnowledgePoint = async (knowledgePoint) => {
+      deleteEntityType.value = "子知识点";
+      deleteEntityData.value = knowledgePoint;
+      dependentQuestionsPageNum.value = 1;
+      dependentQuestionsPageInput.value = 1;
+      await loadDependentQuestions();
+      showDeleteEntityConfirm.value = true;
+    };
+
+    /**
+     * 确认删除解题思想
+     * @param {Object} solutionIdea - 解题思想对象
+     */
+    const confirmDeleteSolutionIdea = async (solutionIdea) => {
+      deleteEntityType.value = "解题思想";
+      deleteEntityData.value = solutionIdea;
+      dependentQuestionsPageNum.value = 1;
+      dependentQuestionsPageInput.value = 1;
+      await loadDependentQuestions();
+      showDeleteEntityConfirm.value = true;
+    };
+
+    /**
+     * 确认删除问题类别
+     * @param {Object} questionCategory - 问题类别对象
+     */
+    const confirmDeleteQuestionCategory = async (questionCategory) => {
+      deleteEntityType.value = "问题类别";
+      deleteEntityData.value = questionCategory;
+      dependentQuestionsPageNum.value = 1;
+      dependentQuestionsPageInput.value = 1;
+      await loadDependentQuestions();
+      showDeleteEntityConfirm.value = true;
+    };
+
+    /**
+     * 加载依赖的题目
+     */
+    const loadDependentQuestions = async () => {
+      if (!deleteEntityData.value) return;
+
+      try {
+        let payload = {
+          page_num: dependentQuestionsPageNum.value,
+          page_size: dependentQuestionsPageSize.value,
+        };
+
+        // 根据实体类型设置不同的检索条件
+        switch (deleteEntityType.value) {
+          case "知识点":
+            payload.knowledge_point_ids = [deleteEntityData.value.id];
+            break;
+          case "子知识点":
+            payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
+            break;
+          case "解题思想":
+            payload.solution_idea_ids = [deleteEntityData.value.id];
+            break;
+          case "问题类别":
+            payload.question_category_ids = [deleteEntityData.value.id];
+            break;
+        }
+
+        const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+        const responseData = res.data.data;
+
+        dependentQuestions.value = responseData?.data_info || [];
+        dependentQuestionsTotalPages.value = responseData?.total_pages || 1;
+        dependentQuestionsTotalItems.value = responseData?.total_items || 0;
+        dependentQuestionsPageInput.value = dependentQuestionsPageNum.value;
+      } catch (err) {
+        console.error("加载依赖题目失败:", err);
+        showAlert("加载失败", "加载依赖题目失败");
+      }
+    };
+
+    /**
+     * 改变依赖题目页码
+     * @param {number} newPage - 新页码
+     */
+    const changeDependentPage = (newPage) => {
+      if (newPage < 1 || newPage > dependentQuestionsTotalPages.value) {
+        return;
+      }
+      dependentQuestionsPageNum.value = newPage;
+      dependentQuestionsPageInput.value = newPage;
+      loadDependentQuestions();
+    };
+
+    /**
+     * 跳转到依赖题目首页
+     */
+    const goToDependentFirstPage = () => {
+      changeDependentPage(1);
+    };
+
+    /**
+     * 跳转到依赖题目末页
+     */
+    const goToDependentLastPage = () => {
+      changeDependentPage(dependentQuestionsTotalPages.value);
+    };
+
+    /**
+     * 跳转到依赖题目指定页码
+     */
+    const goToDependentPage = () => {
+      const page = parseInt(dependentQuestionsPageInput.value);
+      if (page >= 1 && page <= dependentQuestionsTotalPages.value) {
+        changeDependentPage(page);
+      } else {
+        showAlert(
+          "输入错误",
+          `请输入 1 到 ${dependentQuestionsTotalPages.value} 之间的页码`
+        );
+      }
+    };
+
+    /**
+     * 删除依赖题目
+     * @param {Object} question - 题目对象
+     */
+    const deleteDependentQuestion = async (question) => {
+      if (!confirm(`确定要删除题目(ID: ${question.id})吗？`)) {
+        return;
+      }
+
+      try {
+        await axios.delete(`${API_BASE}/questions/deleteQuestion/${question.id}`);
+        showAlert("删除成功", "题目删除成功");
+
+        // 重新加载依赖题目
+        await loadDependentQuestions();
+
+        // 如果删除的是当前更新表单中的题目，关闭更新表单
+        if (selectedQuestion.value && selectedQuestion.value.id === question.id) {
+          cancelUpdate();
+        }
+      } catch (err) {
+        console.error("删除题目失败:", err);
+        showAlert("删除失败", "删除题目失败");
+      }
+    };
+
+    /**
+     * 删除所有依赖题目
+     */
+    const deleteAllDependentQuestions = async () => {
+      if (
+        !confirm(
+          `确定要删除所有 ${dependentQuestionsTotalItems.value} 道题目吗？此操作不可恢复！`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        // 获取所有依赖题目的ID
+        let allDependentQuestions = [];
+        let currentPage = 1;
+        const pageSize = 100; // 每页获取100条
+
+        // 首先获取所有题目的ID
+        while (true) {
+          let payload = {
+            page_num: currentPage,
+            page_size: pageSize,
+          };
+
+          // 根据实体类型设置不同的检索条件
+          switch (deleteEntityType.value) {
+            case "知识点":
+              payload.knowledge_point_ids = [deleteEntityData.value.id];
+              break;
+            case "子知识点":
+              payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
+              break;
+            case "解题思想":
+              payload.solution_idea_ids = [deleteEntityData.value.id];
+              break;
+            case "问题类别":
+              payload.question_category_ids = [deleteEntityData.value.id];
+              break;
+          }
+
+          const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+          const responseData = res.data.data;
+
+          if (!responseData?.data_info || responseData.data_info.length === 0) {
+            break;
+          }
+
+          allDependentQuestions = allDependentQuestions.concat(
+            responseData.data_info.map((q) => q.id)
+          );
+
+          if (currentPage >= (responseData.total_pages || 1)) {
+            break;
+          }
+          currentPage++;
+        }
+
+        // 批量删除所有题目
+        for (const questionId of allDependentQuestions) {
+          await axios.delete(`${API_BASE}/questions/deleteQuestion/${questionId}`);
+        }
+
+        showAlert("删除成功", `成功删除 ${allDependentQuestions.length} 道题目`);
+
+        // 重新加载依赖题目列表（应该为空）
+        await loadDependentQuestions();
+
+        // 关闭更新表单（如果打开的话）
+        cancelUpdate();
+      } catch (err) {
+        console.error("批量删除题目失败:", err);
+        showAlert("删除失败", "批量删除题目失败");
+      }
+    };
+
+    /**
+     * 删除实体（知识点/解题思想/问题类别）
+     */
+    const deleteEntity = async () => {
+      if (!deleteEntityData.value) return;
+
+      try {
+        let url = "";
+        let entityName = "";
+
+        switch (deleteEntityType.value) {
+          case "知识点":
+          case "子知识点":
+            url = `${API_BASE}/questions/deletedKnowledgePoint/${deleteEntityData.value.id}`;
+            entityName = deleteEntityType.value;
+            break;
+          case "解题思想":
+            url = `${API_BASE}/questions/deleteSolutionIdea/${deleteEntityData.value.id}`;
+            entityName = "解题思想";
+            break;
+          case "问题类别":
+            url = `${API_BASE}/questions/deleteQuestionCategory/${deleteEntityData.value.id}`;
+            entityName = "问题类别";
+            break;
+          default:
+            return;
+        }
+
+        await axios.delete(url);
+        showAlert("删除成功", `${entityName}删除成功`);
+
+        // 重新加载列表
+        await loadLists();
+
+        // 如果当前选中的实体被删除，清除选择
+        if (
+          (deleteEntityType.value === "知识点" ||
+            deleteEntityType.value === "子知识点") &&
+          selectedKnowledgePoint.value &&
+          selectedKnowledgePoint.value.id === deleteEntityData.value.id
+        ) {
+          clearKnowledgePoint();
+        }
+        if (
+          deleteEntityType.value === "问题类别" &&
+          selectedQuestionCategory.value &&
+          selectedQuestionCategory.value.id === deleteEntityData.value.id
+        ) {
+          clearQuestionCategory();
+        }
+
+        showDeleteEntityConfirm.value = false;
+        deleteEntityData.value = null;
+        dependentQuestions.value = [];
+      } catch (err) {
+        console.error(`删除${deleteEntityType.value}失败:`, err);
+        showAlert("删除失败", `删除${deleteEntityType.value}失败`);
+      }
+    };
+
+    /**
+     * 取消删除实体
+     */
+    const cancelDeleteEntity = () => {
+      showDeleteEntityConfirm.value = false;
+      deleteEntityData.value = null;
+      dependentQuestions.value = [];
+    };
+
+    // ==================== 新增预览功能相关方法 ====================
+    /**
+     * 显示预览模态框
+     */
+    const showPreview = () => {
+      if (!validateForm()) return;
+      previewMode.value = "upload";
+      showPreviewModal.value = true;
+    };
+
+    /**
+     * 显示更新预览模态框
+     */
+    const showUpdatePreview = () => {
+      if (!validateUpdateForm()) return;
+      previewMode.value = "update";
+      showPreviewModal.value = true;
+    };
+
+    /**
+     * 关闭预览模态框
+     */
+    const closePreview = () => {
+      showPreviewModal.value = false;
+    };
+
+    /**
+     * 确认提交
+     */
+    const confirmSubmit = () => {
+      showPreviewModal.value = false;
+      if (previewMode.value === "upload") {
+        handleSubmit();
+      } else {
+        handleUpdateSubmit();
+      }
+    };
+
+    /**
+     * 验证表单
+     */
+    const validateForm = () => {
+      if (!form.question_category_id) {
+        showAlert("输入错误", "请选择问题类别");
+        return false;
+      }
+      if (!form.title.trim()) {
+        showAlert("输入错误", "请输入题目内容");
+        return false;
+      }
+      return true;
+    };
+
+    /**
+     * 验证更新表单
+     */
+    const validateUpdateForm = () => {
+      if (!updateForm.question_category_id) {
+        showAlert("输入错误", "请选择问题类别");
+        return false;
+      }
+      if (!updateForm.title.trim()) {
+        showAlert("输入错误", "请输入题目内容");
+        return false;
+      }
+      return true;
+    };
+
+    // ==================== 预览数据获取方法 ====================
+    /**
+     * 获取预览的学校名称
+     */
+    const getPreviewSchoolName = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (currentForm.school_id === null) return "全部";
+      const school = schoolList.value.find((s) => s.id === currentForm.school_id);
+      return school ? school.name : "未知";
+    };
+
+    /**
+     * 获取预览的年级名称
+     */
+    const getPreviewGradeName = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (currentForm.grade_id === null) return "全部";
+      const grade = gradeList.value.find((g) => g.id === currentForm.grade_id);
+      return grade ? grade.name : "未知";
+    };
+
+    /**
+     * 获取预览的科目名称
+     */
+    const getPreviewSubjectName = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (currentForm.subject_id === null) return "全部";
+      const subject = subjectList.value.find((s) => s.id === currentForm.subject_id);
+      return subject ? subject.name : "未知";
+    };
+
+    /**
+     * 获取预览的问题类别名称
+     */
+    const getPreviewQuestionCategoryName = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (!currentForm.question_category_id) return "未选择";
+      const category = questionCategoryList.value.find(
+        (c) => c.id === currentForm.question_category_id
+      );
+      return category ? category.name : "未知";
+    };
+
+    /**
+     * 获取预览的难度级别
+     */
+    const getPreviewDifficultyLevel = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (currentForm.difficulty_level === null) return "暂无难度评级";
+      return `${currentForm.difficulty_level} 星`;
+    };
+
+    /**
+     * 获取预览的评分方法
+     */
+    const getPreviewMarkingType = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return currentForm.marking_type === 1 ? "人工评分" : "自动评分";
+    };
+
+    /**
+     * 获取预览的知识点名称
+     */
+    const getPreviewKnowledgePointName = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (!currentForm.knowledge_point_id) return "未选择";
+      const kp = knowledgePointList.value.find(
+        (k) => k.id === currentForm.knowledge_point_id
+      );
+      return kp ? kp.name : "未知";
+    };
+
+    /**
+     * 获取预览的子知识点
+     */
+    const getPreviewSubKnowledgePoints = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (!currentForm.sub_knowledge_point_ids.length) return "无";
+      return currentForm.sub_knowledge_point_ids
+        .map((id) => {
+          const kp = knowledgePointList.value.find((k) => k.id === id);
+          return kp ? kp.name : "未知";
+        })
+        .join(", ");
+    };
+
+    /**
+     * 获取预览的解题思想
+     */
+    const getPreviewSolutionIdeas = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      if (!currentForm.solution_idea_ids.length) return "无";
+      return currentForm.solution_idea_ids
+        .map((id) => {
+          const si = solutionIdeaList.value.find((s) => s.id === id);
+          return si ? si.name : "未知";
+        })
+        .join(", ");
+    };
+
+    /**
+     * 获取预览的题目内容
+     */
+    const getPreviewTitle = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return renderMath(currentForm.title || "无");
+    };
+
+    /**
+     * 获取预览的图片URL
+     */
+    const getPreviewImageUrl = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return currentForm.img_url || "";
+    };
+
+    /**
+     * 获取预览的选项
+     */
+    const getPreviewOptions = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return currentForm.options || [];
+    };
+
+    /**
+     * 检查是否显示预览选项
+     */
+    const showPreviewOptions = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      const categoryName = getPreviewQuestionCategoryName();
+      return (
+        categoryName === "单选题" ||
+        categoryName.includes("单选") ||
+        categoryName === "多选题" ||
+        categoryName.includes("多选")
+      );
+    };
+
+    /**
+     * 检查选项是否为正确答案
+     */
+    const isPreviewOptionCorrect = (index) => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      const categoryName = getPreviewQuestionCategoryName();
+
+      if (categoryName === "单选题" || categoryName.includes("单选")) {
+        const currentSingleAnswerIndex =
+          previewMode.value === "upload"
+            ? singleAnswerIndex.value
+            : updateSingleAnswerIndex.value;
+        return currentSingleAnswerIndex === index;
+      } else if (categoryName === "多选题" || categoryName.includes("多选")) {
+        return currentForm.options[index]?.isAnswer || false;
+      }
+      return false;
+    };
+
+    /**
+     * 检查是否显示主观题答案
+     */
+    const showPreviewSubjectiveAnswer = () => {
+      const categoryName = getPreviewQuestionCategoryName();
+      return !(
+        categoryName === "单选题" ||
+        categoryName.includes("单选") ||
+        categoryName === "多选题" ||
+        categoryName.includes("多选")
+      );
+    };
+
+    /**
+     * 获取预览的答案
+     */
+    const getPreviewAnswer = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return renderMath(currentForm.answer || "无");
+    };
+
+    /**
+     * 获取预览的解析
+     */
+    const getPreviewNotes = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return renderMath(currentForm.notes || "");
+    };
+
+    /**
+     * 获取预览的备注
+     */
+    const getPreviewRemark = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return renderMath(currentForm.remark || "");
+    };
+
     // ==================== 选项操作方法 ====================
     /**
      * 获取选项标签（A, B, C, ...）
@@ -2057,6 +2959,15 @@ export default {
       titlePreview.value = "";
       answerPreview.value = "";
       notesPreview.value = "";
+
+      // 根据问题类别设置默认评分方法
+      if (selectedQuestionCategory.value) {
+        const name = selectedQuestionCategory.value.name || "";
+        const autoMarkingKeywords = ["单选", "多选"]; // 可在这里扩展更多自动评分题型
+        form.marking_type = autoMarkingKeywords.some((keyword) => name.includes(keyword))
+          ? 0
+          : 1;
+      }
     };
 
     /**
@@ -2098,7 +3009,7 @@ export default {
       knowledgeSearch.value = "";
     };
 
-    // ==================== 问题类别选择方法（改为单选） ====================
+    // ==================== 问题类别选择方法（单选） ====================
     /**
      * 选择问题类别
      * @param {Object} item - 问题类别对象
@@ -2109,6 +3020,9 @@ export default {
       questionCategorySearch.value = item.name;
       showQuestionCategoryDropdown.value = false;
       handleQuestionCategoryChange();
+      // 更新记忆
+      uploadMemory.value.question_category_id = item.id;
+      saveUploadMemory();
     };
 
     /**
@@ -2119,38 +3033,9 @@ export default {
       form.question_category_id = null;
       questionCategorySearch.value = "";
       handleQuestionCategoryChange();
-    };
-
-    // ==================== 问题定义选择方法 ====================
-    /**
-     * 选择问题定义
-     * @param {Object} item - 问题定义对象
-     */
-    const selectQuestionDefinition = (item) => {
-      if (!form.question_definition_ids.includes(item.id)) {
-        form.question_definition_ids.push(item.id);
-      }
-      questionDefinitionSearch.value = "";
-      showQuestionDefinitionDropdown.value = false;
-    };
-
-    /**
-     * 检查问题定义是否已选择
-     * @param {number} id - 问题定义ID
-     * @returns {boolean} 是否已选择
-     */
-    const isQuestionDefinitionSelected = (id) => {
-      return form.question_definition_ids.includes(id);
-    };
-
-    /**
-     * 移除问题定义
-     * @param {number} id - 要移除的问题定义ID
-     */
-    const removeQuestionDefinition = (id) => {
-      form.question_definition_ids = form.question_definition_ids.filter(
-        (itemId) => itemId !== id
-      );
+      // 更新记忆
+      uploadMemory.value.question_category_id = null;
+      saveUploadMemory();
     };
 
     // ==================== 解题思想选择方法 ====================
@@ -2246,37 +3131,56 @@ export default {
         (kp) => kp !== id
       );
     };
-
-    // ==================== 更新界面问题定义多选方法 ====================
     /**
-     * 更新界面选择问题定义
-     * @param {Object} item - 问题定义对象
+     * 更新界面选择子知识点
+     * @param {Object} kp - 子知识点对象
      */
-    const selectUpdateQuestionDefinition = (item) => {
-      if (!searchCriteria.question_definition_ids.includes(item.id)) {
-        searchCriteria.question_definition_ids.push(item.id);
+    const selectUpdateSubKnowledgePoint = (kp) => {
+      if (!searchCriteria.sub_knowledge_point_ids.includes(kp.id)) {
+        searchCriteria.sub_knowledge_point_ids.push(kp.id);
       }
-      updateQuestionDefinitionSearch.value = "";
-      showUpdateQuestionDefinitionDropdown.value = false;
+      updateSubKnowledgeSearch.value = "";
+      showUpdateSubKnowledgeDropdown.value = false;
     };
 
     /**
-     * 检查更新界面问题定义是否已选择
-     * @param {number} id - 问题定义ID
+     * 检查更新界面子知识点是否已选择
+     * @param {number} id - 子知识点ID
      * @returns {boolean} 是否已选择
      */
-    const isUpdateQuestionDefinitionSelected = (id) => {
-      return searchCriteria.question_definition_ids.includes(id);
+    const isUpdateSubKnowledgeSelected = (id) => {
+      return searchCriteria.sub_knowledge_point_ids.includes(id);
     };
 
     /**
-     * 移除更新界面问题定义
-     * @param {number} id - 要移除的问题定义ID
+     * 移除更新界面子知识点
+     * @param {number} id - 要移除的子知识点ID
      */
-    const removeUpdateQuestionDefinition = (id) => {
-      searchCriteria.question_definition_ids = searchCriteria.question_definition_ids.filter(
-        (itemId) => itemId !== id
+    const removeUpdateSubKnowledgePoint = (id) => {
+      searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
+        (kp) => kp !== id
       );
+    };
+
+    /**
+     * 过滤更新界面子知识点列表
+     */
+    const filterUpdateSubKnowledgePoints = () => {
+      if (!updateSubKnowledgeSearch.value) {
+        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
+      } else {
+        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+          kp.name.toLowerCase().includes(updateSubKnowledgeSearch.value.toLowerCase())
+        );
+      }
+    };
+    /**
+     * 更新界面子知识点下拉框失焦处理
+     */
+    const onUpdateSubKnowledgeBlur = () => {
+      setTimeout(() => {
+        showUpdateSubKnowledgeDropdown.value = false;
+      }, 200);
     };
 
     // ==================== 更新界面解题思想多选方法 ====================
@@ -2395,38 +3299,6 @@ export default {
       handleUpdateQuestionCategoryChange();
     };
 
-    // ==================== 更新表单问题定义多选方法 ====================
-    /**
-     * 更新表单选择问题定义
-     * @param {Object} item - 问题定义对象
-     */
-    const selectUpdateFormQuestionDefinition = (item) => {
-      if (!updateForm.question_definition_ids.includes(item.id)) {
-        updateForm.question_definition_ids.push(item.id);
-      }
-      updateFormQuestionDefinitionSearch.value = "";
-      showUpdateFormQuestionDefinitionDropdown.value = false;
-    };
-
-    /**
-     * 检查更新表单问题定义是否已选择
-     * @param {number} id - 问题定义ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateFormQuestionDefinitionSelected = (id) => {
-      return updateForm.question_definition_ids.includes(id);
-    };
-
-    /**
-     * 移除更新表单问题定义
-     * @param {number} id - 要移除的问题定义ID
-     */
-    const removeUpdateFormQuestionDefinition = (id) => {
-      updateForm.question_definition_ids = updateForm.question_definition_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
     // ==================== 更新表单解题思想多选方法 ====================
     /**
      * 更新表单选择解题思想
@@ -2523,12 +3395,6 @@ export default {
       }, 200);
     };
 
-    const onQuestionDefinitionBlur = () => {
-      setTimeout(() => {
-        showQuestionDefinitionDropdown.value = false;
-      }, 200);
-    };
-
     const onSolutionIdeaBlur = () => {
       setTimeout(() => {
         showSolutionIdeaDropdown.value = false;
@@ -2547,12 +3413,6 @@ export default {
       }, 200);
     };
 
-    const onUpdateQuestionDefinitionBlur = () => {
-      setTimeout(() => {
-        showUpdateQuestionDefinitionDropdown.value = false;
-      }, 200);
-    };
-
     const onUpdateSolutionIdeaBlur = () => {
       setTimeout(() => {
         showUpdateSolutionIdeaDropdown.value = false;
@@ -2568,12 +3428,6 @@ export default {
     const onUpdateFormKnowledgeBlur = () => {
       setTimeout(() => {
         showUpdateFormKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateFormQuestionDefinitionBlur = () => {
-      setTimeout(() => {
-        showUpdateFormQuestionDefinitionDropdown.value = false;
       }, 200);
     };
 
@@ -2623,19 +3477,6 @@ export default {
     };
 
     /**
-     * 过滤问题定义列表
-     */
-    const filterQuestionDefinitions = () => {
-      if (!questionDefinitionSearch.value) {
-        filteredQuestionDefinitions.value = questionDefinitionList.value;
-      } else {
-        filteredQuestionDefinitions.value = questionDefinitionList.value.filter((item) =>
-          item.name.toLowerCase().includes(questionDefinitionSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
      * 过滤解题思想列表
      */
     const filterSolutionIdeas = () => {
@@ -2670,22 +3511,6 @@ export default {
       } else {
         filteredUpdateKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
           kp.name.toLowerCase().includes(updateKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新界面问题定义列表
-     */
-    const filterUpdateQuestionDefinitions = () => {
-      if (!updateQuestionDefinitionSearch.value) {
-        filteredUpdateQuestionDefinitions.value = questionDefinitionList.value;
-      } else {
-        filteredUpdateQuestionDefinitions.value = questionDefinitionList.value.filter(
-          (item) =>
-            item.name
-              .toLowerCase()
-              .includes(updateQuestionDefinitionSearch.value.toLowerCase())
         );
       }
     };
@@ -2728,22 +3553,6 @@ export default {
       } else {
         filteredUpdateFormKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
           kp.name.toLowerCase().includes(updateFormKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新表单问题定义列表
-     */
-    const filterUpdateFormQuestionDefinitions = () => {
-      if (!updateFormQuestionDefinitionSearch.value) {
-        filteredUpdateFormQuestionDefinitions.value = questionDefinitionList.value;
-      } else {
-        filteredUpdateFormQuestionDefinitions.value = questionDefinitionList.value.filter(
-          (item) =>
-            item.name
-              .toLowerCase()
-              .includes(updateFormQuestionDefinitionSearch.value.toLowerCase())
         );
       }
     };
@@ -2794,13 +3603,51 @@ export default {
         );
       }
     };
+    // ==================== 图片上传配置 ====================
+    const IMAGE_BED_CONFIG = {
+      apiUrl: "https://xxwpic.flito.art/api/index.php", // 图床API地址
+      token: "1c17b11693cb5ec63859b091c5b9c1b2", // 图床API令牌
+    };
 
     // ==================== 图片上传处理 ====================
+    /**
+     * 上传图片到图床
+     * @param {File} file - 图片文件
+     * @returns {Promise<string>} 图片URL
+     */
+    const uploadToImageBed = async (file) => {
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+        formData.append("token", IMAGE_BED_CONFIG.token);
+
+        const response = await fetch(IMAGE_BED_CONFIG.apiUrl, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`上传失败: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.code === 200 && result.result === "success") {
+          return result.url; // 返回图片URL
+        } else {
+          throw new Error("图床返回错误");
+        }
+      } catch (error) {
+        console.error("图片上传失败:", error);
+        throw new Error("图片上传失败，请重试");
+      }
+    };
+
     /**
      * 处理图片上传
      * @param {Event} event - 文件输入事件
      */
-    const handleImageUpload = (event) => {
+    const handleImageUpload = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -2817,16 +3664,20 @@ export default {
       }
 
       // 创建对象URL用于预览
-      form.img_url = URL.createObjectURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      form.img_url = previewUrl;
       pendingImageFile.value = file;
       event.target.value = ""; // 重置文件输入
+
+      // 显示上传中状态
+      showAlert("上传中", "图片正在上传...", "info");
     };
 
     /**
      * 处理更新界面图片上传
      * @param {Event} event - 文件输入事件
      */
-    const handleUpdateImageUpload = (event) => {
+    const handleUpdateImageUpload = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -2840,8 +3691,10 @@ export default {
         return;
       }
 
-      updateForm.img_url = URL.createObjectURL(file);
-      pendingUpdateImageFile.value = file;
+      // 创建对象URL用于预览
+      const previewUrl = URL.createObjectURL(file);
+      updateForm.img_url = previewUrl;
+      pendingUpdateImageFile.value = file; // 保存文件，等待确认上传
       event.target.value = "";
     };
 
@@ -2860,7 +3713,44 @@ export default {
       updateForm.img_url = "";
       pendingUpdateImageFile.value = null;
     };
+    /**
+     * 上传待处理的图片（在表单提交时调用）
+     * @param {string} mode - 模式：'upload' 或 'update'
+     * @returns {Promise<boolean>} 是否上传成功
+     */
+    const uploadPendingImage = async (mode) => {
+      try {
+        const pendingFile =
+          mode === "upload" ? pendingImageFile.value : pendingUpdateImageFile.value;
+        const formData = mode === "upload" ? form : updateForm;
 
+        if (!pendingFile) {
+          return true; // 没有待上传的图片，直接返回成功
+        }
+
+        showAlert("上传中", "图片正在上传到图床...", "info");
+
+        // 上传到图床
+        const imageUrl = await uploadToImageBed(pendingFile);
+
+        // 使用图床返回的URL替换预览URL
+        formData.img_url = imageUrl;
+
+        // 清空待处理文件
+        if (mode === "upload") {
+          pendingImageFile.value = null;
+        } else {
+          pendingUpdateImageFile.value = null;
+        }
+
+        showAlert("上传成功", "图片已成功上传到图床");
+        return true;
+      } catch (error) {
+        console.error("图片上传失败:", error);
+        showAlert("上传失败", error.message);
+        return false;
+      }
+    };
     // ==================== 记忆功能 ====================
     /**
      * 保存上传记忆到localStorage
@@ -2870,6 +3760,7 @@ export default {
         school_id: form.school_id,
         grade_id: form.grade_id,
         subject_id: form.subject_id,
+        question_category_id: form.question_category_id,
         marking_type: form.marking_type,
         difficulty_level: form.difficulty_level,
       };
@@ -2895,12 +3786,11 @@ export default {
     const loadLists = async () => {
       try {
         // 并行请求所有数据
-        const [s, g, sub, kp, qd, si, qc] = await Promise.all([
+        const [s, g, sub, kp, si, qc] = await Promise.all([
           axios.get(`${API_BASE}/questions/getSchoolList`),
           axios.get(`${API_BASE}/questions/getGradeList`),
           axios.get(`${API_BASE}/questions/getSubjectList`),
           axios.get(`${API_BASE}/questions/getKnowledgePointList`),
-          axios.get(`${API_BASE}/questions/getQuestionDefinitionList`),
           axios.get(`${API_BASE}/questions/getSolutionIdeaList`),
           axios.get(`${API_BASE}/questions/getQuestionCategoryList`),
         ]);
@@ -2928,11 +3818,6 @@ export default {
           kp.data.data || {}
         ).map(([id, name]) => ({ id: parseInt(id), name }));
 
-        // 处理问题定义列表数据
-        questionDefinitionList.value = Object.entries(
-          qd.data.data || {}
-        ).map(([id, name]) => ({ id: parseInt(id), name }));
-
         // 处理解题思想列表数据
         solutionIdeaList.value = Object.entries(si.data.data || {}).map(([id, name]) => ({
           id: parseInt(id),
@@ -2947,20 +3832,32 @@ export default {
         // 初始化所有过滤后的列表
         filteredKnowledgePoints.value = knowledgePointList.value;
         filteredSubKnowledgePoints.value = knowledgePointList.value;
-        filteredQuestionDefinitions.value = questionDefinitionList.value;
         filteredSolutionIdeas.value = solutionIdeaList.value;
         filteredQuestionCategories.value = questionCategoryList.value;
 
         filteredUpdateKnowledgePoints.value = knowledgePointList.value;
-        filteredUpdateQuestionDefinitions.value = questionDefinitionList.value;
+        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
         filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
         filteredUpdateQuestionCategories.value = questionCategoryList.value;
 
         filteredUpdateFormKnowledgePoints.value = knowledgePointList.value;
-        filteredUpdateFormQuestionDefinitions.value = questionDefinitionList.value;
         filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
         filteredUpdateFormQuestionCategories.value = questionCategoryList.value;
         filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
+        if (uploadMemory.value.question_category_id) {
+          const rememberedCategory = questionCategoryList.value.find(
+            (category) => category.id === uploadMemory.value.question_category_id
+          );
+          if (rememberedCategory) {
+            selectedQuestionCategory.value = rememberedCategory;
+            form.question_category_id = rememberedCategory.id;
+            questionCategorySearch.value = rememberedCategory.name;
+          } else {
+            // 如果记忆的类别不存在，清除记忆
+            uploadMemory.value.question_category_id = null;
+            saveUploadMemory();
+          }
+        }
       } catch (err) {
         console.error("获取列表失败:", err);
         showAlert("加载失败", "获取列表失败");
@@ -3018,30 +3915,6 @@ export default {
     };
 
     /**
-     * 上传问题定义
-     */
-    const uploadQuestionDefinition = async () => {
-      if (!newQuestionDefinition.value.trim()) {
-        showAlert("输入错误", "请输入问题定义");
-        return;
-      }
-
-      try {
-        const items = newQuestionDefinition.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadQuestionDefinition`, items);
-        showAlert("上传成功", "问题定义上传成功");
-        newQuestionDefinition.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传问题定义失败:", err);
-        showAlert("上传失败", "上传问题定义失败");
-      }
-    };
-
-    /**
      * 上传解题思想
      */
     const uploadSolutionIdea = async () => {
@@ -3089,13 +3962,136 @@ export default {
       }
     };
 
+    // ==================== 更新界面新建内容上传方法 ====================
+    /**
+     * 更新界面上传知识点
+     */
+    const uploadUpdateKnowledgePoint = async () => {
+      if (!newUpdateKnowledgePoint.value.trim()) {
+        showAlert("输入错误", "请输入知识点名称");
+        return;
+      }
+
+      try {
+        const items = newUpdateKnowledgePoint.value
+          .split(/[,，]/)
+          .map((item) => item.trim())
+          .filter((item) => item);
+        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        showAlert("上传成功", "知识点上传成功");
+        newUpdateKnowledgePoint.value = "";
+        await loadLists();
+      } catch (err) {
+        console.error("上传知识点失败:", err);
+        showAlert("上传失败", "上传知识点失败");
+      }
+    };
+
+    /**
+     * 更新界面上传解题思想
+     */
+    const uploadUpdateSolutionIdea = async () => {
+      if (!newUpdateSolutionIdea.value.trim()) {
+        showAlert("输入错误", "请输入解题思想");
+        return;
+      }
+
+      try {
+        const items = newUpdateSolutionIdea.value
+          .split(/[,，]/)
+          .map((item) => item.trim())
+          .filter((item) => item);
+        await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
+        showAlert("上传成功", "解题思想上传成功");
+        newUpdateSolutionIdea.value = "";
+        await loadLists();
+      } catch (err) {
+        console.error("上传解题思想失败:", err);
+        showAlert("上传失败", "上传解题思想失败");
+      }
+    };
+
+    /**
+     * 更新表单上传知识点
+     */
+    const uploadUpdateFormKnowledgePoint = async () => {
+      if (!newUpdateFormKnowledgePoint.value.trim()) {
+        showAlert("输入错误", "请输入知识点名称");
+        return;
+      }
+
+      try {
+        const items = newUpdateFormKnowledgePoint.value
+          .split(/[,，]/)
+          .map((item) => item.trim())
+          .filter((item) => item);
+        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        showAlert("上传成功", "知识点上传成功");
+        newUpdateFormKnowledgePoint.value = "";
+        await loadLists();
+      } catch (err) {
+        console.error("上传知识点失败:", err);
+        showAlert("上传失败", "上传知识点失败");
+      }
+    };
+
+    /**
+     * 更新表单上传子知识点
+     */
+    const uploadUpdateFormSubKnowledgePoint = async () => {
+      if (!newUpdateFormSubKnowledgePoint.value.trim()) {
+        showAlert("输入错误", "请输入子知识点名称");
+        return;
+      }
+
+      try {
+        const items = newUpdateFormSubKnowledgePoint.value
+          .split(/[,，]/)
+          .map((item) => item.trim())
+          .filter((item) => item);
+        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        showAlert("上传成功", "子知识点上传成功");
+        newUpdateFormSubKnowledgePoint.value = "";
+        await loadLists();
+      } catch (err) {
+        console.error("上传子知识点失败:", err);
+        showAlert("上传失败", "上传子知识点失败");
+      }
+    };
+
+    /**
+     * 更新表单上传解题思想
+     */
+    const uploadUpdateFormSolutionIdea = async () => {
+      if (!newUpdateFormSolutionIdea.value.trim()) {
+        showAlert("输入错误", "请输入解题思想");
+        return;
+      }
+
+      try {
+        const items = newUpdateFormSolutionIdea.value
+          .split(/[,，]/)
+          .map((item) => item.trim())
+          .filter((item) => item);
+        await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
+        showAlert("上传成功", "解题思想上传成功");
+        newUpdateFormSolutionIdea.value = "";
+        await loadLists();
+      } catch (err) {
+        console.error("上传解题思想失败:", err);
+        showAlert("上传失败", "上传解题思想失败");
+      }
+    };
+
     // ==================== 题目检索和操作 ====================
     /**
      * 检索题目
      */
     const findQuestions = async () => {
       try {
-        const payload = {};
+        searchCriteria.page_num = 1;
+        pageInput.value = 1;
+        const payload = { ...searchCriteria };
 
         // 构建检索条件，过滤空值
         if (searchCriteria.grade_id !== null)
@@ -3111,8 +4107,8 @@ export default {
           payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
             Number(id)
           );
-        if (searchCriteria.question_definition_ids.length > 0)
-          payload.question_definition_ids = searchCriteria.question_definition_ids.map(
+        if (searchCriteria.sub_knowledge_point_ids.length > 0)
+          payload.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.map(
             (id) => Number(id)
           );
         if (searchCriteria.solution_idea_ids.length > 0)
@@ -3124,19 +4120,70 @@ export default {
         if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
 
         const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-        questionList.value = res.data.data || [];
+        const responseData = res.data.data; // 获取返回的data对象
+
+        // 修复：正确设置分页数据
+        questionList.value = responseData?.data_info || [];
+
+        // 从响应数据的data字段中获取分页信息
+        if (responseData) {
+          searchCriteria.page_num = responseData.page_num || 1;
+          searchCriteria.page_size = responseData.page_size || 10;
+          totalPages.value = responseData.total_pages || 1;
+          totalItems.value = responseData.total_items || 0;
+          pageInput.value = responseData.page_num || 1; // 同步页码输入框
+        }
+
         hasSearched.value = true;
 
         if (!questionList.value.length) {
           showAlert("检索结果", "未找到符合条件的题目");
         } else {
-          showAlert("检索成功", `找到 ${questionList.value.length} 条题目`);
+          showAlert("检索成功", `找到 ${totalItems.value} 条题目`);
         }
       } catch (err) {
         console.error("检索失败:", err);
         showAlert("检索失败", "检索失败");
         questionList.value = [];
         hasSearched.value = true;
+      }
+    };
+    /**
+     * 跳转到首页
+     */
+    const goToFirstPage = () => {
+      changePage(1);
+    };
+
+    /**
+     * 跳转到末页
+     */
+    const goToLastPage = () => {
+      changePage(totalPages.value);
+    };
+
+    /**
+     * 改变页码
+     * @param {number} newPage - 新的页码
+     */
+    const changePage = (newPage) => {
+      if (newPage < 1 || newPage > totalPages.value) {
+        return;
+      }
+      searchCriteria.page_num = newPage;
+      pageInput.value = newPage; // 同步页码输入框
+      silentFindQuestions();
+    };
+
+    /**
+     * 跳转到指定页码
+     */
+    const goToPage = () => {
+      const page = parseInt(pageInput.value);
+      if (page >= 1 && page <= totalPages.value) {
+        changePage(page);
+      } else {
+        showAlert("输入错误", `请输入 1 到 ${totalPages.value} 之间的页码`);
       }
     };
 
@@ -3161,9 +4208,6 @@ export default {
       updateForm.knowledge_point_id = q.knowledge_point_id
         ? Number(q.knowledge_point_id)
         : null;
-      updateForm.question_definition_ids = q.question_definition_ids
-        ? q.question_definition_ids.map((id) => Number(id))
-        : [];
       updateForm.solution_idea_ids = q.solution_idea_ids
         ? q.solution_idea_ids.map((id) => Number(id))
         : [];
@@ -3282,7 +4326,6 @@ export default {
       showUpdateForm.value = false;
       selectedQuestion.value = null;
       updateFormKnowledgeSearch.value = "";
-      updateFormQuestionDefinitionSearch.value = "";
       updateFormSolutionIdeaSearch.value = "";
       updateFormQuestionCategorySearch.value = "";
       updateFormSubKnowledgeSearch.value = "";
@@ -3347,6 +4390,11 @@ export default {
 
       try {
         submitting.value = true;
+        const imageUploadSuccess = await uploadPendingImage("upload");
+        if (!imageUploadSuccess) {
+          submitting.value = false;
+          return;
+        }
 
         // 如果有待上传的图片，先上传图片
         if (pendingImageFile.value) {
@@ -3414,10 +4462,6 @@ export default {
           marking_type: form.marking_type,
           knowledge_point_id:
             form.knowledge_point_id !== null ? Number(form.knowledge_point_id) : null,
-          question_definition_ids:
-            form.question_definition_ids.length > 0
-              ? form.question_definition_ids.map((id) => Number(id))
-              : null,
           solution_idea_ids:
             form.solution_idea_ids.length > 0
               ? form.solution_idea_ids.map((id) => Number(id))
@@ -3446,10 +4490,13 @@ export default {
           `${API_BASE}/questions/uploadSingleQuestion`,
           payload
         );
-        showAlert("上传成功", res.data.message || "上传成功");
-
-        saveUploadMemory(); // 保存用户设置
-        resetForm(); // 重置表单
+        if (res.data.message && res.data.message.includes("题目已存在")) {
+          showAlert("上传失败", "题目已存在，无法重复上传");
+        } else {
+          showAlert("上传成功", res.data.message || "上传成功");
+          saveUploadMemory(); // 保存用户设置
+          resetForm(); // 重置表单
+        }
       } catch (err) {
         console.error("提交失败:", err);
         showAlert("提交失败", err.response?.data?.message || err.message);
@@ -3469,6 +4516,12 @@ export default {
 
       try {
         submitting.value = true;
+        // 先上传图片到图床
+        const imageUploadSuccess = await uploadPendingImage("update");
+        if (!imageUploadSuccess) {
+          submitting.value = false;
+          return;
+        }
 
         // 处理图片上传
         if (pendingUpdateImageFile.value) {
@@ -3542,10 +4595,6 @@ export default {
             updateForm.knowledge_point_id !== null
               ? Number(updateForm.knowledge_point_id)
               : null,
-          question_definition_ids:
-            updateForm.question_definition_ids.length > 0
-              ? updateForm.question_definition_ids.map((id) => Number(id))
-              : null,
           solution_idea_ids:
             updateForm.solution_idea_ids.length > 0
               ? updateForm.solution_idea_ids.map((id) => Number(id))
@@ -3573,9 +4622,14 @@ export default {
         };
 
         const res = await axios.post(`${API_BASE}/questions/updateQuestion`, payload);
-        showAlert("更新成功", res.data.message || "更新成功");
-        await silentFindQuestions(); // 静默刷新列表
-        cancelUpdate(); // 关闭更新表单
+        // 检查响应消息是否为"题目已存在"
+        if (res.data.message && res.data.message.includes("题目已存在")) {
+          showAlert("更新失败", "题目已存在，无法更新");
+        } else {
+          showAlert("更新成功", res.data.message || "更新成功");
+          await silentFindQuestions(); // 静默刷新列表
+          cancelUpdate(); // 关闭更新表单
+        }
       } catch (err) {
         console.error("更新失败:", err);
         showAlert("更新失败", err.response?.data?.message || err.message);
@@ -3589,7 +4643,7 @@ export default {
      */
     const silentFindQuestions = async () => {
       try {
-        const payload = {};
+        const payload = { ...searchCriteria };
 
         // 构建检索条件
         if (searchCriteria.grade_id !== null)
@@ -3605,10 +4659,6 @@ export default {
           payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
             Number(id)
           );
-        if (searchCriteria.question_definition_ids.length > 0)
-          payload.question_definition_ids = searchCriteria.question_definition_ids.map(
-            (id) => Number(id)
-          );
         if (searchCriteria.solution_idea_ids.length > 0)
           payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
             Number(id)
@@ -3618,7 +4668,19 @@ export default {
         if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
 
         const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-        questionList.value = res.data.data || [];
+        const responseData = res.data.data;
+
+        questionList.value = responseData?.data_info || [];
+
+        // 从响应数据的data字段中获取分页信息
+        if (responseData) {
+          searchCriteria.page_num = responseData.page_num || 1;
+          searchCriteria.page_size = responseData.page_size || 10;
+          totalPages.value = responseData.total_pages || 1;
+          totalItems.value = responseData.total_items || 0;
+          pageInput.value = responseData.page_num || 1;
+        }
+
         hasSearched.value = true;
 
         // 静默操作，不显示任何弹窗
@@ -3648,20 +4710,15 @@ export default {
         notes: "",
         remark: "",
         sub_knowledge_point_ids: [],
-        question_definition_ids: [],
         solution_idea_ids: [],
-        question_category_id: null,
         img_url: "",
       });
       singleAnswerIndex.value = null;
       knowledgeSearch.value = "";
       subKnowledgeSearch.value = "";
-      questionDefinitionSearch.value = "";
       solutionIdeaSearch.value = "";
-      questionCategorySearch.value = "";
       pendingImageFile.value = null;
       selectedKnowledgePoint.value = null;
-      selectedQuestionCategory.value = null;
       titlePreview.value = "";
       answerPreview.value = "";
       notesPreview.value = "";
@@ -3677,23 +4734,30 @@ export default {
       showUpdateForm.value = false;
       selectedQuestion.value = null;
       updateKnowledgeSearch.value = "";
-      updateQuestionDefinitionSearch.value = "";
+      updateSubKnowledgeSearch.value = "";
       updateSolutionIdeaSearch.value = "";
       updateQuestionCategorySearch.value = "";
       searchCriteria.knowledge_point_ids = [];
-      searchCriteria.question_definition_ids = [];
+      searchCriteria.sub_knowledge_point_ids = [];
       searchCriteria.solution_idea_ids = [];
       searchCriteria.question_category_ids = []; // 改为数组
+      searchCriteria.page_num = 1; // 重置为第一页
+      searchCriteria.page_size = 10; // 重置每页数量
+      totalPages.value = 1; // 重置总页数
+      totalItems.value = 0; // 重置总条目数
+      pageInput.value = 1; // 重置页码输入
       hasSearched.value = false;
       Object.assign(searchCriteria, {
         grade_id: null,
         subject_id: null,
         question_category_ids: [], // 改为数组
         knowledge_point_ids: [],
-        question_definition_ids: [],
+        sub_knowledge_point_ids: [],
         solution_idea_ids: [],
         difficulty_level: null,
         title: "",
+        page_num: 1, // 确保重置
+        page_size: 10, // 确保重置
       });
     };
 
@@ -3753,17 +4817,6 @@ export default {
     };
 
     /**
-     * 根据ID获取问题定义名称
-     * @param {number} id - 问题定义ID
-     * @returns {string} 问题定义名称
-     */
-    const getQuestionDefinitionName = (id) => {
-      if (id === null) return "-";
-      const item = questionDefinitionList.value.find((q) => q.id === Number(id));
-      return item ? item.name : "-";
-    };
-
-    /**
      * 根据ID获取解题思想名称
      * @param {number} id - 解题思想ID
      * @returns {string} 解题思想名称
@@ -3810,16 +4863,19 @@ export default {
       gradeList,
       subjectList,
       knowledgePointList,
-      questionDefinitionList,
       solutionIdeaList,
       questionCategoryList,
 
       // 新建内容输入
       newKnowledgePoint,
       newSubKnowledgePoint,
-      newQuestionDefinition,
       newSolutionIdea,
       newQuestionCategory,
+      newUpdateKnowledgePoint,
+      newUpdateSolutionIdea,
+      newUpdateFormKnowledgePoint,
+      newUpdateFormSubKnowledgePoint,
+      newUpdateFormSolutionIdea,
 
       // 选项操作方法
       addOption,
@@ -3850,29 +4906,30 @@ export default {
       // 搜索关键词
       knowledgeSearch,
       subKnowledgeSearch,
-      questionDefinitionSearch,
       solutionIdeaSearch,
       questionCategorySearch,
 
       // 过滤列表
       filteredKnowledgePoints,
       filteredSubKnowledgePoints,
-      filteredQuestionDefinitions,
       filteredSolutionIdeas,
       filteredQuestionCategories,
 
       // 选中项列表
       selectedSubKnowledgePoints,
-      selectedQuestionDefinitions,
       selectedSolutionIdeas,
       selectedQuestionCategory,
 
       // 上传方法
       uploadKnowledgePoint,
       uploadSubKnowledgePoint,
-      uploadQuestionDefinition,
       uploadSolutionIdea,
       uploadQuestionCategory,
+      uploadUpdateKnowledgePoint,
+      uploadUpdateSolutionIdea,
+      uploadUpdateFormKnowledgePoint,
+      uploadUpdateFormSubKnowledgePoint,
+      uploadUpdateFormSolutionIdea,
 
       // 题目列表和检索
       questionList,
@@ -3909,29 +4966,26 @@ export default {
       getGradeName,
       getSubjectName,
       getKnowledgePointName,
-      getQuestionDefinitionName,
       getSolutionIdeaName,
       getQuestionCategoryName,
       getMarkingTypeName,
 
       // 更新界面搜索关键词
       updateKnowledgeSearch,
-      updateQuestionDefinitionSearch,
+      updateSubKnowledgeSearch,
       updateSolutionIdeaSearch,
       updateQuestionCategorySearch,
       updateFormKnowledgeSearch,
-      updateFormQuestionDefinitionSearch,
       updateFormSolutionIdeaSearch,
       updateFormQuestionCategorySearch,
       updateFormSubKnowledgeSearch,
 
       // 更新界面过滤列表
       filteredUpdateKnowledgePoints,
-      filteredUpdateQuestionDefinitions,
+      filteredUpdateSubKnowledgePoints,
       filteredUpdateSolutionIdeas,
       filteredUpdateQuestionCategories,
       filteredUpdateFormKnowledgePoints,
-      filteredUpdateFormQuestionDefinitions,
       filteredUpdateFormSolutionIdeas,
       filteredUpdateFormQuestionCategories,
       filteredUpdateFormSubKnowledgePoints,
@@ -3939,15 +4993,13 @@ export default {
       // 过滤方法
       filterKnowledgePoints,
       filterSubKnowledgePoints,
-      filterQuestionDefinitions,
       filterSolutionIdeas,
       filterQuestionCategories,
       filterUpdateKnowledgePoints,
-      filterUpdateQuestionDefinitions,
+      filterUpdateSubKnowledgePoints,
       filterUpdateSolutionIdeas,
       filterUpdateQuestionCategories,
       filterUpdateFormKnowledgePoints,
-      filterUpdateFormQuestionDefinitions,
       filterUpdateFormSolutionIdeas,
       filterUpdateFormQuestionCategories,
       filterUpdateFormSubKnowledgePoints,
@@ -3955,9 +5007,6 @@ export default {
       // 选择方法
       selectKnowledgePoint,
       clearKnowledgePoint,
-      selectQuestionDefinition,
-      removeQuestionDefinition,
-      isQuestionDefinitionSelected,
       selectSolutionIdea,
       removeSolutionIdea,
       isSolutionIdeaSelected,
@@ -3967,11 +5016,11 @@ export default {
       removeSubKnowledgePoint,
       isSubKnowledgeSelected,
       selectUpdateKnowledgePoint,
+      selectUpdateSubKnowledgePoint,
       removeUpdateKnowledgePoint,
+      removeUpdateSubKnowledgePoint,
       isUpdateKnowledgeSelected,
-      selectUpdateQuestionDefinition,
-      removeUpdateQuestionDefinition,
-      isUpdateQuestionDefinitionSelected,
+      isUpdateSubKnowledgeSelected,
       selectUpdateSolutionIdea,
       removeUpdateSolutionIdea,
       isUpdateSolutionIdeaSelected,
@@ -3981,9 +5030,6 @@ export default {
       clearUpdateQuestionCategory,
       selectUpdateFormKnowledgePoint,
       clearUpdateFormKnowledgePoint,
-      selectUpdateFormQuestionDefinition,
-      removeUpdateFormQuestionDefinition,
-      isUpdateFormQuestionDefinitionSelected,
       selectUpdateFormSolutionIdea,
       removeUpdateFormSolutionIdea,
       isUpdateFormSolutionIdeaSelected,
@@ -3996,15 +5042,13 @@ export default {
       // 下拉框显示状态
       showKnowledgeDropdown,
       showSubKnowledgeDropdown,
-      showQuestionDefinitionDropdown,
       showSolutionIdeaDropdown,
       showQuestionCategoryDropdown,
       showUpdateKnowledgeDropdown,
-      showUpdateQuestionDefinitionDropdown,
+      showUpdateSubKnowledgeDropdown,
       showUpdateSolutionIdeaDropdown,
       showUpdateQuestionCategoryDropdown,
       showUpdateFormKnowledgeDropdown,
-      showUpdateFormQuestionDefinitionDropdown,
       showUpdateFormSolutionIdeaDropdown,
       showUpdateFormQuestionCategoryDropdown,
       showUpdateFormSubKnowledgeDropdown,
@@ -4012,15 +5056,13 @@ export default {
       // 下拉框失焦处理
       onKnowledgeBlur,
       onSubKnowledgeBlur,
-      onQuestionDefinitionBlur,
       onSolutionIdeaBlur,
       onQuestionCategoryBlur,
       onUpdateKnowledgeBlur,
-      onUpdateQuestionDefinitionBlur,
+      onUpdateSubKnowledgeBlur,
       onUpdateSolutionIdeaBlur,
       onUpdateQuestionCategoryBlur,
       onUpdateFormKnowledgeBlur,
-      onUpdateFormQuestionDefinitionBlur,
       onUpdateFormSolutionIdeaBlur,
       onUpdateFormQuestionCategoryBlur,
       onUpdateFormSubKnowledgeBlur,
@@ -4030,10 +5072,9 @@ export default {
       selectedUpdateFormKnowledgePoint,
       selectedUpdateFormQuestionCategory,
       selectedUpdateKnowledgePoints,
-      selectedUpdateQuestionDefinitions,
+      selectedUpdateSubKnowledgePoints,
       selectedUpdateSolutionIdeas,
       selectedUpdateQuestionCategories,
-      selectedUpdateFormQuestionDefinitions,
       selectedUpdateFormSolutionIdeas,
       selectedUpdateFormSubKnowledgePoints,
 
@@ -4076,6 +5117,66 @@ export default {
       renderMathPreview,
       renderOptionPreview,
       renderUpdateOptionPreview,
+
+      // 新增预览功能相关
+      showPreviewModal,
+      previewMode,
+      showPreview,
+      showUpdatePreview,
+      closePreview,
+      confirmSubmit,
+      getPreviewSchoolName,
+      getPreviewGradeName,
+      getPreviewSubjectName,
+      getPreviewQuestionCategoryName,
+      getPreviewDifficultyLevel,
+      getPreviewMarkingType,
+      getPreviewKnowledgePointName,
+      getPreviewSubKnowledgePoints,
+      getPreviewSolutionIdeas,
+      getPreviewTitle,
+      getPreviewImageUrl,
+      getPreviewOptions,
+      showPreviewOptions,
+      isPreviewOptionCorrect,
+      showPreviewSubjectiveAnswer,
+      getPreviewAnswer,
+      getPreviewNotes,
+      getPreviewRemark,
+      renderMath,
+
+      // 分页相关
+      totalPages,
+      totalItems,
+      pageInput,
+      changePage,
+      goToPage,
+      goToFirstPage,
+      goToLastPage,
+
+      // 新增删除实体相关
+      showDeleteEntityConfirm,
+      deleteEntityType,
+      deleteEntityData,
+      dependentQuestions,
+      dependentQuestionsPageNum,
+      dependentQuestionsPageSize,
+      dependentQuestionsTotalPages,
+      dependentQuestionsTotalItems,
+      dependentQuestionsPageInput,
+      confirmDeleteKnowledgePoint,
+      confirmDeleteSubKnowledgePoint,
+      confirmDeleteSolutionIdea,
+      confirmDeleteQuestionCategory,
+      loadDependentQuestions,
+      changeDependentPage,
+      goToDependentFirstPage,
+      goToDependentLastPage,
+      goToDependentPage,
+      deleteDependentQuestion,
+      deleteAllDependentQuestions,
+      deleteEntity,
+      cancelDeleteEntity,
     };
   },
 };
@@ -4337,6 +5438,95 @@ export default {
 .btn-delete:hover {
   background-color: #f78989; /* 悬停时更亮的红色 */
 }
+/* ==================== 分页控件样式 ==================== */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.pagination-controls button {
+  padding: 8px 16px;
+  border: 1px solid #dcdfe6;
+  background-color: #fff;
+  color: #606266;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.pagination-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pagination-controls input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.pagination-controls span {
+  font-size: 14px;
+  color: #606266;
+}
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  background-color: #fff;
+  color: #606266;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  min-width: 60px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.pagination-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: #f5f7fa;
+  color: #c0c4cc;
+}
+
+.page-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.pagination-controls span {
+  font-size: 14px;
+  color: #606266;
+  margin: 0 10px;
+}
 
 /* ==================== 更新表单区域样式 ==================== */
 .update-form-section {
@@ -4498,6 +5688,261 @@ export default {
   line-height: 1.5; /* 行高 */
 }
 
+/* ==================== 题目预览模态框样式 ==================== */
+.preview-modal-overlay {
+  z-index: 2000; /* 更高的z-index确保在最上层 */
+}
+
+.preview-modal-content {
+  background: white; /* 白色背景 */
+  padding: 40px; /* 内边距 */
+  border-radius: 12px; /* 大圆角 */
+  max-width: 800px; /* 最大宽度 */
+  width: 95%; /* 宽度95% */
+  max-height: 90vh; /* 最大高度为视口90% */
+  overflow-y: auto; /* 垂直滚动 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
+  transform: scale(1.05); /* 轻微放大 */
+  animation: modalAppear 0.3s ease-out; /* 出现动画 */
+}
+
+.preview-modal-title {
+  margin-bottom: 25px; /* 底部外边距 */
+  color: #303133; /* 深灰色文字 */
+  font-size: 24px; /* 大字体 */
+  font-weight: 600; /* 粗体 */
+  text-align: center; /* 文字居中 */
+  border-bottom: 2px solid #409eff; /* 底部边框 */
+  padding-bottom: 15px; /* 底部内边距 */
+}
+
+.preview-content {
+  margin-bottom: 30px; /* 底部外边距 */
+}
+
+.preview-section {
+  margin-bottom: 20px; /* 底部外边距 */
+  padding: 15px; /* 内边距 */
+  border: 1px solid #e4e7ed; /* 边框 */
+  border-radius: 8px; /* 圆角 */
+  background: #fafafa; /* 浅灰色背景 */
+}
+
+.preview-section h4 {
+  margin-bottom: 15px; /* 底部外边距 */
+  color: #409eff; /* 主题蓝色文字 */
+  font-size: 18px; /* 字体大小 */
+  font-weight: 600; /* 粗体 */
+  border-bottom: 1px solid #dcdfe6; /* 底部边框 */
+  padding-bottom: 8px; /* 底部内边距 */
+}
+
+.preview-grid {
+  display: grid; /* 网格布局 */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 自适应列 */
+  gap: 15px; /* 网格间距 */
+}
+
+.preview-item {
+  display: flex; /* 弹性布局 */
+  flex-direction: column; /* 垂直方向 */
+}
+
+.preview-item label {
+  font-weight: 600; /* 粗体 */
+  color: #606266; /* 中灰色文字 */
+  margin-bottom: 5px; /* 底部外边距 */
+  font-size: 14px; /* 字体大小 */
+}
+
+.preview-item span {
+  color: #303133; /* 深灰色文字 */
+  font-size: 15px; /* 字体大小 */
+  line-height: 1.5; /* 行高 */
+  word-break: break-word; /* 单词换行 */
+}
+
+.preview-text-content {
+  background: white; /* 白色背景 */
+  padding: 15px; /* 内边距 */
+  border-radius: 6px; /* 圆角 */
+  border: 1px solid #dcdfe6; /* 边框 */
+  line-height: 1.6; /* 行高 */
+  color: #303133; /* 深灰色文字 */
+}
+
+.preview-image {
+  margin-top: 15px; /* 顶部外边距 */
+  text-align: center; /* 文字居中 */
+  overflow-y: auto; /* 允许垂直滚动 */
+}
+
+.preview-img {
+  max-width: 100%; /* 最大宽度100% */
+  max-height: 4000px; /* 最大高度 */
+  height: auto; /* 高度自适应 */
+  border-radius: 6px; /* 圆角 */
+  border: 1px solid #dcdfe6; /* 边框 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+}
+
+.preview-options {
+  display: flex; /* 弹性布局 */
+  flex-direction: column; /* 垂直方向 */
+  gap: 12px; /* 选项间距 */
+}
+
+.preview-option {
+  display: flex; /* 弹性布局 */
+  align-items: flex-start; /* 顶部对齐 */
+  gap: 10px; /* 子元素间距 */
+  padding: 12px; /* 内边距 */
+  background: white; /* 白色背景 */
+  border: 1px solid #dcdfe6; /* 边框 */
+  border-radius: 6px; /* 圆角 */
+  transition: all 0.3s; /* 过渡动画 */
+}
+
+.preview-option.correct-answer {
+  background: #f0f9ff; /* 浅蓝色背景 */
+  border-color: #409eff; /* 主题蓝色边框 */
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2); /* 蓝色阴影 */
+}
+
+.option-label {
+  font-weight: 600; /* 粗体 */
+  color: #409eff; /* 主题蓝色 */
+  min-width: 30px; /* 最小宽度 */
+}
+
+.option-text {
+  flex: 1; /* 弹性填充 */
+  color: #303133; /* 深灰色文字 */
+  line-height: 1.5; /* 行高 */
+}
+
+.correct-badge {
+  background: #67c23a; /* 绿色背景 */
+  color: white; /* 白色文字 */
+  padding: 4px 8px; /* 内边距 */
+  border-radius: 4px; /* 圆角 */
+  font-size: 12px; /* 小字体 */
+  font-weight: 600; /* 粗体 */
+}
+
+.preview-actions {
+  display: flex; /* 弹性布局 */
+  gap: 15px; /* 按钮间距 */
+  justify-content: center; /* 水平居中 */
+  margin-top: 25px; /* 顶部外边距 */
+  padding-top: 20px; /* 顶部内边距 */
+  border-top: 1px solid #e4e7ed; /* 顶部边框 */
+}
+
+.preview-actions button {
+  padding: 12px 24px; /* 内边距 */
+  font-size: 16px; /* 字体大小 */
+  border-radius: 6px; /* 圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  transition: all 0.3s; /* 过渡动画 */
+  min-width: 120px; /* 最小宽度 */
+}
+
+/* ==================== 新增删除实体确认对话框样式 ==================== */
+.delete-entity-modal {
+  max-width: 800px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.dependent-questions {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.dependent-questions h4 {
+  color: #f56c6c;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.dependent-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  padding: 10px;
+  background: #f9f9f9;
+  margin-bottom: 15px;
+}
+
+.dependent-question {
+  padding: 12px;
+  border-bottom: 1px solid #e4e7ed;
+  background: white;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.dependent-question:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.dependent-question-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dependent-question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dependent-question-id {
+  font-weight: 600;
+  color: #409eff;
+}
+
+.dependent-question-type {
+  background: #ecf5ff;
+  color: #409eff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.dependent-question-content {
+  line-height: 1.4;
+  color: #606266;
+  max-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dependent-question-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dependent-question-actions button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.delete-all-btn {
+  background-color: #e6a23c;
+  margin-right: auto;
+}
+
+.delete-all-btn:hover {
+  background-color: #eebe77;
+}
+
 /* ==================== 表单组件样式 ==================== */
 .form-group {
   margin-bottom: 20px; /* 底部外边距 */
@@ -4638,6 +6083,23 @@ export default {
 .search-input {
   margin-bottom: 0; /* 无底部外边距 */
   border-radius: 4px; /* 圆角 */
+}
+
+/* ==================== 新增删除按钮样式 ==================== */
+.btn-remove-small {
+  background-color: #f56c6c; /* 红色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 2px 6px; /* 小内边距 */
+  border-radius: 3px; /* 小圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 12px; /* 小字体 */
+  transition: background-color 0.3s; /* 背景色过渡 */
+  margin-left: 8px; /* 左侧间距 */
+}
+
+.btn-remove-small:hover {
+  background-color: #f78989; /* 悬停时更亮的红色 */
 }
 
 /* ==================== 选中项显示样式 ==================== */
@@ -4964,34 +6426,30 @@ export default {
 }
 
 .table-cell:nth-child(8) {
-  width: 120px; /* 问题定义列 */
-}
-
-.table-cell:nth-child(9) {
   width: 120px; /* 解题思想列 */
 }
 
-.table-cell:nth-child(10) {
+.table-cell:nth-child(9) {
   width: 120px; /* 子知识点列 */
 }
 
-.table-cell:nth-child(11) {
+.table-cell:nth-child(10) {
   width: 60px; /* 难度列 */
 }
 
-.table-cell:nth-child(12) {
+.table-cell:nth-child(11) {
   width: 250px; /* 题目内容列 */
 }
 
-.table-cell:nth-child(13) {
+.table-cell:nth-child(12) {
   width: 150px; /* 备注列 */
 }
 
-.table-cell:nth-child(14) {
+.table-cell:nth-child(13) {
   width: 120px; /* 图片列 */
 }
 
-.table-cell:nth-child(15) {
+.table-cell:nth-child(14) {
   width: 150px; /* 操作列 */
 }
 
@@ -5050,6 +6508,36 @@ export default {
   .option-actions {
     justify-content: flex-start; /* 左对齐 */
     margin-top: 10px; /* 顶部外边距 */
+  }
+
+  /* 预览模态框在小屏幕上的适配 */
+  .preview-modal-content {
+    padding: 20px; /* 较小的内边距 */
+    margin: 10px; /* 较小的外边距 */
+  }
+
+  .preview-grid {
+    grid-template-columns: 1fr; /* 单列布局 */
+  }
+
+  .preview-actions {
+    flex-direction: column; /* 垂直方向 */
+  }
+
+  /* 删除实体确认对话框在小屏幕上的适配 */
+  .delete-entity-modal {
+    padding: 20px;
+    margin: 10px;
+  }
+
+  .dependent-question-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .dependent-question-actions {
+    justify-content: flex-start;
   }
 }
 </style>
