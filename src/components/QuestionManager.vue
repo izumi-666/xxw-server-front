@@ -2308,7 +2308,7 @@ export default {
       updateOptionPreviews.value[index] = renderMath(text);
     };
 
-    // ==================== 新增删除实体相关方法 ====================
+    // ==================== 删除实体相关方法 ====================
     /**
      * 确认删除知识点
      * @param {Object} knowledgePoint - 知识点对象
@@ -2559,7 +2559,7 @@ export default {
         switch (deleteEntityType.value) {
           case "知识点":
           case "子知识点":
-            url = `${API_BASE}/questions/deletedKnowledgePoint/${deleteEntityData.value.id}`;
+            url = `${API_BASE}/questions/deleteKnowledgePoint/${deleteEntityData.value.id}`;
             entityName = deleteEntityType.value;
             break;
           case "解题思想":
@@ -2573,8 +2573,17 @@ export default {
           default:
             return;
         }
+        const response = await axios.delete(url);
 
-        await axios.delete(url);
+        // 检查返回的状态码（例如知识点被绑定，返回409）
+        if (response.data?.code === 409) {
+          const { message } = response.data;
+          showAlert("无法删除", message);
+          showDeleteEntityConfirm.value = false;
+          return;
+        }
+
+        // 删除成功
         showAlert("删除成功", `${entityName}删除成功`);
 
         // 重新加载列表
@@ -2602,7 +2611,10 @@ export default {
         dependentQuestions.value = [];
       } catch (err) {
         console.error(`删除${deleteEntityType.value}失败:`, err);
-        showAlert("删除失败", `删除${deleteEntityType.value}失败`);
+        // 优先取后端返回的 message，否则显示通用提示
+        const backendMessage = err.response?.data?.message;
+        showDeleteEntityConfirm.value = false;
+        showAlert("删除失败", backendMessage);
       }
     };
 
@@ -2615,7 +2627,7 @@ export default {
       dependentQuestions.value = [];
     };
 
-    // ==================== 新增预览功能相关方法 ====================
+    // ==================== 预览功能相关方法 ====================
     /**
      * 显示预览模态框
      */
