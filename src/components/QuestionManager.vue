@@ -4505,7 +4505,7 @@ export default {
         if (res.data.message && res.data.message.includes("题目已存在")) {
           showAlert("上传失败", "题目已存在，无法重复上传");
         } else {
-          showAlert("上传成功", res.data.message || "上传成功");
+          showAlert("上传成功");
           saveUploadMemory(); // 保存用户设置
           resetForm(); // 重置表单
         }
@@ -4638,7 +4638,7 @@ export default {
         if (res.data.message && res.data.message.includes("题目已存在")) {
           showAlert("更新失败", "题目已存在，无法更新");
         } else {
-          showAlert("更新成功", res.data.message || "更新成功");
+          showAlert("更新成功");
           await silentFindQuestions(); // 静默刷新列表
           cancelUpdate(); // 关闭更新表单
         }
