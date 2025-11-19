@@ -140,6 +140,7 @@
             class="form-textarea"
             rows="3"
             @input="renderMathPreview('title', form.title)"
+            @paste="handleTitlePaste"
             required
           ></textarea>
           <!-- 数学公式预览 -->
@@ -165,6 +166,7 @@
               >
                 选择图片
               </button>
+              <span class="upload-tip">或使用 Ctrl+V 在题目内容区域粘贴图片</span>
             </div>
             <!-- 图片预览 -->
             <div v-if="form.img_url" class="image-preview">
@@ -299,8 +301,45 @@
             class="form-textarea"
             rows="3"
             @input="renderMathPreview('notes', form.notes)"
+            @paste="handleNotesPaste"
           ></textarea>
           <div class="math-preview" v-html="notesPreview"></div>
+
+          <!-- 解析图片上传区域 -->
+          <div class="image-upload-section">
+            <label class="form-label">解析图片：</label>
+            <div class="upload-controls">
+              <!-- 文件输入（隐藏） -->
+              <input
+                type="file"
+                @change="handleNotesImageUpload"
+                accept="image/*"
+                class="file-input"
+                ref="notesFileInput"
+              />
+              <!-- 触发文件选择的按钮 -->
+              <button
+                type="button"
+                @click="$refs.notesFileInput.click()"
+                class="btn-secondary"
+              >
+                选择图片
+              </button>
+              <span class="upload-tip">或使用 Ctrl+V 粘贴图片</span>
+            </div>
+            <!-- 图片预览 -->
+            <div v-if="form.notes_img_url" class="image-preview">
+              <img
+                :src="form.notes_img_url"
+                alt="预览"
+                class="preview-image"
+                @click="previewImage(form.notes_img_url)"
+              />
+              <button type="button" @click="removeNotesImage" class="btn-remove">
+                移除图片
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- 知识点选择区域 -->
@@ -329,15 +368,26 @@
                 @mousedown="selectKnowledgePoint(kp)"
               >
                 {{ kp.name }}
-                <!-- 删除知识点按钮 -->
-                <button
-                  type="button"
-                  @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
-                  class="btn-remove-small"
-                  title="删除知识点"
-                >
-                  ×
-                </button>
+                <!-- 编辑知识点按钮 -->
+                <div class="item-actions">
+                  <button
+                    type="button"
+                    @mousedown.stop="editKnowledgePoint(kp)"
+                    class="btn-edit-small"
+                    title="编辑知识点"
+                  >
+                    编辑
+                  </button>
+                  <!-- 删除知识点按钮 -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
+                    class="btn-remove-small"
+                    title="删除知识点"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -365,17 +415,23 @@
             >
               新增知识点
             </button>
+            <!-- 合并知识点按钮 -->
+            <div>
+              <button @click="openMergeKnowledgeModal" class="btn-highlight">
+                合并知识点
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- 子知识点选择区域 -->
+        <!-- 副知识点选择区域 -->
         <div class="form-group">
-          <label class="form-label">子知识点：</label>
+          <label class="form-label">副知识点：</label>
           <div class="searchable-select">
             <input
               type="text"
               v-model="subKnowledgeSearch"
-              placeholder="输入关键字搜索子知识点..."
+              placeholder="输入关键字搜索副知识点..."
               class="form-input search-input"
               @input="filterSubKnowledgePoints"
               @focus="showSubKnowledgeDropdown = true"
@@ -394,19 +450,30 @@
                 {{ kp.name }}
                 <!-- 已选择标记 -->
                 <span v-if="isSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
-                <!-- 删除子知识点按钮 -->
-                <button
-                  type="button"
-                  @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
-                  class="btn-remove-small"
-                  title="删除子知识点"
-                >
-                  ×
-                </button>
+                <!-- 编辑和删除副知识点按钮 -->
+                <div class="item-actions">
+                  <button
+                    type="button"
+                    @mousedown.stop="editKnowledgePoint(kp)"
+                    class="btn-edit-small"
+                    title="编辑副知识点"
+                  >
+                    编辑
+                  </button>
+                  <!-- 删除副知识点按钮 -->
+                  <button
+                    type="button"
+                    @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
+                    class="btn-remove-small"
+                    title="删除副知识点"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-          <!-- 已选择的子知识点标签显示 -->
+          <!-- 已选择的副知识点标签显示 -->
           <div class="selected-items" v-if="selectedSubKnowledgePoints.length">
             <span class="selected-tags-label">已选择：</span>
             <span
@@ -418,12 +485,12 @@
               {{ kp.name }} ×
             </span>
           </div>
-          <!-- 新建子知识点输入 -->
+          <!-- 新建副知识点输入 -->
           <div class="new-knowledge-input">
             <input
               type="text"
               v-model="newSubKnowledgePoint"
-              placeholder="新建子知识点（多个用逗号分隔）"
+              placeholder="新建副知识点（多个用逗号分隔）"
               class="form-input"
               @keypress.enter="uploadSubKnowledgePoint"
             />
@@ -433,7 +500,7 @@
               class="btn-highlight"
               :disabled="!newSubKnowledgePoint.trim()"
             >
-              新增子知识点
+              新增副知识点
             </button>
           </div>
         </div>
@@ -665,15 +732,25 @@
                   <span v-if="isUpdateKnowledgeSelected(kp.id)" class="selected-mark"
                     >✓</span
                   >
-                  <!-- 删除知识点按钮（更新界面） -->
-                  <button
-                    type="button"
-                    @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
-                    class="btn-remove-small"
-                    title="删除知识点"
-                  >
-                    ×
-                  </button>
+                  <!-- 编辑和删除知识点按钮（更新界面） -->
+                  <div class="item-actions">
+                    <button
+                      type="button"
+                      @mousedown.stop="editKnowledgePoint(kp)"
+                      class="btn-edit-small"
+                      title="编辑知识点"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      type="button"
+                      @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
+                      class="btn-remove-small"
+                      title="删除知识点"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -689,14 +766,14 @@
               </span>
             </div>
           </div>
-          <!-- 子知识点筛选（多选） -->
+          <!-- 副知识点筛选（多选） -->
           <div class="criteria-item">
-            <label>子知识点：</label>
+            <label>副知识点：</label>
             <div class="searchable-select">
               <input
                 type="text"
                 v-model="updateSubKnowledgeSearch"
-                placeholder="输入关键字搜索子知识点..."
+                placeholder="输入关键字搜索副知识点..."
                 class="form-input search-input"
                 @input="filterUpdateSubKnowledgePoints"
                 @focus="showUpdateSubKnowledgeDropdown = true"
@@ -719,15 +796,25 @@
                   <span v-if="isUpdateSubKnowledgeSelected(kp.id)" class="selected-mark"
                     >✓</span
                   >
-                  <!-- 删除子知识点按钮 -->
-                  <button
-                    type="button"
-                    @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
-                    class="btn-remove-small"
-                    title="删除子知识点"
-                  >
-                    ×
-                  </button>
+                  <!-- 编辑和删除副知识点按钮 -->
+                  <div class="item-actions">
+                    <button
+                      type="button"
+                      @mousedown.stop="editKnowledgePoint(kp)"
+                      class="btn-edit-small"
+                      title="编辑副知识点"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      type="button"
+                      @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
+                      class="btn-remove-small"
+                      title="删除副知识点"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -886,7 +973,6 @@
           <div class="results-table">
             <!-- 表格头部 -->
             <div class="table-header">
-              <div class="table-cell">ID</div>
               <div class="table-cell">学校</div>
               <div class="table-cell">年级</div>
               <div class="table-cell">科目</div>
@@ -894,7 +980,7 @@
               <div class="table-cell">评分方法</div>
               <div class="table-cell">知识点</div>
               <div class="table-cell">解题思想</div>
-              <div class="table-cell">子知识点</div>
+              <div class="table-cell">副知识点</div>
               <div class="table-cell">难度</div>
               <div class="table-cell">题目内容</div>
               <div class="table-cell">备注</div>
@@ -903,7 +989,6 @@
             </div>
             <!-- 表格数据行 -->
             <div v-for="q in questionList" :key="q.id" class="table-row">
-              <div class="table-cell">{{ q.id }}</div>
               <div class="table-cell">{{ getSchoolName(q.school_id) }}</div>
               <div class="table-cell">{{ getGradeName(q.grade_id) }}</div>
               <div class="table-cell">{{ getSubjectName(q.subject_id) }}</div>
@@ -930,7 +1015,7 @@
                   无
                 </span>
               </div>
-              <!-- 子知识点单元格（多值显示） -->
+              <!-- 副知识点单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
                   v-for="subId in q.sub_knowledge_point_ids || []"
@@ -1113,15 +1198,25 @@
                   @mousedown="selectUpdateFormKnowledgePoint(kp)"
                 >
                   {{ kp.name }}
-                  <!-- 删除知识点按钮（更新表单） -->
-                  <button
-                    type="button"
-                    @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
-                    class="btn-remove-small"
-                    title="删除知识点"
-                  >
-                    ×
-                  </button>
+                  <!-- 编辑和删除知识点按钮（更新表单） -->
+                  <div class="item-actions">
+                    <button
+                      type="button"
+                      @mousedown.stop="editKnowledgePoint(kp)"
+                      class="btn-edit-small"
+                      title="编辑知识点"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      type="button"
+                      @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
+                      class="btn-remove-small"
+                      title="删除知识点"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1154,14 +1249,14 @@
               </button>
             </div>
           </div>
-          <!-- 子知识点选择 -->
+          <!-- 副知识点选择 -->
           <div class="form-group">
-            <label class="form-label">子知识点：</label>
+            <label class="form-label">副知识点：</label>
             <div class="searchable-select">
               <input
                 type="text"
                 v-model="updateFormSubKnowledgeSearch"
-                placeholder="输入关键字搜索子知识点..."
+                placeholder="输入关键字搜索副知识点..."
                 class="form-input search-input"
                 @input="filterUpdateFormSubKnowledgePoints"
                 @focus="showUpdateFormSubKnowledgeDropdown = true"
@@ -1186,15 +1281,25 @@
                     class="selected-mark"
                     >✓</span
                   >
-                  <!-- 删除子知识点按钮（更新表单） -->
-                  <button
-                    type="button"
-                    @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
-                    class="btn-remove-small"
-                    title="删除子知识点"
-                  >
-                    ×
-                  </button>
+                  <!-- 编辑和删除副知识点按钮（更新表单） -->
+                  <div class="item-actions">
+                    <button
+                      type="button"
+                      @mousedown.stop="editKnowledgePoint(kp)"
+                      class="btn-edit-small"
+                      title="编辑副知识点"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      type="button"
+                      @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
+                      class="btn-remove-small"
+                      title="删除副知识点"
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1212,12 +1317,12 @@
                 {{ kp.name }} ×
               </span>
             </div>
-            <!-- 新增子知识点功能 -->
+            <!-- 新增副知识点功能 -->
             <div class="new-knowledge-input">
               <input
                 type="text"
                 v-model="newUpdateFormSubKnowledgePoint"
-                placeholder="新建子知识点（多个用逗号分隔）"
+                placeholder="新建副知识点（多个用逗号分隔）"
                 class="form-input"
                 @keypress.enter="uploadUpdateFormSubKnowledgePoint"
               />
@@ -1227,7 +1332,7 @@
                 class="btn-highlight"
                 :disabled="!newUpdateFormSubKnowledgePoint.trim()"
               >
-                新增子知识点
+                新增副知识点
               </button>
             </div>
           </div>
@@ -1325,6 +1430,7 @@
               class="form-textarea"
               rows="3"
               @input="renderMathPreview('updateTitle', updateForm.title)"
+              @paste="handleUpdateTitlePaste"
               required
             ></textarea>
             <div class="math-preview" v-html="updateTitlePreview"></div>
@@ -1347,6 +1453,7 @@
                 >
                   选择图片
                 </button>
+                <span class="upload-tip">或使用 Ctrl+V 粘贴图片</span>
               </div>
               <div v-if="updateForm.img_url" class="image-preview">
                 <img
@@ -1494,8 +1601,42 @@
               class="form-textarea"
               rows="3"
               @input="renderMathPreview('updateNotes', updateForm.notes)"
+              @paste="handleUpdateNotesPaste"
             ></textarea>
             <div class="math-preview" v-html="updateNotesPreview"></div>
+
+            <!-- 解析图片上传区域 -->
+            <div class="image-upload-section">
+              <label class="form-label">解析图片：</label>
+              <div class="upload-controls">
+                <input
+                  type="file"
+                  @change="handleUpdateNotesImageUpload"
+                  accept="image/*"
+                  class="file-input"
+                  ref="updateNotesFileInput"
+                />
+                <button
+                  type="button"
+                  @click="$refs.updateNotesFileInput.click()"
+                  class="btn-secondary"
+                >
+                  选择图片
+                </button>
+                <span class="upload-tip">或使用 Ctrl+V 粘贴图片</span>
+              </div>
+              <div v-if="updateForm.notes_img_url" class="image-preview">
+                <img
+                  :src="updateForm.notes_img_url"
+                  alt="预览"
+                  class="preview-image"
+                  @click="previewImage(updateForm.notes_img_url)"
+                />
+                <button type="button" @click="removeUpdateNotesImage" class="btn-remove">
+                  移除图片
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- 备注（更新表单） -->
@@ -1608,7 +1749,7 @@
                 <span>{{ getPreviewKnowledgePointName() }}</span>
               </div>
               <div class="preview-item">
-                <label>子知识点:</label>
+                <label>副知识点:</label>
                 <span>{{ getPreviewSubKnowledgePoints() }}</span>
               </div>
               <div class="preview-item">
@@ -1656,6 +1797,9 @@
           <div v-if="getPreviewNotes()" class="preview-section">
             <h4>解析</h4>
             <div class="preview-text-content" v-html="getPreviewNotes()"></div>
+            <div v-if="getPreviewNotesImageUrl()" class="preview-image">
+              <img :src="getPreviewNotesImageUrl()" alt="解析图片" class="preview-img" />
+            </div>
           </div>
 
           <!-- 备注 -->
@@ -1782,6 +1926,26 @@
       </div>
     </div>
 
+    <!-- ==================== 编辑知识点模态框 ==================== -->
+    <div v-if="showEditKnowledgePointModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>编辑{{ editingKnowledgePointType }}</h3>
+        <div class="form-group">
+          <label class="form-label">名称：</label>
+          <input
+            type="text"
+            v-model="editingKnowledgePointName"
+            placeholder="请输入新名称"
+            class="form-input"
+          />
+        </div>
+        <div class="modal-actions">
+          <button @click="updateKnowledgePointName" class="btn-primary">确认</button>
+          <button @click="cancelEditKnowledgePoint" class="btn-secondary">取消</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ==================== 退出登录确认对话框 ==================== -->
     <div v-if="showLogoutConfirm" class="modal-overlay">
       <div class="modal-content">
@@ -1790,6 +1954,156 @@
         <div class="modal-actions">
           <button @click="handleLogout" class="btn-delete">确认退出</button>
           <button @click="cancelLogout" class="btn-secondary">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 合并知识点模态框 ==================== -->
+    <div v-if="showMergeKnowledgeModal" class="modal-overlay">
+      <div class="modal-content merge-knowledge-modal">
+        <h3>合并知识点</h3>
+
+        <!-- 步骤1：选择要合并的知识点 -->
+        <div v-if="mergeStep === 1">
+          <div class="form-group">
+            <label class="form-label">选择要合并的知识点：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="mergeKnowledgeSearch"
+                placeholder="输入关键字搜索知识点..."
+                class="form-input search-input"
+                @input="filterMergeKnowledgePoints"
+                @focus="showMergeKnowledgeDropdown = true"
+                @blur="onMergeKnowledgeBlur"
+              />
+              <div
+                v-if="showMergeKnowledgeDropdown && filteredMergeKnowledgePoints.length"
+                class="dropdown-list"
+              >
+                <div
+                  v-for="kp in filteredMergeKnowledgePoints"
+                  :key="kp.id"
+                  class="dropdown-item"
+                  @mousedown="selectMergeKnowledgePoint(kp)"
+                >
+                  {{ kp.name }}
+                  <span v-if="isMergeKnowledgeSelected(kp.id)" class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-items" v-if="selectedMergeKnowledgePoints.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="kp in selectedMergeKnowledgePoints"
+                :key="kp.id"
+                class="selected-tag"
+                @click="removeMergeKnowledgePoint(kp.id)"
+              >
+                {{ kp.name }} ×
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">合并后的知识点：</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="mergedKnowledgePointName"
+                placeholder="输入新知识点名称或选择现有知识点"
+                class="form-input search-input"
+                @input="filterMergedKnowledgePoints"
+                @focus="showMergedKnowledgeDropdown = true"
+                @blur="onMergedKnowledgeBlur"
+              />
+              <div
+                v-if="showMergedKnowledgeDropdown && filteredMergedKnowledgePoints.length"
+                class="dropdown-list"
+              >
+                <div
+                  v-for="kp in filteredMergedKnowledgePoints"
+                  :key="kp.id"
+                  class="dropdown-item"
+                  @mousedown="selectMergedKnowledgePoint(kp)"
+                >
+                  {{ kp.name }}
+                </div>
+              </div>
+            </div>
+            <div class="selected-item" v-if="selectedMergedKnowledgePoint">
+              已选择: {{ selectedMergedKnowledgePoint.name }}
+              <button type="button" @click="clearMergedKnowledgePoint" class="btn-remove">
+                清除
+              </button>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button
+              @click="previewMerge"
+              class="btn-primary"
+              :disabled="
+                selectedMergeKnowledgePoints.length < 2 ||
+                !mergedKnowledgePointName.trim()
+              "
+            >
+              预览合并
+            </button>
+            <button @click="closeMergeKnowledgeModal" class="btn-secondary">取消</button>
+          </div>
+        </div>
+
+        <!-- 步骤2：预览受影响的题目 -->
+        <div v-if="mergeStep === 2" class="merge-step">
+          <div class="merge-preview-info">
+            <h4>合并预览</h4>
+            <p>将以下知识点合并为 "{{ mergedKnowledgePointName }}"：</p>
+            <div class="merge-source-points">
+              <span
+                v-for="kp in selectedMergeKnowledgePoints"
+                :key="kp.id"
+                class="merge-source-tag"
+              >
+                {{ kp.name }}
+              </span>
+            </div>
+          </div>
+
+          <div class="affected-questions">
+            <h4>受影响的题目（共 {{ affectedQuestionsTotalItems }} 条）</h4>
+            <div class="affected-list">
+              <div v-for="q in affectedQuestions" :key="q.id" class="affected-question">
+                <div class="affected-question-preview">
+                  <div class="affected-question-header">
+                    <span class="affected-question-type">{{
+                      getQuestionCategoryName(q.question_category_id)
+                    }}</span>
+                  </div>
+                  <div
+                    class="affected-question-content"
+                    v-html="renderMath(q.title)"
+                  ></div>
+                  <div class="affected-question-meta">
+                    <span
+                      >当前知识点: {{ getKnowledgePointName(q.knowledge_point_id) }}</span
+                    >
+                    <span
+                      >当前副知识点:
+                      {{ getKnowledgePointName(q.sub_knowledge_point_ids) }}</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button @click="confirmMerge" class="btn-primary">确认合并</button>
+            <button @click="mergeStep = 1" class="btn-secondary">返回修改</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1808,6 +2122,31 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 export default {
   setup() {
     const router = useRouter();
+
+    // ==================== 新增合并知识点相关状态 ====================
+    const showMergeKnowledgeModal = ref(false); // 合并知识点模态框显示状态
+    const mergeStep = ref(1); // 合并步骤：1-选择知识点，2-预览受影响题目
+    const mergeKnowledgeSearch = ref(""); // 合并知识点搜索关键词
+    const mergedKnowledgePointName = ref(""); // 合并后的知识点名称
+    const selectedMergeKnowledgePoints = ref([]); // 选中的要合并的知识点
+    const selectedMergedKnowledgePoint = ref(null); // 选中的合并后知识点（现有）
+    const showMergeKnowledgeDropdown = ref(false); // 合并知识点下拉框显示状态
+    const showMergedKnowledgeDropdown = ref(false); // 合并后知识点下拉框显示状态
+    const filteredMergeKnowledgePoints = ref([]); // 过滤后的合并知识点列表
+    const filteredMergedKnowledgePoints = ref([]); // 过滤后的合并后知识点列表
+    const affectedQuestions = ref([]); // 受影响的题目列表
+    const affectedQuestionsPageNum = ref(1); // 受影响题目当前页码
+    const affectedQuestionsPageSize = ref(5); // 受影响题目每页数量
+    const affectedQuestionsTotalPages = ref(1); // 受影响题目总页数
+    const affectedQuestionsTotalItems = ref(0); // 受影响题目总条目数
+    const affectedQuestionsPageInput = ref(1); // 受影响题目页码输入
+    const isMerging = ref(false); // 合并操作进行中状态
+
+    // ==================== 新增编辑知识点相关状态 ====================
+    const showEditKnowledgePointModal = ref(false); // 编辑知识点模态框显示状态
+    const editingKnowledgePoint = ref(null); // 正在编辑的知识点对象
+    const editingKnowledgePointName = ref(""); // 编辑中的知识点名称
+    const editingKnowledgePointType = ref("知识点"); // 编辑的实体类型：知识点或副知识点
 
     // ==================== 新增删除实体相关状态 ====================
     const showDeleteEntityConfirm = ref(false); // 删除实体确认框显示状态
@@ -1912,7 +2251,7 @@ export default {
 
     // ==================== 新建内容输入状态 ====================
     const newKnowledgePoint = ref(""); // 新建知识点输入
-    const newSubKnowledgePoint = ref(""); // 新建子知识点输入
+    const newSubKnowledgePoint = ref(""); // 新建副知识点输入
     const newSolutionIdea = ref(""); // 新建解题思想输入
     const newQuestionCategory = ref(""); // 新建问题类别输入
 
@@ -1920,7 +2259,7 @@ export default {
     const newUpdateKnowledgePoint = ref(""); // 更新界面新建知识点
     const newUpdateSolutionIdea = ref(""); // 更新界面新建解题思想
     const newUpdateFormKnowledgePoint = ref(""); // 更新表单新建知识点
-    const newUpdateFormSubKnowledgePoint = ref(""); // 更新表单新建子知识点
+    const newUpdateFormSubKnowledgePoint = ref(""); // 更新表单新建副知识点
     const newUpdateFormSolutionIdea = ref(""); // 更新表单新建解题思想
 
     // ==================== 其他状态 ====================
@@ -1966,8 +2305,9 @@ export default {
       ],
       answer: "", // 答案
       notes: "", // 解析
+      notes_img_url: "", // 解析图片URL
       remark: "", // 备注
-      sub_knowledge_point_ids: [], // 子知识点ID数组
+      sub_knowledge_point_ids: [], // 副知识点ID数组
       img_url: "", // 图片URL
     });
 
@@ -1991,6 +2331,7 @@ export default {
       ],
       answer: "",
       notes: "",
+      notes_img_url: "",
       remark: "",
       sub_knowledge_point_ids: [],
       img_url: "",
@@ -2002,7 +2343,7 @@ export default {
       subject_id: null,
       question_category_ids: [], // 改为数组，支持多选
       knowledge_point_ids: [], // 知识点ID数组
-      sub_knowledge_point_ids: [], // 子知识点ID数组
+      sub_knowledge_point_ids: [], // 副知识点ID数组
       solution_idea_ids: [], // 解题思想ID数组
       difficulty_level: null,
       title: "", // 题目关键词
@@ -2020,6 +2361,10 @@ export default {
     const selectedQuestion = ref(null); // 选中的题目
     const showDeleteConfirm = ref(false); // 删除确认框显示状态
     const questionToDelete = ref(null); // 待删除的题目
+
+    // ==================== 图片粘贴相关状态 ====================
+    const pendingNotesImageFile = ref(null); // 解析图片待上传文件
+    const pendingUpdateNotesImageFile = ref(null); // 更新界面解析图片待上传文件
 
     // ==================== 搜索关键词状态 ====================
     // 上传界面的搜索关键词
@@ -2089,6 +2434,421 @@ export default {
     const totalItems = ref(0); // 总条目数
     const pageInput = ref(1); // 页码输入
 
+    // ==================== 合并知识点相关方法 ====================
+    /**
+     * 打开合并知识点模态框
+     */
+    const openMergeKnowledgeModal = () => {
+      showMergeKnowledgeModal.value = true;
+      mergeStep.value = 1;
+      selectedMergeKnowledgePoints.value = [];
+      selectedMergedKnowledgePoint.value = null;
+      mergedKnowledgePointName.value = "";
+      mergeKnowledgeSearch.value = "";
+      filteredMergeKnowledgePoints.value = knowledgePointList.value;
+      filteredMergedKnowledgePoints.value = knowledgePointList.value;
+    };
+
+    /**
+     * 关闭合并知识点模态框
+     */
+    const closeMergeKnowledgeModal = () => {
+      showMergeKnowledgeModal.value = false;
+      mergeStep.value = 1;
+      selectedMergeKnowledgePoints.value = [];
+      selectedMergedKnowledgePoint.value = null;
+      mergedKnowledgePointName.value = "";
+      affectedQuestions.value = [];
+    };
+
+    /**
+     * 过滤合并知识点列表
+     */
+    const filterMergeKnowledgePoints = () => {
+      if (!mergeKnowledgeSearch.value) {
+        filteredMergeKnowledgePoints.value = knowledgePointList.value;
+      } else {
+        filteredMergeKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+          kp.name.toLowerCase().includes(mergeKnowledgeSearch.value.toLowerCase())
+        );
+      }
+    };
+
+    /**
+     * 过滤合并后知识点列表
+     */
+    const filterMergedKnowledgePoints = () => {
+      if (!mergedKnowledgePointName.value) {
+        filteredMergedKnowledgePoints.value = knowledgePointList.value;
+      } else {
+        filteredMergedKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+          kp.name.toLowerCase().includes(mergedKnowledgePointName.value.toLowerCase())
+        );
+      }
+    };
+
+    /**
+     * 选择要合并的知识点
+     * @param {Object} kp - 知识点对象
+     */
+    const selectMergeKnowledgePoint = (kp) => {
+      if (!selectedMergeKnowledgePoints.value.find((item) => item.id === kp.id)) {
+        selectedMergeKnowledgePoints.value.push(kp);
+      }
+      mergeKnowledgeSearch.value = "";
+      showMergeKnowledgeDropdown.value = false;
+    };
+
+    /**
+     * 检查知识点是否已选择用于合并
+     * @param {number} id - 知识点ID
+     * @returns {boolean} 是否已选择
+     */
+    const isMergeKnowledgeSelected = (id) => {
+      return selectedMergeKnowledgePoints.value.some((kp) => kp.id === id);
+    };
+
+    /**
+     * 移除要合并的知识点
+     * @param {number} id - 知识点ID
+     */
+    const removeMergeKnowledgePoint = (id) => {
+      selectedMergeKnowledgePoints.value = selectedMergeKnowledgePoints.value.filter(
+        (kp) => kp.id !== id
+      );
+    };
+
+    /**
+     * 选择合并后的知识点
+     * @param {Object} kp - 知识点对象
+     */
+    const selectMergedKnowledgePoint = (kp) => {
+      selectedMergedKnowledgePoint.value = kp;
+      mergedKnowledgePointName.value = kp.name;
+      showMergedKnowledgeDropdown.value = false;
+    };
+
+    /**
+     * 清除合并后知识点选择
+     */
+    const clearMergedKnowledgePoint = () => {
+      selectedMergedKnowledgePoint.value = null;
+      mergedKnowledgePointName.value = "";
+    };
+
+    /**
+     * 合并知识点下拉框失焦处理
+     */
+    const onMergeKnowledgeBlur = () => {
+      setTimeout(() => {
+        showMergeKnowledgeDropdown.value = false;
+      }, 200);
+    };
+
+    /**
+     * 合并后知识点下拉框失焦处理
+     */
+    const onMergedKnowledgeBlur = () => {
+      setTimeout(() => {
+        showMergedKnowledgeDropdown.value = false;
+      }, 200);
+    };
+
+    /**
+     * 预览合并
+     */
+    const previewMerge = async () => {
+      try {
+        isMerging.value = true;
+        // 确定合并后的知识点ID
+        let mergedKnowledgePointId = null;
+        // 如果选择了现有的知识点，使用其ID
+        if (selectedMergedKnowledgePoint.value) {
+          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+        } else {
+          // 如果是新知识点，先创建
+          const newKnowledgePointResponse = await axios.post(
+            `${API_BASE}/questions/uploadKnowledgePoint`,
+            [mergedKnowledgePointName.value.trim()]
+          );
+          if (newKnowledgePointResponse.data.code === 500) {
+            closeMergeKnowledgeModal();
+            showAlert("创建失败", "知识点已存在");
+            isMerging.value = false;
+            return;
+          }
+          // 重新加载知识点列表以获取新创建的ID
+          await loadLists();
+          // 从更新后的列表中查找新创建的知识点
+          const newKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.name === mergedKnowledgePointName.value.trim()
+          );
+          if (newKnowledgePoint) {
+            mergedKnowledgePointId = newKnowledgePoint.id;
+          } else {
+            isMerging.value = false;
+            return;
+          }
+        }
+        // 第一次调用合并接口，confirm=false
+        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+        const response = await axios.post(
+          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
+          sourceIds
+        );
+        const responseData = response.data.data;
+        affectedQuestions.value = Array.isArray(responseData) ? responseData : [];
+
+        // 因为不分页，所以固定为 1 页
+        affectedQuestionsTotalItems.value = affectedQuestions.value.length;
+        affectedQuestionsTotalPages.value = 1;
+
+        affectedQuestionsPageNum.value = 1;
+        affectedQuestionsPageInput.value = 1;
+
+        // 进入步骤2
+        mergeStep.value = 2;
+      } catch (err) {
+        console.error("预览合并失败:", err);
+        closeMergeKnowledgeModal();
+        showAlert("预览失败", err.response?.data?.message || err.message);
+      } finally {
+        isMerging.value = false;
+      }
+    };
+
+    /**
+     * 确认合并
+     */
+    const confirmMerge = async () => {
+      try {
+        isMerging.value = true;
+
+        // 确定合并后的知识点ID
+        let mergedKnowledgePointId = null;
+
+        // 如果选择了现有的知识点，使用其ID
+        if (selectedMergedKnowledgePoint.value) {
+          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+        } else {
+          // 从知识点列表中查找
+          const targetKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.name === mergedKnowledgePointName.value.trim()
+          );
+
+          if (targetKnowledgePoint) {
+            mergedKnowledgePointId = targetKnowledgePoint.id;
+          } else {
+            showAlert("合并失败", "无法找到目标知识点");
+            isMerging.value = false;
+            return;
+          }
+        }
+
+        // 第二次调用合并接口，confirm=true
+        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+        await axios.post(
+          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/true`,
+          sourceIds
+        );
+
+        showAlert("合并成功", "知识点合并完成");
+        closeMergeKnowledgeModal();
+
+        // 重新加载知识点列表
+        await loadLists();
+      } catch (err) {
+        console.error("合并失败:", err);
+        showAlert("合并失败", err.response?.data?.message || err.message);
+      } finally {
+        isMerging.value = false;
+      }
+    };
+
+    /**
+     * 改变受影响题目页码
+     * @param {number} newPage - 新页码
+     */
+    const changeAffectedPage = (newPage) => {
+      if (newPage < 1 || newPage > affectedQuestionsTotalPages.value) {
+        return;
+      }
+      affectedQuestionsPageNum.value = newPage;
+      affectedQuestionsPageInput.value = newPage;
+      loadAffectedQuestions();
+    };
+
+    /**
+     * 跳转到受影响题目首页
+     */
+    const goToAffectedFirstPage = () => {
+      changeAffectedPage(1);
+    };
+
+    /**
+     * 跳转到受影响题目末页
+     */
+    const goToAffectedLastPage = () => {
+      changeAffectedPage(affectedQuestionsTotalPages.value);
+    };
+
+    /**
+     * 跳转到受影响题目指定页码
+     */
+    const goToAffectedPage = () => {
+      const page = parseInt(affectedQuestionsPageInput.value);
+      if (page >= 1 && page <= affectedQuestionsTotalPages.value) {
+        changeAffectedPage(page);
+      } else {
+        showAlert(
+          "输入错误",
+          `请输入 1 到 ${affectedQuestionsTotalPages.value} 之间的页码`
+        );
+      }
+    };
+
+    /**
+     * 加载受影响题目（用于分页）
+     */
+    const loadAffectedQuestions = async () => {
+      if (
+        selectedMergeKnowledgePoints.value.length < 2 ||
+        !mergedKnowledgePointName.value.trim()
+      ) {
+        return;
+      }
+
+      try {
+        // 确定合并后的知识点ID
+        let mergedKnowledgePointId = null;
+
+        if (selectedMergedKnowledgePoint.value) {
+          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+        } else {
+          const targetKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.name === mergedKnowledgePointName.value.trim()
+          );
+
+          if (targetKnowledgePoint) {
+            mergedKnowledgePointId = targetKnowledgePoint.id;
+          } else {
+            return;
+          }
+        }
+
+        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+        const response = await axios.post(
+          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
+          sourceIds,
+          {
+            params: {
+              page_num: affectedQuestionsPageNum.value,
+              page_size: affectedQuestionsPageSize.value,
+            },
+          }
+        );
+
+        const responseData = response.data.data;
+        affectedQuestions.value = responseData?.data_info || [];
+        affectedQuestionsTotalPages.value = responseData?.total_pages || 1;
+        affectedQuestionsTotalItems.value = responseData?.total_items || 0;
+        affectedQuestionsPageInput.value = affectedQuestionsPageNum.value;
+      } catch (err) {
+        console.error("加载受影响题目失败:", err);
+        showAlert("加载失败", "加载受影响题目失败");
+      }
+    };
+
+    // ==================== 编辑知识点相关方法 ====================
+    /**
+     * 编辑知识点
+     * @param {Object} knowledgePoint - 知识点对象
+     * @param {string} type - 类型：知识点或副知识点
+     */
+    const editKnowledgePoint = (knowledgePoint, type = "知识点") => {
+      editingKnowledgePoint.value = knowledgePoint;
+      editingKnowledgePointName.value = knowledgePoint.name;
+      editingKnowledgePointType.value = type;
+      showEditKnowledgePointModal.value = true;
+    };
+
+    /**
+     * 更新知识点名称
+     */
+    const updateKnowledgePointName = async () => {
+      if (!editingKnowledgePoint.value || !editingKnowledgePointName.value.trim()) {
+        cancelEditKnowledgePoint();
+        showAlert("输入错误", "请输入知识点名称");
+        return;
+      }
+
+      try {
+        const response = await axios.post(
+          `${API_BASE}/questions/updateKnowledgePointName`,
+          {
+            id: editingKnowledgePoint.value.id,
+            name: editingKnowledgePointName.value.trim(),
+          }
+        );
+        if (response.data?.code === 409) {
+          cancelEditKnowledgePoint();
+          showAlert("更新失败", response.data.message || "知识点已存在");
+          return; // 直接结束，不执行后面的成功逻辑
+        }
+
+        showAlert("更新成功", `${editingKnowledgePointType.value}名称更新成功`);
+
+        // 重新加载列表
+        await loadLists();
+
+        // 如果当前选中的知识点被编辑，更新选中状态
+        if (
+          selectedKnowledgePoint.value &&
+          selectedKnowledgePoint.value.id === editingKnowledgePoint.value.id
+        ) {
+          const updatedKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.id === editingKnowledgePoint.value.id
+          );
+          if (updatedKnowledgePoint) {
+            selectedKnowledgePoint.value = updatedKnowledgePoint;
+            form.knowledge_point_id = updatedKnowledgePoint.id;
+            knowledgeSearch.value = updatedKnowledgePoint.name;
+          }
+        }
+
+        // 如果更新表单中选中的知识点被编辑，更新选中状态
+        if (
+          selectedUpdateFormKnowledgePoint.value &&
+          selectedUpdateFormKnowledgePoint.value.id === editingKnowledgePoint.value.id
+        ) {
+          const updatedKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.id === editingKnowledgePoint.value.id
+          );
+          if (updatedKnowledgePoint) {
+            selectedUpdateFormKnowledgePoint.value = updatedKnowledgePoint;
+            updateForm.knowledge_point_id = updatedKnowledgePoint.id;
+            updateFormKnowledgeSearch.value = updatedKnowledgePoint.name;
+          }
+        }
+
+        cancelEditKnowledgePoint();
+      } catch (err) {
+        console.error("更新知识点名称失败:", err);
+        cancelEditKnowledgePoint();
+        showAlert("更新失败", err.response?.data?.message || err.message);
+      }
+    };
+
+    /**
+     * 取消编辑知识点
+     */
+    const cancelEditKnowledgePoint = () => {
+      showEditKnowledgePointModal.value = false;
+      editingKnowledgePoint.value = null;
+      editingKnowledgePointName.value = "";
+      editingKnowledgePointType.value = "知识点";
+    };
+
     // ==================== 计算属性 ====================
     /**
      * 是否显示单选题选项区域
@@ -2155,7 +2915,7 @@ export default {
     });
 
     /**
-     * 选中的子知识点对象列表
+     * 选中的副知识点对象列表
      */
     const selectedSubKnowledgePoints = computed(() => {
       return form.sub_knowledge_point_ids
@@ -2182,7 +2942,7 @@ export default {
     });
 
     /**
-     * 更新界面选中的子知识点对象列表
+     * 更新界面选中的副知识点对象列表
      */
     const selectedUpdateSubKnowledgePoints = computed(() => {
       return searchCriteria.sub_knowledge_point_ids
@@ -2218,7 +2978,7 @@ export default {
     });
 
     /**
-     * 更新表单选中的子知识点对象列表
+     * 更新表单选中的副知识点对象列表
      */
     const selectedUpdateFormSubKnowledgePoints = computed(() => {
       return updateForm.sub_knowledge_point_ids
@@ -2308,6 +3068,175 @@ export default {
       updateOptionPreviews.value[index] = renderMath(text);
     };
 
+    // ==================== 图片粘贴处理函数 ====================
+    /**
+     * 处理题目内容粘贴事件
+     * @param {Event} event - 粘贴事件
+     */
+    const handleTitlePaste = async (event) => {
+      await handlePaste(event, "title");
+    };
+
+    /**
+     * 处理解析粘贴事件
+     * @param {Event} event - 粘贴事件
+     */
+    const handleNotesPaste = async (event) => {
+      await handlePaste(event, "notes");
+    };
+
+    /**
+     * 处理更新界面题目内容粘贴事件
+     * @param {Event} event - 粘贴事件
+     */
+    const handleUpdateTitlePaste = async (event) => {
+      await handlePaste(event, "updateTitle");
+    };
+
+    /**
+     * 处理更新界面解析粘贴事件
+     * @param {Event} event - 粘贴事件
+     */
+    const handleUpdateNotesPaste = async (event) => {
+      await handlePaste(event, "updateNotes");
+    };
+
+    /**
+     * 通用粘贴处理函数
+     * @param {Event} event - 粘贴事件
+     * @param {string} type - 类型：title, notes, updateTitle, updateNotes
+     */
+    const handlePaste = async (event, type) => {
+      const clipboardData = event.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+
+      // 检查是否有图片数据
+      const items = clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          event.preventDefault(); // 阻止默认粘贴行为
+
+          const file = items[i].getAsFile();
+          if (!file) return;
+
+          // 验证文件类型
+          if (!file.type.startsWith("image/")) {
+            showAlert("文件错误", "请粘贴图片文件");
+            return;
+          }
+
+          // 验证文件大小（5MB限制）
+          if (file.size > 5 * 1024 * 1024) {
+            showAlert("文件过大", "图片大小不能超过5MB");
+            return;
+          }
+
+          try {
+            // 创建对象URL用于预览
+            const previewUrl = URL.createObjectURL(file);
+
+            // 根据类型设置对应的图片URL和待上传文件
+            switch (type) {
+              case "title":
+                form.img_url = previewUrl;
+                pendingImageFile.value = file;
+                break;
+              case "notes":
+                form.notes_img_url = previewUrl;
+                pendingNotesImageFile.value = file;
+                break;
+              case "updateTitle":
+                updateForm.img_url = previewUrl;
+                pendingUpdateImageFile.value = file;
+                break;
+              case "updateNotes":
+                updateForm.notes_img_url = previewUrl;
+                pendingUpdateNotesImageFile.value = file;
+                break;
+            }
+
+            showAlert("粘贴成功", "图片已粘贴，将在提交时上传");
+          } catch (error) {
+            console.error("粘贴图片失败:", error);
+            showAlert("粘贴失败", "图片粘贴失败");
+          }
+          break;
+        }
+      }
+    };
+
+    // ==================== 解析图片上传处理 ====================
+    /**
+     * 处理解析图片上传
+     * @param {Event} event - 文件输入事件
+     */
+    const handleNotesImageUpload = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 验证文件类型
+      if (!file.type.startsWith("image/")) {
+        showAlert("文件错误", "请选择图片文件");
+        return;
+      }
+
+      // 验证文件大小（5MB限制）
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert("文件过大", "图片大小不能超过5MB");
+        return;
+      }
+
+      // 创建对象URL用于预览
+      const previewUrl = URL.createObjectURL(file);
+      form.notes_img_url = previewUrl;
+      pendingNotesImageFile.value = file;
+      event.target.value = ""; // 重置文件输入
+
+      // 显示上传中状态
+      showAlert("上传中", "解析图片正在上传...", "info");
+    };
+
+    /**
+     * 处理更新界面解析图片上传
+     * @param {Event} event - 文件输入事件
+     */
+    const handleUpdateNotesImageUpload = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        showAlert("文件错误", "请选择图片文件");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert("文件过大", "图片大小不能超过5MB");
+        return;
+      }
+
+      // 创建对象URL用于预览
+      const previewUrl = URL.createObjectURL(file);
+      updateForm.notes_img_url = previewUrl;
+      pendingUpdateNotesImageFile.value = file; // 保存文件，等待确认上传
+      event.target.value = "";
+    };
+
+    /**
+     * 移除解析图片
+     */
+    const removeNotesImage = () => {
+      form.notes_img_url = "";
+      pendingNotesImageFile.value = null;
+    };
+
+    /**
+     * 移除更新界面解析图片
+     */
+    const removeUpdateNotesImage = () => {
+      updateForm.notes_img_url = "";
+      pendingUpdateNotesImageFile.value = null;
+    };
+
     // ==================== 删除实体相关方法 ====================
     /**
      * 确认删除知识点
@@ -2324,10 +3253,10 @@ export default {
 
     /**
      * 确认删除知识点
-     * @param {Object} SubknowledgePoint - 子知识点对象
+     * @param {Object} SubknowledgePoint - 副知识点对象
      */
     const confirmDeleteSubKnowledgePoint = async (knowledgePoint) => {
-      deleteEntityType.value = "子知识点";
+      deleteEntityType.value = "副知识点";
       deleteEntityData.value = knowledgePoint;
       dependentQuestionsPageNum.value = 1;
       dependentQuestionsPageInput.value = 1;
@@ -2378,7 +3307,7 @@ export default {
           case "知识点":
             payload.knowledge_point_ids = [deleteEntityData.value.id];
             break;
-          case "子知识点":
+          case "副知识点":
             payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
             break;
           case "解题思想":
@@ -2500,7 +3429,7 @@ export default {
             case "知识点":
               payload.knowledge_point_ids = [deleteEntityData.value.id];
               break;
-            case "子知识点":
+            case "副知识点":
               payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
               break;
             case "解题思想":
@@ -2558,7 +3487,7 @@ export default {
 
         switch (deleteEntityType.value) {
           case "知识点":
-          case "子知识点":
+          case "副知识点":
             url = `${API_BASE}/questions/deleteKnowledgePoint/${deleteEntityData.value.id}`;
             entityName = deleteEntityType.value;
             break;
@@ -2592,7 +3521,7 @@ export default {
         // 如果当前选中的实体被删除，清除选择
         if (
           (deleteEntityType.value === "知识点" ||
-            deleteEntityType.value === "子知识点") &&
+            deleteEntityType.value === "副知识点") &&
           selectedKnowledgePoint.value &&
           selectedKnowledgePoint.value.id === deleteEntityData.value.id
         ) {
@@ -2768,7 +3697,7 @@ export default {
     };
 
     /**
-     * 获取预览的子知识点
+     * 获取预览的副知识点
      */
     const getPreviewSubKnowledgePoints = () => {
       const currentForm = previewMode.value === "upload" ? form : updateForm;
@@ -2809,6 +3738,14 @@ export default {
     const getPreviewImageUrl = () => {
       const currentForm = previewMode.value === "upload" ? form : updateForm;
       return currentForm.img_url || "";
+    };
+
+    /**
+     * 获取预览的解析图片URL
+     */
+    const getPreviewNotesImageUrl = () => {
+      const currentForm = previewMode.value === "upload" ? form : updateForm;
+      return currentForm.notes_img_url || "";
     };
 
     /**
@@ -3080,10 +4017,10 @@ export default {
       form.solution_idea_ids = form.solution_idea_ids.filter((itemId) => itemId !== id);
     };
 
-    // ==================== 子知识点选择方法 ====================
+    // ==================== 副知识点选择方法 ====================
     /**
-     * 选择子知识点
-     * @param {Object} kp - 子知识点对象
+     * 选择副知识点
+     * @param {Object} kp - 副知识点对象
      */
     const selectSubKnowledgePoint = (kp) => {
       if (!form.sub_knowledge_point_ids.includes(kp.id)) {
@@ -3094,8 +4031,8 @@ export default {
     };
 
     /**
-     * 检查子知识点是否已选择
-     * @param {number} id - 子知识点ID
+     * 检查副知识点是否已选择
+     * @param {number} id - 副知识点ID
      * @returns {boolean} 是否已选择
      */
     const isSubKnowledgeSelected = (id) => {
@@ -3103,8 +4040,8 @@ export default {
     };
 
     /**
-     * 移除子知识点
-     * @param {number} id - 要移除的子知识点ID
+     * 移除副知识点
+     * @param {number} id - 要移除的副知识点ID
      */
     const removeSubKnowledgePoint = (id) => {
       form.sub_knowledge_point_ids = form.sub_knowledge_point_ids.filter(
@@ -3144,8 +4081,8 @@ export default {
       );
     };
     /**
-     * 更新界面选择子知识点
-     * @param {Object} kp - 子知识点对象
+     * 更新界面选择副知识点
+     * @param {Object} kp - 副知识点对象
      */
     const selectUpdateSubKnowledgePoint = (kp) => {
       if (!searchCriteria.sub_knowledge_point_ids.includes(kp.id)) {
@@ -3156,8 +4093,8 @@ export default {
     };
 
     /**
-     * 检查更新界面子知识点是否已选择
-     * @param {number} id - 子知识点ID
+     * 检查更新界面副知识点是否已选择
+     * @param {number} id - 副知识点ID
      * @returns {boolean} 是否已选择
      */
     const isUpdateSubKnowledgeSelected = (id) => {
@@ -3165,8 +4102,8 @@ export default {
     };
 
     /**
-     * 移除更新界面子知识点
-     * @param {number} id - 要移除的子知识点ID
+     * 移除更新界面副知识点
+     * @param {number} id - 要移除的副知识点ID
      */
     const removeUpdateSubKnowledgePoint = (id) => {
       searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
@@ -3175,7 +4112,7 @@ export default {
     };
 
     /**
-     * 过滤更新界面子知识点列表
+     * 过滤更新界面副知识点列表
      */
     const filterUpdateSubKnowledgePoints = () => {
       if (!updateSubKnowledgeSearch.value) {
@@ -3187,7 +4124,7 @@ export default {
       }
     };
     /**
-     * 更新界面子知识点下拉框失焦处理
+     * 更新界面副知识点下拉框失焦处理
      */
     const onUpdateSubKnowledgeBlur = () => {
       setTimeout(() => {
@@ -3343,10 +4280,10 @@ export default {
       );
     };
 
-    // ==================== 更新表单子知识点选择方法 ====================
+    // ==================== 更新表单副知识点选择方法 ====================
     /**
-     * 更新表单选择子知识点
-     * @param {Object} kp - 子知识点对象
+     * 更新表单选择副知识点
+     * @param {Object} kp - 副知识点对象
      */
     const selectUpdateFormSubKnowledgePoint = (kp) => {
       if (!updateForm.sub_knowledge_point_ids.includes(kp.id)) {
@@ -3357,8 +4294,8 @@ export default {
     };
 
     /**
-     * 检查更新表单子知识点是否已选择
-     * @param {number} id - 子知识点ID
+     * 检查更新表单副知识点是否已选择
+     * @param {number} id - 副知识点ID
      * @returns {boolean} 是否已选择
      */
     const isUpdateFormSubKnowledgeSelected = (id) => {
@@ -3366,8 +4303,8 @@ export default {
     };
 
     /**
-     * 移除更新表单子知识点
-     * @param {number} id - 要移除的子知识点ID
+     * 移除更新表单副知识点
+     * @param {number} id - 要移除的副知识点ID
      */
     const removeUpdateFormSubKnowledgePoint = (id) => {
       updateForm.sub_knowledge_point_ids = updateForm.sub_knowledge_point_ids.filter(
@@ -3476,7 +4413,7 @@ export default {
     };
 
     /**
-     * 过滤子知识点列表
+     * 过滤副知识点列表
      */
     const filterSubKnowledgePoints = () => {
       if (!subKnowledgeSearch.value) {
@@ -3601,7 +4538,7 @@ export default {
     };
 
     /**
-     * 过滤更新表单子知识点列表
+     * 过滤更新表单副知识点列表
      */
     const filterUpdateFormSubKnowledgePoints = () => {
       if (!updateFormSubKnowledgeSearch.value) {
@@ -3754,8 +4691,6 @@ export default {
         } else {
           pendingUpdateImageFile.value = null;
         }
-
-        showAlert("上传成功", "图片已成功上传到图床");
         return true;
       } catch (error) {
         console.error("图片上传失败:", error);
@@ -3763,6 +4698,46 @@ export default {
         return false;
       }
     };
+
+    /**
+     * 上传待处理的解析图片（在表单提交时调用）
+     * @param {string} mode - 模式：'upload' 或 'update'
+     * @returns {Promise<boolean>} 是否上传成功
+     */
+    const uploadPendingNotesImage = async (mode) => {
+      try {
+        const pendingFile =
+          mode === "upload"
+            ? pendingNotesImageFile.value
+            : pendingUpdateNotesImageFile.value;
+        const formData = mode === "upload" ? form : updateForm;
+
+        if (!pendingFile) {
+          return true; // 没有待上传的图片，直接返回成功
+        }
+
+        showAlert("上传中", "解析图片正在上传到图床...", "info");
+
+        // 上传到图床
+        const imageUrl = await uploadToImageBed(pendingFile);
+
+        // 使用图床返回的URL替换预览URL
+        formData.notes_img_url = imageUrl;
+
+        // 清空待处理文件
+        if (mode === "upload") {
+          pendingNotesImageFile.value = null;
+        } else {
+          pendingUpdateNotesImageFile.value = null;
+        }
+        return true;
+      } catch (error) {
+        console.error("解析图片上传失败:", error);
+        showAlert("上传失败", error.message);
+        return false;
+      }
+    };
+
     // ==================== 记忆功能 ====================
     /**
      * 保存上传记忆到localStorage
@@ -3856,6 +4831,11 @@ export default {
         filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
         filteredUpdateFormQuestionCategories.value = questionCategoryList.value;
         filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
+
+        // 初始化合并知识点相关列表
+        filteredMergeKnowledgePoints.value = knowledgePointList.value;
+        filteredMergedKnowledgePoints.value = knowledgePointList.value;
+
         if (uploadMemory.value.question_category_id) {
           const rememberedCategory = questionCategoryList.value.find(
             (category) => category.id === uploadMemory.value.question_category_id
@@ -3892,7 +4872,11 @@ export default {
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        if (res.data.code === 500) {
+          showAlert("上传失败", "知识点已存在");
+          return;
+        }
         showAlert("上传成功", "知识点上传成功");
         newKnowledgePoint.value = "";
         await loadLists(); // 重新加载列表
@@ -3903,11 +4887,11 @@ export default {
     };
 
     /**
-     * 上传子知识点
+     * 上传副知识点
      */
     const uploadSubKnowledgePoint = async () => {
       if (!newSubKnowledgePoint.value.trim()) {
-        showAlert("输入错误", "请输入子知识点名称");
+        showAlert("输入错误", "请输入副知识点名称");
         return;
       }
 
@@ -3916,13 +4900,17 @@ export default {
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        showAlert("上传成功", "子知识点上传成功");
+        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        if (res.data.code === 500) {
+          showAlert("上传失败", "副知识点已存在");
+          return;
+        }
+        showAlert("上传成功", "副知识点上传成功");
         newSubKnowledgePoint.value = "";
         await loadLists();
       } catch (err) {
-        console.error("上传子知识点失败:", err);
-        showAlert("上传失败", "上传子知识点失败");
+        console.error("上传副知识点失败:", err);
+        showAlert("上传失败", "上传副知识点失败");
       }
     };
 
@@ -3989,7 +4977,11 @@ export default {
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        if (res.data.code === 500) {
+          showAlert("上传失败", "知识点已存在");
+          return;
+        }
         showAlert("上传成功", "知识点上传成功");
         newUpdateKnowledgePoint.value = "";
         await loadLists();
@@ -4037,7 +5029,11 @@ export default {
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        if (res.data.code === 500) {
+          showAlert("上传失败", "知识点已存在");
+          return;
+        }
         showAlert("上传成功", "知识点上传成功");
         newUpdateFormKnowledgePoint.value = "";
         await loadLists();
@@ -4048,11 +5044,11 @@ export default {
     };
 
     /**
-     * 更新表单上传子知识点
+     * 更新表单上传副知识点
      */
     const uploadUpdateFormSubKnowledgePoint = async () => {
       if (!newUpdateFormSubKnowledgePoint.value.trim()) {
-        showAlert("输入错误", "请输入子知识点名称");
+        showAlert("输入错误", "请输入副知识点名称");
         return;
       }
 
@@ -4061,13 +5057,17 @@ export default {
           .split(/[,，]/)
           .map((item) => item.trim())
           .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        showAlert("上传成功", "子知识点上传成功");
+        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+        if (res.data.code === 500) {
+          showAlert("上传失败", "副知识点已存在");
+          return;
+        }
+        showAlert("上传成功", "副知识点上传成功");
         newUpdateFormSubKnowledgePoint.value = "";
         await loadLists();
       } catch (err) {
-        console.error("上传子知识点失败:", err);
-        showAlert("上传失败", "上传子知识点失败");
+        console.error("上传副知识点失败:", err);
+        showAlert("上传失败", "上传副知识点失败");
       }
     };
 
@@ -4228,6 +5228,7 @@ export default {
         : null;
       updateForm.answer = q.answer || "";
       updateForm.notes = q.notes || "";
+      updateForm.notes_img_url = q.notes_img_url || "";
       updateForm.remark = q.remark || "";
       updateForm.sub_knowledge_point_ids = (q.sub_knowledge_point_ids || []).map((id) =>
         Number(id)
@@ -4402,27 +5403,19 @@ export default {
 
       try {
         submitting.value = true;
+
+        // 先上传题目图片到图床
         const imageUploadSuccess = await uploadPendingImage("upload");
         if (!imageUploadSuccess) {
           submitting.value = false;
           return;
         }
 
-        // 如果有待上传的图片，先上传图片
-        if (pendingImageFile.value) {
-          const fd = new FormData();
-          fd.append("file", pendingImageFile.value);
-          const token = localStorage.getItem("token");
-          const uploadRes = await axios.post(`${API_BASE}/questions/uploadImage`, fd, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          });
-          const uploadedUrl = uploadRes?.data?.data?.url || uploadRes?.data?.url;
-          if (!uploadedUrl) throw new Error("图片上传未返回 URL");
-          form.img_url = uploadedUrl;
-          pendingImageFile.value = null;
+        // 再上传解析图片到图床
+        const notesImageUploadSuccess = await uploadPendingNotesImage("upload");
+        if (!notesImageUploadSuccess) {
+          submitting.value = false;
+          return;
         }
 
         let optionsPayload = {};
@@ -4490,6 +5483,7 @@ export default {
             : {}),
           answer: answerPayload,
           notes: form.notes,
+          notes_img_url: form.notes_img_url,
           remark: form.remark,
           sub_knowledge_point_ids:
             form.sub_knowledge_point_ids.length > 0
@@ -4528,28 +5522,18 @@ export default {
 
       try {
         submitting.value = true;
-        // 先上传图片到图床
+        // 先上传题目图片到图床
         const imageUploadSuccess = await uploadPendingImage("update");
         if (!imageUploadSuccess) {
           submitting.value = false;
           return;
         }
 
-        // 处理图片上传
-        if (pendingUpdateImageFile.value) {
-          const fd = new FormData();
-          fd.append("file", pendingUpdateImageFile.value);
-          const token = localStorage.getItem("token");
-          const uploadRes = await axios.post(`${API_BASE}/questions/uploadImage`, fd, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          });
-          const uploadedUrl = uploadRes?.data?.data?.url || uploadRes?.data?.url;
-          if (!uploadedUrl) throw new Error("图片上传未返回 URL");
-          updateForm.img_url = uploadedUrl;
-          pendingUpdateImageFile.value = null;
+        // 再上传解析图片到图床
+        const notesImageUploadSuccess = await uploadPendingNotesImage("update");
+        if (!notesImageUploadSuccess) {
+          submitting.value = false;
+          return;
         }
 
         let optionsPayload = {};
@@ -4625,6 +5609,7 @@ export default {
             : {}),
           answer: answerPayload,
           notes: updateForm.notes,
+          notes_img_url: updateForm.notes_img_url,
           remark: updateForm.remark,
           sub_knowledge_point_ids:
             updateForm.sub_knowledge_point_ids.length > 0
@@ -4720,6 +5705,7 @@ export default {
         ],
         answer: "",
         notes: "",
+        notes_img_url: "",
         remark: "",
         sub_knowledge_point_ids: [],
         solution_idea_ids: [],
@@ -4730,6 +5716,7 @@ export default {
       subKnowledgeSearch.value = "";
       solutionIdeaSearch.value = "";
       pendingImageFile.value = null;
+      pendingNotesImageFile.value = null;
       selectedKnowledgePoint.value = null;
       titlePreview.value = "";
       answerPreview.value = "";
@@ -4914,6 +5901,14 @@ export default {
       handleUpdateImageUpload,
       removeImage,
       removeUpdateImage,
+      handleNotesImageUpload,
+      handleUpdateNotesImageUpload,
+      removeNotesImage,
+      removeUpdateNotesImage,
+      handleTitlePaste,
+      handleNotesPaste,
+      handleUpdateTitlePaste,
+      handleUpdateNotesPaste,
 
       // 搜索关键词
       knowledgeSearch,
@@ -5148,6 +6143,7 @@ export default {
       getPreviewSolutionIdeas,
       getPreviewTitle,
       getPreviewImageUrl,
+      getPreviewNotesImageUrl,
       getPreviewOptions,
       showPreviewOptions,
       isPreviewOptionCorrect,
@@ -5189,6 +6185,52 @@ export default {
       deleteAllDependentQuestions,
       deleteEntity,
       cancelDeleteEntity,
+
+      // 新增编辑知识点相关
+      showEditKnowledgePointModal,
+      editingKnowledgePoint,
+      editingKnowledgePointName,
+      editingKnowledgePointType,
+      editKnowledgePoint,
+      updateKnowledgePointName,
+      cancelEditKnowledgePoint,
+
+      // 新增合并知识点相关
+      showMergeKnowledgeModal,
+      mergeStep,
+      mergeKnowledgeSearch,
+      mergedKnowledgePointName,
+      selectedMergeKnowledgePoints,
+      selectedMergedKnowledgePoint,
+      showMergeKnowledgeDropdown,
+      showMergedKnowledgeDropdown,
+      filteredMergeKnowledgePoints,
+      filteredMergedKnowledgePoints,
+      affectedQuestions,
+      affectedQuestionsPageNum,
+      affectedQuestionsPageSize,
+      affectedQuestionsTotalPages,
+      affectedQuestionsTotalItems,
+      affectedQuestionsPageInput,
+      isMerging,
+      openMergeKnowledgeModal,
+      closeMergeKnowledgeModal,
+      filterMergeKnowledgePoints,
+      filterMergedKnowledgePoints,
+      selectMergeKnowledgePoint,
+      isMergeKnowledgeSelected,
+      removeMergeKnowledgePoint,
+      selectMergedKnowledgePoint,
+      clearMergedKnowledgePoint,
+      onMergeKnowledgeBlur,
+      onMergedKnowledgeBlur,
+      previewMerge,
+      confirmMerge,
+      changeAffectedPage,
+      goToAffectedFirstPage,
+      goToAffectedLastPage,
+      goToAffectedPage,
+      loadAffectedQuestions,
     };
   },
 };
@@ -5231,6 +6273,125 @@ export default {
 /* 非激活状态按钮的悬停效果 */
 .mode-select button:hover:not(.active) {
   background-color: #ecf5ff; /* 浅蓝色背景 */
+}
+
+/* ==================== 合并知识点区域样式 ==================== */
+.merge-knowledge-section {
+  text-align: right;
+}
+
+/* ==================== 合并知识点模态框样式 ==================== */
+.merge-knowledge-modal {
+  max-width: 1200px;
+  width: 100%;
+  max-height: 85vh;
+  position: relative; /* 添加相对定位 */
+  padding: 25px;
+}
+
+.merge-step {
+  max-height: calc(85vh - 100px); /* 减去标题和按钮的高度 */
+  overflow-y: auto;
+  padding-right: 10px; /* 为滚动条留出空间 */
+}
+
+.merge-preview-info {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #bae7ff;
+}
+
+.merge-preview-info h4 {
+  color: #409eff;
+  margin-bottom: 10px;
+}
+
+.merge-source-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.merge-source-tag {
+  background: #ecf5ff;
+  color: #409eff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  border: 1px solid #d9ecff;
+}
+
+.affected-questions {
+  margin-top: 20px;
+}
+
+.affected-questions h4 {
+  color: #606266;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.affected-list {
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  padding: 10px;
+  background: #fff;
+}
+
+.affected-question {
+  padding: 12px;
+  border-bottom: 1px solid #e4e7ed;
+  background: white;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.affected-question:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.affected-question-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.affected-question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.affected-question-id {
+  font-weight: 600;
+  color: #409eff;
+}
+
+.affected-question-type {
+  background: #ecf5ff;
+  color: #409eff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.affected-question-content {
+  line-height: 1.6;
+  color: #303133;
+  max-height: none; /* 移除高度限制 */
+  overflow: visible; /* 不裁剪内容 */
+  white-space: normal;
+}
+
+.affected-question-meta {
+  display: flex;
+  gap: 50px;
+  font-size: 14px;
+  color: #909399;
 }
 
 /* ==================== 表单区域样式 ==================== */
@@ -5318,8 +6479,6 @@ export default {
 }
 
 .table-cell {
-  /* align-items: center; /* 垂直居中 
-  justify-content: center; 水平居中  （之前无备注列时dispaly使用flex时使用此两行） */
   padding: 12px 8px; /* 内边距 */
   font-size: 14px; /* 字体大小 */
   color: #606266; /* 文字颜色 */
@@ -5347,7 +6506,7 @@ export default {
   background-color: #f5f7fa; /* 浅灰色背景 */
 }
 
-/* 子知识点单元格样式 */
+/* 副知识点单元格样式 */
 .sub-knowledge-cell {
   display: flex; /* 弹性布局 */
   flex-wrap: wrap; /* 允许换行 */
@@ -5356,7 +6515,7 @@ export default {
   justify-content: center; /* 水平居中 */
 }
 
-/* 子知识点标签样式 */
+/* 副知识点标签样式 */
 .sub-knowledge-tag {
   background: #ecf5ff; /* 浅蓝色背景 */
   color: #409eff; /* 主题蓝色文字 */
@@ -5369,7 +6528,7 @@ export default {
   display: inline-block; /* 行内块显示 */
 }
 
-/* 无子知识点提示样式 （问题定义，解题思想，问题类别也同样适用此标签）*/
+/* 无副知识点提示样式 （问题定义，解题思想，问题类别也同样适用此标签）*/
 .no-sub-knowledge {
   color: #c0c4cc; /* 浅灰色文字 */
   font-style: italic; /* 斜体 */
@@ -5619,6 +6778,7 @@ export default {
 }
 
 .modal-actions {
+  padding: 12px 24px;
   display: flex; /* 弹性布局 */
   gap: 15px; /* 按钮间距 */
   justify-content: center; /* 水平居中 */
@@ -5860,7 +7020,7 @@ export default {
   min-width: 120px; /* 最小宽度 */
 }
 
-/* ==================== 新增删除实体确认对话框样式 ==================== */
+/* ==================== 删除知识点/解题思想/问题类别确认对话框样式 ==================== */
 .delete-entity-modal {
   max-width: 800px;
   width: 95%;
@@ -5953,6 +7113,30 @@ export default {
 
 .delete-all-btn:hover {
   background-color: #eebe77;
+}
+
+/* ==================== 新增编辑按钮样式 ==================== */
+.btn-edit-small {
+  background-color: #409eff; /* 主题蓝色背景 */
+  color: white; /* 白色文字 */
+  border: none; /* 无边框 */
+  padding: 2px 6px; /* 小内边距 */
+  border-radius: 3px; /* 小圆角 */
+  cursor: pointer; /* 鼠标手型 */
+  font-size: 12px; /* 小字体 */
+  transition: background-color 0.3s; /* 背景色过渡 */
+  margin-left: 4px; /* 左侧间距 */
+}
+
+.btn-edit-small:hover {
+  background-color: #66b1ff; /* 悬停时更亮的蓝色 */
+}
+
+/* ==================== 按钮容器样式 ==================== */
+.item-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
 /* ==================== 表单组件样式 ==================== */
@@ -6063,7 +7247,7 @@ export default {
   max-height: 250px; /* 最大高度 */
   overflow-y: auto; /* 垂直滚动 */
   z-index: 1000; /* 高z-index确保在最上层 */
-  font-size: 14px; /* 字体大小 */
+  font-size: 16px; /* 字体大小 */
 }
 
 .dropdown-item {
@@ -6239,7 +7423,7 @@ export default {
   background-color: #67c23a; /* 绿色背景 */
   color: white; /* 白色文字 */
   border: none; /* 无边框 */
-  padding: 8px 16px; /* 内边距 */
+  padding: 10px 16px; /* 内边距 */
   border-radius: 4px; /* 圆角 */
   cursor: pointer; /* 鼠标手型 */
   font-size: 13px; /* 字体大小 */
@@ -6289,6 +7473,12 @@ export default {
 
 .file-input {
   display: none; /* 隐藏文件输入 */
+}
+
+.upload-tip {
+  font-size: 12px; /* 小字体 */
+  color: #909399; /* 浅灰色文字 */
+  font-style: italic; /* 斜体 */
 }
 
 .image-preview {
@@ -6410,59 +7600,55 @@ export default {
 /* ==================== 表格列宽设置 ==================== */
 /* 按顺序为每个表格列设置固定宽度 */
 .table-cell:nth-child(1) {
-  width: 40px; /* ID列 */
-}
-
-.table-cell:nth-child(2) {
   width: 140px; /* 学校列 */
 }
 
-.table-cell:nth-child(3) {
+.table-cell:nth-child(2) {
   width: 80px; /* 年级列 */
 }
 
-.table-cell:nth-child(4) {
+.table-cell:nth-child(3) {
   width: 50px; /* 科目列 */
 }
 
-.table-cell:nth-child(5) {
+.table-cell:nth-child(4) {
   width: 120px; /* 问题类别列 */
 }
 
-.table-cell:nth-child(6) {
+.table-cell:nth-child(5) {
   width: 90px; /* 评分方法列 */
 }
 
-.table-cell:nth-child(7) {
+.table-cell:nth-child(6) {
   width: 120px; /* 知识点列 */
 }
 
-.table-cell:nth-child(8) {
+.table-cell:nth-child(7) {
   width: 120px; /* 解题思想列 */
 }
 
+.table-cell:nth-child(8) {
+  width: 150px; /* 副知识点列 */
+}
+
 .table-cell:nth-child(9) {
-  width: 120px; /* 子知识点列 */
+  width: 100px; /* 难度列 */
 }
 
 .table-cell:nth-child(10) {
-  width: 60px; /* 难度列 */
+  width: 300px; /* 题目内容列 */
 }
 
 .table-cell:nth-child(11) {
-  width: 250px; /* 题目内容列 */
+  width: 200px; /* 备注列 */
 }
 
 .table-cell:nth-child(12) {
-  width: 150px; /* 备注列 */
+  width: 150px; /* 图片列 */
 }
 
 .table-cell:nth-child(13) {
-  width: 120px; /* 图片列 */
-}
-
-.table-cell:nth-child(14) {
-  width: 150px; /* 操作列 */
+  width: 80px; /* 操作列 */
 }
 
 /* 表格行边框 */
@@ -6551,5 +7737,23 @@ export default {
   .dependent-question-actions {
     justify-content: flex-start;
   }
+
+  /* 合并知识点模态框在小屏幕上的适配 */
+  .merge-knowledge-modal {
+    padding: 20px;
+    margin: 10px;
+  }
+
+  .merge-source-points {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .affected-question-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
 }
 </style>
+我发现我的合并知识点的模态框会因为overflow-y导致在选择知识点的时候下拉框里面的知识点显示模糊
