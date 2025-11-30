@@ -142,8 +142,8 @@
               class="markdown-editor"
               placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式"
               @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+              @drop.prevent="handleDrop"
+              @dragover.prevent
               rows="6"
             ></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.title)"></div>
@@ -163,14 +163,13 @@
                   <textarea
                     v-model="opt.text"
                     data-form="form"
-  data-field="text"
-  :data-opt="index"
+                    data-field="text"
+                    :data-opt="index"
                     class="markdown-editor option-editor"
                     :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                   @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
-
+                    @paste="handlePaste"
+                    @drop.prevent="handleDrop"
+                    @dragover.prevent
                     rows="3"
                   ></textarea>
                   <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
@@ -219,14 +218,13 @@
                   <textarea
                     v-model="opt.text"
                     data-form="form"
-  data-field="text"
-  :data-opt="index"
+                    data-field="text"
+                    :data-opt="index"
                     class="markdown-editor option-editor"
                     :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-         @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
-
+                    @paste="handlePaste"
+                    @drop.prevent="handleDrop"
+                    @dragover.prevent
                     rows="3"
                   ></textarea>
                   <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
@@ -267,12 +265,12 @@
             <textarea
               v-model="form.answer"
               data-form="form"
-               data-field="answer"
+              data-field="answer"
               class="markdown-editor"
               placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式"
-               @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+              @paste="handlePaste"
+              @drop.prevent="handleDrop"
+              @dragover.prevent
               rows="6"
             ></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.answer)"></div>
@@ -291,8 +289,8 @@
               class="markdown-editor"
               placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式"
               @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+              @drop.prevent="handleDrop"
+              @dragover.prevent
               rows="6"
             ></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.notes)"></div>
@@ -566,8 +564,8 @@
               class="markdown-editor"
               placeholder="请输入备注信息，支持 Markdown 语法"
               @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+              @drop.prevent="handleDrop"
+              @dragover.prevent
               rows="4"
             ></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.remark)"></div>
@@ -1401,11 +1399,14 @@
                 class="markdown-editor"
                 placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式"
                 @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+                @drop.prevent="handleDrop"
+                @dragover.prevent
                 rows="6"
               ></textarea>
-              <div class="markdown-preview" v-html="renderMarkdown(updateForm.title)"></div>
+              <div
+                class="markdown-preview"
+                v-html="renderMarkdown(updateForm.title)"
+              ></div>
             </div>
           </div>
 
@@ -1425,13 +1426,13 @@
                     <textarea
                       v-model="opt.text"
                       data-form="updateForm"
-  data-field="text"
-  :data-opt="index"
+                      data-field="text"
+                      :data-opt="index"
                       class="markdown-editor option-editor"
                       :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
                       @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+                      @drop.prevent="handleDrop"
+                      @dragover.prevent
                       rows="3"
                     ></textarea>
                     <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
@@ -1485,14 +1486,13 @@
                     <textarea
                       v-model="opt.text"
                       data-form="updateForm"
-  data-field="text"
-  :data-opt="index"
+                      data-field="text"
+                      :data-opt="index"
                       class="markdown-editor option-editor"
                       :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                     @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
-
+                      @paste="handlePaste"
+                      @drop.prevent="handleDrop"
+                      @dragover.prevent
                       rows="3"
                     ></textarea>
                     <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
@@ -1535,15 +1535,18 @@
               <textarea
                 v-model="updateForm.answer"
                 data-form="updateForm"
-                 data-field="answer"
+                data-field="answer"
                 class="markdown-editor"
                 placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式"
-                 @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+                @paste="handlePaste"
+                @drop.prevent="handleDrop"
+                @dragover.prevent
                 rows="6"
               ></textarea>
-              <div class="markdown-preview" v-html="renderMarkdown(updateForm.answer)"></div>
+              <div
+                class="markdown-preview"
+                v-html="renderMarkdown(updateForm.answer)"
+              ></div>
             </div>
           </div>
 
@@ -1558,12 +1561,15 @@
                 data-field="notes"
                 class="markdown-editor"
                 placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式"
-                 @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+                @paste="handlePaste"
+                @drop.prevent="handleDrop"
+                @dragover.prevent
                 rows="6"
               ></textarea>
-              <div class="markdown-preview" v-html="renderMarkdown(updateForm.notes)"></div>
+              <div
+                class="markdown-preview"
+                v-html="renderMarkdown(updateForm.notes)"
+              ></div>
             </div>
           </div>
 
@@ -1579,11 +1585,14 @@
                 class="markdown-editor"
                 placeholder="请输入备注信息，支持 Markdown 语法"
                 @paste="handlePaste"
-  @drop.prevent="handleDrop"
-  @dragover.prevent
+                @drop.prevent="handleDrop"
+                @dragover.prevent
                 rows="4"
               ></textarea>
-              <div class="markdown-preview" v-html="renderMarkdown(updateForm.remark)"></div>
+              <div
+                class="markdown-preview"
+                v-html="renderMarkdown(updateForm.remark)"
+              ></div>
             </div>
           </div>
 
@@ -1697,7 +1706,10 @@
           <!-- 题目内容 -->
           <div class="preview-section">
             <h4>题目内容</h4>
-            <div class="preview-text-content" v-html="renderMarkdown(getPreviewTitle())"></div>
+            <div
+              class="preview-text-content"
+              v-html="renderMarkdown(getPreviewTitle())"
+            ></div>
             <div v-if="getPreviewImageUrl()" class="preview-image">
               <img :src="getPreviewImageUrl()" alt="题目图片" class="preview-img" />
             </div>
@@ -1725,13 +1737,19 @@
           <!-- 答案（主观题） -->
           <div v-if="showPreviewSubjectiveAnswer()" class="preview-section">
             <h4>参考答案</h4>
-            <div class="preview-text-content" v-html="renderMarkdown(getPreviewAnswer())"></div>
+            <div
+              class="preview-text-content"
+              v-html="renderMarkdown(getPreviewAnswer())"
+            ></div>
           </div>
 
           <!-- 解析 -->
           <div v-if="getPreviewNotes()" class="preview-section">
             <h4>解析</h4>
-            <div class="preview-text-content" v-html="renderMarkdown(getPreviewNotes())"></div>
+            <div
+              class="preview-text-content"
+              v-html="renderMarkdown(getPreviewNotes())"
+            ></div>
             <div v-if="getPreviewNotesImageUrl()" class="preview-image">
               <img :src="getPreviewNotesImageUrl()" alt="解析图片" class="preview-img" />
             </div>
@@ -1740,7 +1758,10 @@
           <!-- 备注 -->
           <div v-if="getPreviewRemark()" class="preview-section">
             <h4>备注</h4>
-            <div class="preview-text-content" v-html="renderMarkdown(getPreviewRemark())"></div>
+            <div
+              class="preview-text-content"
+              v-html="renderMarkdown(getPreviewRemark())"
+            ></div>
           </div>
         </div>
 
@@ -2015,7 +2036,10 @@
                       getQuestionCategoryName(q.question_category_id)
                     }}</span>
                   </div>
-                  <div class="affected-question-content" v-html="renderMarkdown(q.title)"></div>
+                  <div
+                    class="affected-question-content"
+                    v-html="renderMarkdown(q.title)"
+                  ></div>
                   <div class="affected-question-meta">
                     <span
                       >当前知识点: {{ getKnowledgePointName(q.knowledge_point_id) }}</span
@@ -2047,7 +2071,7 @@ import axios from "axios";
 import { useRouter } from "vue-router";
 
 // 导入 Markdown 渲染相关
-import { marked } from 'marked';
+import { marked } from "marked";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 
@@ -2072,8 +2096,8 @@ export default {
      * @returns {string} 渲染后的 HTML
      */
     const renderMarkdown = (text) => {
-      if (!text) return '';
-      
+      if (!text) return "";
+
       // 预处理 LaTeX 公式
       const processedText = text
         // 处理行内公式 $...$
@@ -2081,7 +2105,7 @@ export default {
           try {
             return katex.renderToString(formula, {
               displayMode: false,
-              throwOnError: false
+              throwOnError: false,
             });
           } catch (error) {
             return match; // 如果渲染失败，返回原公式
@@ -2092,7 +2116,7 @@ export default {
           try {
             return katex.renderToString(formula, {
               displayMode: true,
-              throwOnError: false
+              throwOnError: false,
             });
           } catch (error) {
             return match; // 如果渲染失败，返回原公式
@@ -3887,94 +3911,89 @@ export default {
         return false;
       }
     };
-   /**
- * 获取 textarea 对应字段和表单对象
- * 这里通过 data-form="form" 或 data-form="updateForm" 来区分
- */
-const getFormInfo = (textarea) => {
-  const formName = textarea.dataset.form;
-  const field = textarea.dataset.field;
-  const optIndex = textarea.dataset.opt;
+    /**
+     * 获取 textarea 对应字段和表单对象
+     * 这里通过 data-form="form" 或 data-form="updateForm" 来区分
+     */
+    const getFormInfo = (textarea) => {
+      const formName = textarea.dataset.form;
+      const field = textarea.dataset.field;
+      const optIndex = textarea.dataset.opt;
 
-  const formObject = formName === "updateForm" ? updateForm : form;
+      const formObject = formName === "updateForm" ? updateForm : form;
 
-  const optObj = optIndex !== undefined 
-    ? formObject.options[optIndex]
-    : null;
+      const optObj = optIndex !== undefined ? formObject.options[optIndex] : null;
 
-  return { formObject, field, optObj };
-};
+      return { formObject, field, optObj };
+    };
 
+    const handlePaste = async (event) => {
+      const textarea = event.target;
+      const { formObject, field, optObj } = getFormInfo(textarea);
+      if (!formObject || !field) return;
 
-const handlePaste = async (event) => {
-  const textarea = event.target;
-  const { formObject, field, optObj } = getFormInfo(textarea);
-  if (!formObject || !field) return;
+      const items = event.clipboardData.items;
+      for (let item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          await handleMarkdownImage(file, textarea, formObject, field, optObj);
+        }
+      }
+    };
 
-  const items = event.clipboardData.items;
-  for (let item of items) {
-    if (item.type.startsWith("image/")) {
-      const file = item.getAsFile();
-      await handleMarkdownImage(file, textarea, formObject, field, optObj);
-    }
-  }
-};
+    const handleDrop = async (event) => {
+      const textarea = event.target;
+      const { formObject, field, optObj } = getFormInfo(textarea);
+      if (!formObject || !field) return;
 
-const handleDrop = async (event) => {
-  const textarea = event.target;
-  const { formObject, field, optObj } = getFormInfo(textarea);
-  if (!formObject || !field) return;
+      const files = Array.from(event.dataTransfer.files);
+      for (let file of files) {
+        if (file.type.startsWith("image/")) {
+          await handleMarkdownImage(file, textarea, formObject, field, optObj);
+        }
+      }
+    };
 
-  const files = Array.from(event.dataTransfer.files);
-  for (let file of files) {
-    if (file.type.startsWith("image/")) {
-      await handleMarkdownImage(file, textarea, formObject, field, optObj);
-    }
-  }
-};
+    /**
+     * 处理 Markdown 图片上传
+     */
+    const handleMarkdownImage = async (file, textarea, formObject, field, optObj) => {
+      if (!file || !field || !formObject) return;
 
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert("文件过大", "图片大小不能超过5MB");
+        return;
+      }
 
-/**
- * 处理 Markdown 图片上传
- */
-const handleMarkdownImage = async (file, textarea, formObject, field, optObj) => {
-  if (!file || !field || !formObject) return;
+      try {
+        showAlert("上传中", "图片正在上传到图床...", "info");
 
-  if (file.size > 5 * 1024 * 1024) {
-    showAlert("文件过大", "图片大小不能超过5MB");
-    return;
-  }
+        const url = await uploadToImageBed(file);
 
-  try {
-    showAlert("上传中", "图片正在上传到图床...", "info");
+        insertImageMarkdown(url, textarea, formObject, field, optObj);
 
-    const url = await uploadToImageBed(file);
+        showAlert("上传成功", "图片已插入 Markdown", "success");
+      } catch (error) {
+        console.error("Markdown 图片上传失败:", error);
+        showAlert("上传失败", error.message);
+      }
+    };
 
-    insertImageMarkdown(url, textarea, formObject, field, optObj);
+    /**
+     * 插入 Markdown 图片
+     */
+    const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
 
-    showAlert("上传成功", "图片已插入 Markdown", "success");
-  } catch (error) {
-    console.error("Markdown 图片上传失败:", error);
-    showAlert("上传失败", error.message);
-  }
-};
+      const targetObj = optObj || formObject;
+      const oldText = targetObj[field] || "";
+      const markdown = `![image](${url})`;
 
+      targetObj[field] = oldText.slice(0, start) + markdown + oldText.slice(end);
 
-/**
- * 插入 Markdown 图片
- */
-const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-
-  const targetObj = optObj || formObject;
-  const oldText = targetObj[field] || "";
-  const markdown = `![image](${url})`;
-
-  targetObj[field] = oldText.slice(0, start) + markdown + oldText.slice(end);
-
-  textarea.setSelectionRange(start + markdown.length, start + markdown.length);
-};
+      textarea.setSelectionRange(start + markdown.length, start + markdown.length);
+    };
 
     // ==================== 记忆功能 ====================
     /**
@@ -6017,7 +6036,7 @@ const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
   border: none;
   border-bottom: 1px solid #dcdfe6;
   resize: vertical;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
 }
 
 .markdown-editor:focus {
@@ -6349,7 +6368,6 @@ const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
   max-height: 250px; /* 设置最大高度 */
   overflow-y: auto; /* 垂直滚动条 */
 }
-
 
 .image-cell {
   text-align: center; /* 居中对齐 */
@@ -7545,4 +7563,3 @@ const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
   }
 }
 </style>
-这是我的源码，现在我想让markdown编辑器支持上传图片，复制粘贴图片，应该如何修改
