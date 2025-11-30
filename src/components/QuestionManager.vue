@@ -133,16 +133,20 @@
         <!-- 题目内容输入区域 -->
         <div class="form-group">
           <label class="form-label required">题目内容：</label>
-          <!-- 富文本编辑器 -->
-          <div class="rich-text-editor-container">
-            <QuillEditor
-              ref="titleEditor"
-              v-model:content="form.title"
-              contentType="html"
-              :options="editorOptions"
-              placeholder="请输入题干，数学公式使用 $公式$ "
-              class="rich-text-editor"
-            />
+          <!-- Markdown 编辑器 -->
+          <div class="markdown-editor-container">
+            <textarea
+              v-model="form.title"
+              data-form="form"
+              data-field="title"
+              class="markdown-editor"
+              placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式"
+              @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+              rows="6"
+            ></textarea>
+            <div class="markdown-preview" v-html="renderMarkdown(form.title)"></div>
           </div>
         </div>
 
@@ -154,20 +158,22 @@
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
               <div class="option-input-container">
-                <!-- 选项富文本编辑器 -->
-                <div class="rich-text-editor-container small">
-                  <QuillEditor
-                    :ref="
-                      (el) => {
-                        optionEditors[index] = el;
-                      }
-                    "
-                    v-model:content="opt.text"
-                    contentType="html"
-                    :options="editorOptions"
+                <!-- 选项 Markdown 编辑器 -->
+                <div class="markdown-editor-container small">
+                  <textarea
+                    v-model="opt.text"
+                    data-form="form"
+  data-field="text"
+  :data-opt="index"
+                    class="markdown-editor option-editor"
                     :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                    class="rich-text-editor option-editor"
-                  />
+                   @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+
+                    rows="3"
+                  ></textarea>
+                  <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                 </div>
               </div>
               <div class="option-actions">
@@ -208,20 +214,22 @@
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
               <div class="option-input-container">
-                <!-- 选项富文本编辑器 -->
-                <div class="rich-text-editor-container small">
-                  <QuillEditor
-                    :ref="
-                      (el) => {
-                        optionEditors[index] = el;
-                      }
-                    "
-                    v-model:content="opt.text"
-                    contentType="html"
-                    :options="editorOptions"
+                <!-- 选项 Markdown 编辑器 -->
+                <div class="markdown-editor-container small">
+                  <textarea
+                    v-model="opt.text"
+                    data-form="form"
+  data-field="text"
+  :data-opt="index"
+                    class="markdown-editor option-editor"
                     :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                    class="rich-text-editor option-editor"
-                  />
+         @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+
+                    rows="3"
+                  ></textarea>
+                  <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                 </div>
               </div>
               <div class="option-actions">
@@ -254,32 +262,40 @@
         <!-- 主观题答案区域（在问题类别不是选择题时显示） -->
         <div v-if="showSubjectiveAnswer" class="form-group">
           <label class="form-label">参考答案：</label>
-          <!-- 富文本编辑器 -->
-          <div class="rich-text-editor-container">
-            <QuillEditor
-              ref="answerEditor"
-              v-model:content="form.answer"
-              contentType="html"
-              :options="editorOptions"
-              placeholder="请输入参考答案，数学公式使用 $公式$ "
-              class="rich-text-editor"
-            />
+          <!-- Markdown 编辑器 -->
+          <div class="markdown-editor-container">
+            <textarea
+              v-model="form.answer"
+              data-form="form"
+               data-field="answer"
+              class="markdown-editor"
+              placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式"
+               @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+              rows="6"
+            ></textarea>
+            <div class="markdown-preview" v-html="renderMarkdown(form.answer)"></div>
           </div>
         </div>
 
         <!-- 解析输入区域 -->
         <div class="form-group">
           <label class="form-label">解析：</label>
-          <!-- 富文本编辑器 -->
-          <div class="rich-text-editor-container">
-            <QuillEditor
-              ref="notesEditor"
-              v-model:content="form.notes"
-              contentType="html"
-              :options="editorOptions"
-              placeholder="请输入题目解析，数学公式使用 $公式$ "
-              class="rich-text-editor"
-            />
+          <!-- Markdown 编辑器 -->
+          <div class="markdown-editor-container">
+            <textarea
+              v-model="form.notes"
+              data-form="form"
+              data-field="notes"
+              class="markdown-editor"
+              placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式"
+              @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+              rows="6"
+            ></textarea>
+            <div class="markdown-preview" v-html="renderMarkdown(form.notes)"></div>
           </div>
         </div>
 
@@ -541,16 +557,20 @@
         <!-- 备注（remark） -->
         <div class="form-group">
           <label class="form-label">备注：</label>
-          <!-- 富文本编辑器 -->
-          <div class="rich-text-editor-container">
-            <QuillEditor
-              ref="remarkEditor"
-              v-model:content="form.remark"
-              contentType="html"
-              :options="editorOptions"
-              placeholder="请输入备注信息"
-              class="rich-text-editor"
-            />
+          <!-- Markdown 编辑器 -->
+          <div class="markdown-editor-container">
+            <textarea
+              v-model="form.remark"
+              data-form="form"
+              data-field="remark"
+              class="markdown-editor"
+              placeholder="请输入备注信息，支持 Markdown 语法"
+              @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+              rows="4"
+            ></textarea>
+            <div class="markdown-preview" v-html="renderMarkdown(form.remark)"></div>
           </div>
         </div>
 
@@ -927,9 +947,9 @@
               </div>
               <div class="table-cell">{{ q.difficulty_level }}星</div>
               <!-- 题目内容单元格-->
-              <div class="table-cell title-cell" v-html="q.title"></div>
+              <div class="table-cell title-cell" v-html="renderMarkdown(q.title)"></div>
               <!-- 备注 -->
-              <div class="table-cell title-cell" v-html="q.remark"></div>
+              <div class="table-cell title-cell" v-html="renderMarkdown(q.remark)"></div>
               <!-- 图片预览单元格 -->
               <div class="table-cell image-cell">
                 <img
@@ -1372,16 +1392,20 @@
           <!-- 题目内容 -->
           <div class="form-group">
             <label class="form-label required">题目内容：</label>
-            <!-- 富文本编辑器 -->
-            <div class="rich-text-editor-container">
-              <QuillEditor
-                ref="updateTitleEditor"
-                v-model:content="updateForm.title"
-                contentType="html"
-                :options="editorOptions"
-                placeholder="请输入题干，数学公式使用 $公式$ "
-                class="rich-text-editor"
-              />
+            <!-- Markdown 编辑器 -->
+            <div class="markdown-editor-container">
+              <textarea
+                v-model="updateForm.title"
+                data-form="updateForm"
+                data-field="title"
+                class="markdown-editor"
+                placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式"
+                @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+                rows="6"
+              ></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.title)"></div>
             </div>
           </div>
 
@@ -1396,20 +1420,21 @@
               >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
                 <div class="option-input-container">
-                  <!-- 选项富文本编辑器 -->
-                  <div class="rich-text-editor-container small">
-                    <QuillEditor
-                      :ref="
-                        (el) => {
-                          updateOptionEditors[index] = el;
-                        }
-                      "
-                      v-model:content="opt.text"
-                      contentType="html"
-                      :options="editorOptions"
+                  <!-- 选项 Markdown 编辑器 -->
+                  <div class="markdown-editor-container small">
+                    <textarea
+                      v-model="opt.text"
+                      data-form="updateForm"
+  data-field="text"
+  :data-opt="index"
+                      class="markdown-editor option-editor"
                       :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                      class="rich-text-editor option-editor"
-                    />
+                      @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+                      rows="3"
+                    ></textarea>
+                    <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                   </div>
                 </div>
                 <div class="option-actions">
@@ -1455,20 +1480,22 @@
               >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
                 <div class="option-input-container">
-                  <!-- 选项富文本编辑器 -->
-                  <div class="rich-text-editor-container small">
-                    <QuillEditor
-                      :ref="
-                        (el) => {
-                          updateOptionEditors[index] = el;
-                        }
-                      "
-                      v-model:content="opt.text"
-                      contentType="html"
-                      :options="editorOptions"
+                  <!-- 选项 Markdown 编辑器 -->
+                  <div class="markdown-editor-container small">
+                    <textarea
+                      v-model="opt.text"
+                      data-form="updateForm"
+  data-field="text"
+  :data-opt="index"
+                      class="markdown-editor option-editor"
                       :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                      class="rich-text-editor option-editor"
-                    />
+                     @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+
+                      rows="3"
+                    ></textarea>
+                    <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                   </div>
                 </div>
                 <div class="option-actions">
@@ -1503,48 +1530,60 @@
           <!-- 主观题答案区域 -->
           <div v-if="showUpdateSubjectiveAnswer" class="form-group">
             <label class="form-label">参考答案：</label>
-            <!-- 富文本编辑器 -->
-            <div class="rich-text-editor-container">
-              <QuillEditor
-                ref="updateAnswerEditor"
-                v-model:content="updateForm.answer"
-                contentType="html"
-                :options="editorOptions"
-                placeholder="请输入参考答案，数学公式使用 $公式$ "
-                class="rich-text-editor"
-              />
+            <!-- Markdown 编辑器 -->
+            <div class="markdown-editor-container">
+              <textarea
+                v-model="updateForm.answer"
+                data-form="updateForm"
+                 data-field="answer"
+                class="markdown-editor"
+                placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式"
+                 @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+                rows="6"
+              ></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.answer)"></div>
             </div>
           </div>
 
           <!-- 解析 -->
           <div class="form-group">
             <label class="form-label">解析：</label>
-            <!-- 富文本编辑器 -->
-            <div class="rich-text-editor-container">
-              <QuillEditor
-                ref="updateNotesEditor"
-                v-model:content="updateForm.notes"
-                contentType="html"
-                :options="editorOptions"
-                placeholder="请输入题目解析，数学公式使用 $公式$ "
-                class="rich-text-editor"
-              />
+            <!-- Markdown 编辑器 -->
+            <div class="markdown-editor-container">
+              <textarea
+                v-model="updateForm.notes"
+                data-form="updateForm"
+                data-field="notes"
+                class="markdown-editor"
+                placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式"
+                 @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+                rows="6"
+              ></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.notes)"></div>
             </div>
           </div>
 
           <!-- 备注（更新表单） -->
           <div class="form-group">
             <label class="form-label">备注：</label>
-            <!-- 富文本编辑器 -->
-            <div class="rich-text-editor-container">
-              <QuillEditor
-                ref="updateRemarkEditor"
-                v-model:content="updateForm.remark"
-                contentType="html"
-                :options="editorOptions"
-                placeholder="请输入备注信息"
-                class="rich-text-editor"
-              />
+            <!-- Markdown 编辑器 -->
+            <div class="markdown-editor-container">
+              <textarea
+                v-model="updateForm.remark"
+                data-form="updateForm"
+                data-field="remark"
+                class="markdown-editor"
+                placeholder="请输入备注信息，支持 Markdown 语法"
+                @paste="handlePaste"
+  @drop.prevent="handleDrop"
+  @dragover.prevent
+                rows="4"
+              ></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.remark)"></div>
             </div>
           </div>
 
@@ -1658,7 +1697,7 @@
           <!-- 题目内容 -->
           <div class="preview-section">
             <h4>题目内容</h4>
-            <div class="preview-text-content" v-html="getPreviewTitle()"></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewTitle())"></div>
             <div v-if="getPreviewImageUrl()" class="preview-image">
               <img :src="getPreviewImageUrl()" alt="题目图片" class="preview-img" />
             </div>
@@ -1675,7 +1714,7 @@
                 :class="{ 'correct-answer': isPreviewOptionCorrect(index) }"
               >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
-                <span class="option-text" v-html="opt.text"></span>
+                <span class="option-text" v-html="renderMarkdown(opt.text)"></span>
                 <span v-if="isPreviewOptionCorrect(index)" class="correct-badge"
                   >正确答案</span
                 >
@@ -1686,13 +1725,13 @@
           <!-- 答案（主观题） -->
           <div v-if="showPreviewSubjectiveAnswer()" class="preview-section">
             <h4>参考答案</h4>
-            <div class="preview-text-content" v-html="getPreviewAnswer()"></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewAnswer())"></div>
           </div>
 
           <!-- 解析 -->
           <div v-if="getPreviewNotes()" class="preview-section">
             <h4>解析</h4>
-            <div class="preview-text-content" v-html="getPreviewNotes()"></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewNotes())"></div>
             <div v-if="getPreviewNotesImageUrl()" class="preview-image">
               <img :src="getPreviewNotesImageUrl()" alt="解析图片" class="preview-img" />
             </div>
@@ -1701,7 +1740,7 @@
           <!-- 备注 -->
           <div v-if="getPreviewRemark()" class="preview-section">
             <h4>备注</h4>
-            <div class="preview-text-content" v-html="getPreviewRemark()"></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewRemark())"></div>
           </div>
         </div>
 
@@ -1737,7 +1776,7 @@
                 </div>
                 <div
                   class="dependent-question-content"
-                  v-html="q.title"
+                  v-html="renderMarkdown(q.title)"
                 ></div>
                 <div class="dependent-question-actions">
                   <button @click="deleteDependentQuestion(q)" class="btn-delete">
@@ -1976,7 +2015,7 @@
                       getQuestionCategoryName(q.question_category_id)
                     }}</span>
                   </div>
-                  <div class="affected-question-content" v-html="q.title"></div>
+                  <div class="affected-question-content" v-html="renderMarkdown(q.title)"></div>
                   <div class="affected-question-meta">
                     <span
                       >当前知识点: {{ getKnowledgePointName(q.knowledge_point_id) }}</span
@@ -2007,125 +2046,62 @@ import { reactive, ref, onMounted, computed, watchEffect, nextTick, watch } from
 import axios from "axios";
 import { useRouter } from "vue-router";
 
-// 导入富文本编辑器
-import { QuillEditor } from "@vueup/vue-quill";
-import "@vueup/vue-quill/dist/vue-quill.snow.css";
+// 导入 Markdown 渲染相关
+import { marked } from 'marked';
 import katex from "katex";
 import "katex/dist/katex.min.css";
+
 // 从环境变量获取API基础URL
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+// 配置 marked 以支持 LaTeX
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+  sanitize: false, // 允许 HTML
+});
+
 export default {
-  components: {
-    QuillEditor,
-  },
   setup() {
     const router = useRouter();
 
-    // ==================== 富文本编辑器配置 ====================
-    const editorOptions = ref({
-      modules: {
-        toolbar: {
-          container: [
-            ["bold", "italic", "underline", "strike"],
-            ["blockquote", "code-block"],
-            [{ header: 1 }, { header: 2 }],
-            [{ list: "ordered" }, { list: "bullet" }],
-            [{ script: "sub" }, { script: "super" }],
-            [{ indent: "-1" }, { indent: "+1" }],
-            [{ direction: "rtl" }],
-            [{ size: ["small", false, "large", "huge"] }],
-            [{ header: [1, 2, 3, 4, 5, 6, false] }],
-            [{ color: [] }, { background: [] }],
-            [{ font: [] }],
-            [{ align: [] }],
-            ["clean"],
-            ["link", "image", "video"],
-            ["formula"],
-          ],
-          handlers: {
-            // 重写图片处理逻辑
-            image: function () {
-              // 创建文件输入元素
-              const input = document.createElement("input");
-              input.setAttribute("type", "file");
-              input.setAttribute("accept", "image/*");
-              input.style.display = "none";
-              document.body.appendChild(input);
+    // ==================== Markdown 渲染函数 ====================
+    /**
+     * 渲染 Markdown 文本为 HTML
+     * @param {string} text - Markdown 文本
+     * @returns {string} 渲染后的 HTML
+     */
+    const renderMarkdown = (text) => {
+      if (!text) return '';
+      
+      // 预处理 LaTeX 公式
+      const processedText = text
+        // 处理行内公式 $...$
+        .replace(/\$(.+?)\$/g, (match, formula) => {
+          try {
+            return katex.renderToString(formula, {
+              displayMode: false,
+              throwOnError: false
+            });
+          } catch (error) {
+            return match; // 如果渲染失败，返回原公式
+          }
+        })
+        // 处理块级公式 $$...$$
+        .replace(/\$\$(.+?)\$\$/g, (match, formula) => {
+          try {
+            return katex.renderToString(formula, {
+              displayMode: true,
+              throwOnError: false
+            });
+          } catch (error) {
+            return match; // 如果渲染失败，返回原公式
+          }
+        });
 
-              input.addEventListener("change", async () => {
-                const file = input.files[0];
-                if (file) {
-                  // 验证文件类型
-                  if (!file.type.startsWith("image/")) {
-                    showAlert("文件错误", "请选择图片文件");
-                    document.body.removeChild(input);
-                    return;
-                  }
-
-                  // 验证文件大小（5MB限制）
-                  if (file.size > 5 * 1024 * 1024) {
-                    showAlert("文件过大", "图片大小不能超过5MB");
-                    document.body.removeChild(input);
-                    return;
-                  }
-
-                  try {
-                    // 显示上传中提示
-                    showAlert("上传中", "图片正在上传到图床...");
-
-                    // 上传图片到图床
-                    const imageUrl = await uploadToImageBed(file);
-
-                    // 获取当前编辑器实例和光标位置
-                    const quill = this.quill;
-                    const range = quill.getSelection();
-
-                    if (range) {
-                      // 在光标位置插入图片
-                      quill.insertEmbed(range.index, "image", imageUrl);
-                      showAlert("上传成功", "图片已上传并插入到编辑器中");
-                    } else {
-                      // 如果没有选中范围，在末尾插入
-                      quill.insertEmbed(quill.getLength(), "image", imageUrl);
-                      showAlert("上传成功", "图片已上传并插入到编辑器中");
-                    }
-                  } catch (error) {
-                    console.error("图片上传失败:", error);
-                    showAlert("上传失败", error.message);
-                  }
-                }
-                // 移除输入元素
-                document.body.removeChild(input);
-              });
-
-              // 触发文件选择
-              input.click();
-            },
-            formula() {
-              const latex = prompt("请输入 LaTeX：例如 x^2+1");
-              if (latex) {
-                const cursor = this.quill.getSelection(true);
-                this.quill.insertText(cursor.index, `$${latex}$`);
-              }
-            },
-          },
-        },
-      },
-      placeholder: "请输入内容...",
-    });
-    // 编辑器引用
-    const titleEditor = ref(null);
-    const answerEditor = ref(null);
-    const notesEditor = ref(null);
-    const remarkEditor = ref(null);
-    const optionEditors = ref([]);
-
-    const updateTitleEditor = ref(null);
-    const updateAnswerEditor = ref(null);
-    const updateNotesEditor = ref(null);
-    const updateRemarkEditor = ref(null);
-    const updateOptionEditors = ref([]);
+      // 渲染 Markdown
+      return marked(processedText);
+    };
 
     // ==================== 合并知识点相关状态 ====================
     const showMergeKnowledgeModal = ref(false); // 合并知识点模态框显示状态
@@ -2422,246 +2398,6 @@ export default {
     const totalPages = ref(1); // 总页数
     const totalItems = ref(0); // 总条目数
     const pageInput = ref(1); // 页码输入
-
-    function walkTextNodes(node, callback) {
-  if (node.nodeType === Node.TEXT_NODE) {
-    callback(node);
-  } else {
-    node.childNodes.forEach(n => walkTextNodes(n, callback));
-  }
-}
-function renderLatexInQuill(editorEl) {
-  if (!editorEl) return;
-
-  const textNodes = [];
-  walkTextNodes(editorEl, node => textNodes.push(node));
-
-  textNodes.forEach(textNode => {
-    const text = textNode.textContent;
-    if (!/(\${1,2})(.+?)\1/.test(text)) return;
-
-    const span = document.createElement("span");
-    span.innerHTML = text
-      .replace(/\$\$(.+?)\$\$/gs, (_, f) => katex.renderToString(f, { displayMode: true }))
-      .replace(/\$(.+?)\$/g, (_, f) => katex.renderToString(f, { displayMode: false }));
-
-    textNode.replaceWith(span);
-  });
-}
-function renderLatexInHtml(rootEl) {
-  if (!rootEl) return;
-
-  const textNodes = [];
-  walkTextNodes(rootEl, node => textNodes.push(node));
-
-  textNodes.forEach(textNode => {
-    const text = textNode.textContent;
-    if (!/(\${1,2})(.+?)\1/.test(text)) return;
-
-    const span = document.createElement("span");
-    span.innerHTML = text
-      .replace(/\$\$(.+?)\$\$/gs, (_, f) => katex.renderToString(f, { displayMode: true }))
-      .replace(/\$(.+?)\$/g, (_, f) => katex.renderToString(f, { displayMode: false }));
-
-    textNode.replaceWith(span);
-  });
-}
-
-function renderEditors() {
-  nextTick(() => {
-    document.querySelectorAll(".ql-editor").forEach(renderLatexInQuill);
-  });
-}
-watch(() => form, renderEditors, { deep: true });
-watch(() => updateForm, renderEditors, { deep: true });
-watch(questionList, () => {
-  nextTick(() => {
-    document.querySelectorAll(".title-cell, .remark-cell").forEach(renderLatexInHtml);
-  });
-}, { deep: true });
-
-watch(affectedQuestions, () => {
-  nextTick(() => {
-    document.querySelectorAll(".affected-question-content").forEach(renderLatexInHtml);
-  });
-}, { deep: true });
-
-watch(dependentQuestions, () => {
-  nextTick(() => {
-    document.querySelectorAll(".dependent-question-content").forEach(renderLatexInHtml);
-  });
-}, { deep: true });
-
-
-
-    // ==================== 图片粘贴处理函数 ====================
-    /**
-     * 处理题目内容粘贴事件
-     * @param {Event} event - 粘贴事件
-     */
-    const handleTitlePaste = async (event) => {
-      await handlePaste(event, "title");
-    };
-
-    /**
-     * 处理解析粘贴事件
-     * @param {Event} event - 粘贴事件
-     */
-    const handleNotesPaste = async (event) => {
-      await handlePaste(event, "notes");
-    };
-
-    /**
-     * 处理更新界面题目内容粘贴事件
-     * @param {Event} event - 粘贴事件
-     */
-    const handleUpdateTitlePaste = async (event) => {
-      await handlePaste(event, "updateTitle");
-    };
-
-    /**
-     * 处理更新界面解析粘贴事件
-     * @param {Event} event - 粘贴事件
-     */
-    const handleUpdateNotesPaste = async (event) => {
-      await handlePaste(event, "updateNotes");
-    };
-
-    /**
-     * 通用粘贴处理函数
-     * @param {Event} event - 粘贴事件
-     * @param {string} type - 类型：title, notes, updateTitle, updateNotes
-     */
-    const handlePaste = async (event, type) => {
-      const clipboardData = event.clipboardData || window.clipboardData;
-      if (!clipboardData) return;
-
-      // 检查是否有图片数据
-      const items = clipboardData.items;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image") !== -1) {
-          event.preventDefault(); // 阻止默认粘贴行为
-
-          const file = items[i].getAsFile();
-          if (!file) return;
-
-          // 验证文件类型
-          if (!file.type.startsWith("image/")) {
-            showAlert("文件错误", "请粘贴图片文件");
-            return;
-          }
-
-          // 验证文件大小（5MB限制）
-          if (file.size > 5 * 1024 * 1024) {
-            showAlert("文件过大", "图片大小不能超过5MB");
-            return;
-          }
-
-          try {
-            // 创建对象URL用于预览
-            const previewUrl = URL.createObjectURL(file);
-
-            // 根据类型设置对应的图片URL和待上传文件
-            switch (type) {
-              case "title":
-                form.img_url = previewUrl;
-                pendingImageFile.value = file;
-                break;
-              case "notes":
-                form.notes_img_url = previewUrl;
-                pendingNotesImageFile.value = file;
-                break;
-              case "updateTitle":
-                updateForm.img_url = previewUrl;
-                pendingUpdateImageFile.value = file;
-                break;
-              case "updateNotes":
-                updateForm.notes_img_url = previewUrl;
-                pendingUpdateNotesImageFile.value = file;
-                break;
-            }
-
-            showAlert("粘贴成功", "图片已粘贴，将在提交时上传");
-          } catch (error) {
-            console.error("粘贴图片失败:", error);
-            showAlert("粘贴失败", "图片粘贴失败");
-          }
-          break;
-        }
-      }
-    };
-
-    // ==================== 解析图片上传处理 ====================
-    /**
-     * 处理解析图片上传
-     * @param {Event} event - 文件输入事件
-     */
-    const handleNotesImageUpload = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      // 验证文件类型
-      if (!file.type.startsWith("image/")) {
-        showAlert("文件错误", "请选择图片文件");
-        return;
-      }
-
-      // 验证文件大小（5MB限制）
-      if (file.size > 5 * 1024 * 1024) {
-        showAlert("文件过大", "图片大小不能超过5MB");
-        return;
-      }
-
-      // 创建对象URL用于预览
-      const previewUrl = URL.createObjectURL(file);
-      form.notes_img_url = previewUrl;
-      pendingNotesImageFile.value = file;
-      event.target.value = ""; // 重置文件输入
-
-      // 显示上传中状态
-      showAlert("上传中", "解析图片正在上传...", "info");
-    };
-
-    /**
-     * 处理更新界面解析图片上传
-     * @param {Event} event - 文件输入事件
-     */
-    const handleUpdateNotesImageUpload = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      if (!file.type.startsWith("image/")) {
-        showAlert("文件错误", "请选择图片文件");
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        showAlert("文件过大", "图片大小不能超过5MB");
-        return;
-      }
-
-      // 创建对象URL用于预览
-      const previewUrl = URL.createObjectURL(file);
-      updateForm.notes_img_url = previewUrl;
-      pendingUpdateNotesImageFile.value = file; // 保存文件，等待确认上传
-      event.target.value = "";
-    };
-
-    /**
-     * 移除解析图片
-     */
-    const removeNotesImage = () => {
-      form.notes_img_url = "";
-      pendingNotesImageFile.value = null;
-    };
-
-    /**
-     * 移除更新界面解析图片
-     */
-    const removeUpdateNotesImage = () => {
-      updateForm.notes_img_url = "";
-      pendingUpdateNotesImageFile.value = null;
-    };
 
     // ==================== 删除实体相关方法 ====================
     /**
@@ -4151,6 +3887,94 @@ watch(dependentQuestions, () => {
         return false;
       }
     };
+   /**
+ * 获取 textarea 对应字段和表单对象
+ * 这里通过 data-form="form" 或 data-form="updateForm" 来区分
+ */
+const getFormInfo = (textarea) => {
+  const formName = textarea.dataset.form;
+  const field = textarea.dataset.field;
+  const optIndex = textarea.dataset.opt;
+
+  const formObject = formName === "updateForm" ? updateForm : form;
+
+  const optObj = optIndex !== undefined 
+    ? formObject.options[optIndex]
+    : null;
+
+  return { formObject, field, optObj };
+};
+
+
+const handlePaste = async (event) => {
+  const textarea = event.target;
+  const { formObject, field, optObj } = getFormInfo(textarea);
+  if (!formObject || !field) return;
+
+  const items = event.clipboardData.items;
+  for (let item of items) {
+    if (item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      await handleMarkdownImage(file, textarea, formObject, field, optObj);
+    }
+  }
+};
+
+const handleDrop = async (event) => {
+  const textarea = event.target;
+  const { formObject, field, optObj } = getFormInfo(textarea);
+  if (!formObject || !field) return;
+
+  const files = Array.from(event.dataTransfer.files);
+  for (let file of files) {
+    if (file.type.startsWith("image/")) {
+      await handleMarkdownImage(file, textarea, formObject, field, optObj);
+    }
+  }
+};
+
+
+/**
+ * 处理 Markdown 图片上传
+ */
+const handleMarkdownImage = async (file, textarea, formObject, field, optObj) => {
+  if (!file || !field || !formObject) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    showAlert("文件过大", "图片大小不能超过5MB");
+    return;
+  }
+
+  try {
+    showAlert("上传中", "图片正在上传到图床...", "info");
+
+    const url = await uploadToImageBed(file);
+
+    insertImageMarkdown(url, textarea, formObject, field, optObj);
+
+    showAlert("上传成功", "图片已插入 Markdown", "success");
+  } catch (error) {
+    console.error("Markdown 图片上传失败:", error);
+    showAlert("上传失败", error.message);
+  }
+};
+
+
+/**
+ * 插入 Markdown 图片
+ */
+const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  const targetObj = optObj || formObject;
+  const oldText = targetObj[field] || "";
+  const markdown = `![image](${url})`;
+
+  targetObj[field] = oldText.slice(0, start) + markdown + oldText.slice(end);
+
+  textarea.setSelectionRange(start + markdown.length, start + markdown.length);
+};
 
     // ==================== 记忆功能 ====================
     /**
@@ -5844,14 +5668,6 @@ watch(dependentQuestions, () => {
       handleUpdateImageUpload,
       removeImage,
       removeUpdateImage,
-      handleNotesImageUpload,
-      handleUpdateNotesImageUpload,
-      removeNotesImage,
-      removeUpdateNotesImage,
-      handleTitlePaste,
-      handleNotesPaste,
-      handleUpdateTitlePaste,
-      handleUpdateNotesPaste,
 
       // 搜索关键词
       knowledgeSearch,
@@ -6040,6 +5856,12 @@ watch(dependentQuestions, () => {
       showImagePreview,
       previewImageUrl,
 
+      //图片上传
+      handlePaste,
+      handleDrop,
+      handleMarkdownImage,
+      insertImageMarkdown,
+
       // 退出登录
       handleLogout,
       confirmLogout,
@@ -6159,18 +5981,8 @@ watch(dependentQuestions, () => {
       goToAffectedPage,
       loadAffectedQuestions,
 
-      // 富文本编辑器相关
-      editorOptions,
-      titleEditor,
-      answerEditor,
-      notesEditor,
-      remarkEditor,
-      optionEditors,
-      updateTitleEditor,
-      updateAnswerEditor,
-      updateNotesEditor,
-      updateRemarkEditor,
-      updateOptionEditors,
+      // Markdown 渲染函数
+      renderMarkdown,
     };
   },
 };
@@ -6186,101 +5998,58 @@ watch(dependentQuestions, () => {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; /* 字体栈，优先使用系统字体 */
 }
 
-/* ==================== 富文本编辑器样式 ==================== */
-/* 容器样式 */
-.rich-text-editor-container {
+/* ==================== Markdown 编辑器样式 ==================== */
+.markdown-editor-container {
   margin-bottom: 10px;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   overflow: hidden;
   background-color: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 小编辑器（选项） */
-.rich-text-editor-container.small {
-  max-height: 120px;
-  overflow-y: auto;
-}
-
-/* 编辑器主体 */
-.rich-text-editor {
+.markdown-editor {
   min-height: 180px;
   font-size: 14px;
   line-height: 1.6;
-  padding: 8px;
-  border: none; /* 容器已经有边框 */
-}
-
-/* 小编辑器高度 */
-.rich-text-editor.option-editor {
-  min-height: 80px;
-}
-
-/* 工具栏 */
-:deep(.ql-toolbar) {
-  border-bottom: 1px solid #dcdfe6;
-  background: #f8f9fa;
-  padding: 4px;
-  display: flex;
-  flex-wrap: wrap;
-}
-
-:deep(.ql-toolbar .ql-formats) {
-  margin-right: 4px;
-}
-
-:deep(.ql-toolbar button),
-:deep(.ql-toolbar select) {
-  padding: 2px 4px;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-/* 编辑器内容区 */
-:deep(.ql-editor) {
-  min-height: 150px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* 空内容提示 */
-:deep(.ql-editor.ql-blank::before) {
-  content: attr(data-placeholder);
-  color: #c0c4cc;
-  font-style: italic;
-}
-
-/* 列表、引用、代码块 */
-:deep(.ql-editor ul),
-:deep(.ql-editor ol) {
-  padding-left: 20px;
-}
-
-:deep(.ql-editor blockquote) {
-  border-left: 4px solid #ccc;
-  margin: 10px 0;
-  padding-left: 16px;
-  color: #666;
-}
-
-:deep(.ql-editor pre.ql-syntax) {
-  background-color: #23241f;
-  color: #f8f8f2;
   padding: 12px;
-  border-radius: 3px;
-  overflow-x: auto;
+  border: none;
+  border-bottom: 1px solid #dcdfe6;
+  resize: vertical;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
-/* 弹出框 / picker */
-:deep(.ql-tooltip),
-:deep(.ql-picker-options) {
-  position: absolute;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  padding: 2px 100px;
+.markdown-editor:focus {
+  outline: none;
+  border-color: #409eff;
+}
+
+.markdown-preview {
+  padding: 12px;
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+/* 小编辑器（选项） */
+.markdown-editor-container.small .markdown-editor {
+  min-height: 80px;
+  font-size: 13px;
+}
+
+.markdown-editor-container.small .markdown-preview {
+  min-height: 60px;
+  max-height: 120px;
+  font-size: 13px;
+}
+
+/* 选项编辑器 */
+.markdown-editor.option-editor {
+  min-height: 60px;
+  font-size: 13px;
 }
 
 /* ==================== 模式选择器样式 ==================== */
@@ -7762,30 +7531,18 @@ watch(dependentQuestions, () => {
     gap: 5px;
   }
 
-  /* 富文本编辑器在小屏幕上的适配 */
-  .rich-text-editor-container {
+  /* Markdown 编辑器在小屏幕上的适配 */
+  .markdown-editor-container {
     margin-bottom: 8px;
   }
 
-  .rich-text-editor {
+  .markdown-editor {
     height: 150px;
   }
 
-  .rich-text-editor.option-editor {
+  .markdown-editor.option-editor {
     height: 80px;
-  }
-
-  :deep(.ql-toolbar) {
-    padding: 4px;
-  }
-
-  :deep(.ql-toolbar .ql-formats) {
-    margin-right: 4px;
-  }
-
-  :deep(.ql-toolbar button) {
-    padding: 2px 4px;
   }
 }
 </style>
-这是我的源码，我希望在检索结表格中，预览题目框中，如果题目内容，解析，备注，选项内容，参考答案过长时，可以够滚动条
+这是我的源码，现在我想让markdown编辑器支持上传图片，复制粘贴图片，应该如何修改
