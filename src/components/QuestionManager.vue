@@ -133,53 +133,16 @@
         <!-- 题目内容输入区域 -->
         <div class="form-group">
           <label class="form-label required">题目内容：</label>
-          <!-- 题目内容文本域 -->
-          <textarea
-            v-model="form.title"
-            placeholder="请输入题干，数学公式使用 $公式$ "
-            class="form-textarea"
-            rows="3"
-            @input="renderMathPreview('title', form.title)"
-            @paste="handleTitlePaste"
-            required
-          ></textarea>
-          <!-- 数学公式预览 -->
-          <div class="math-preview" v-html="titlePreview"></div>
-
-          <!-- 图片上传区域 -->
-          <div class="image-upload-section">
-            <label class="form-label">题干图片：</label>
-            <div class="upload-controls">
-              <!-- 文件输入（隐藏） -->
-              <input
-                type="file"
-                @change="handleImageUpload"
-                accept="image/*"
-                class="file-input"
-                ref="fileInput"
-              />
-              <!-- 触发文件选择的按钮 -->
-              <button
-                type="button"
-                @click="$refs.fileInput.click()"
-                class="btn-secondary"
-              >
-                选择图片
-              </button>
-              <span class="upload-tip">或使用 Ctrl+V 在题目内容区域粘贴图片</span>
-            </div>
-            <!-- 图片预览 -->
-            <div v-if="form.img_url" class="image-preview">
-              <img
-                :src="form.img_url"
-                alt="预览"
-                class="preview-image"
-                @click="previewImage(form.img_url)"
-              />
-              <button type="button" @click="removeImage" class="btn-remove">
-                移除图片
-              </button>
-            </div>
+          <!-- 富文本编辑器 -->
+          <div class="rich-text-editor-container">
+            <QuillEditor
+              ref="titleEditor"
+              v-model:content="form.title"
+              contentType="html"
+              :options="editorOptions"
+              placeholder="请输入题干，数学公式使用 $公式$ "
+              class="rich-text-editor"
+            />
           </div>
         </div>
 
@@ -191,16 +154,21 @@
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
               <div class="option-input-container">
-                <!-- 选项文本输入 -->
-                <input
-                  type="text"
-                  v-model="opt.text"
-                  :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                  class="form-input option-input"
-                  @input="renderOptionPreview(index, opt.text)"
-                />
-                <!-- 选项数学公式预览 -->
-                <div class="math-preview small" v-html="optionPreviews[index]"></div>
+                <!-- 选项富文本编辑器 -->
+                <div class="rich-text-editor-container small">
+                  <QuillEditor
+                    :ref="
+                      (el) => {
+                        optionEditors[index] = el;
+                      }
+                    "
+                    v-model:content="opt.text"
+                    contentType="html"
+                    :options="editorOptions"
+                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                    class="rich-text-editor option-editor"
+                  />
+                </div>
               </div>
               <div class="option-actions">
                 <!-- 单选题正确答案选择 -->
@@ -240,16 +208,21 @@
             <div v-for="(opt, index) in form.options" :key="index" class="option-item">
               <span class="option-label">{{ getOptionLabel(index) }}.</span>
               <div class="option-input-container">
-                <!-- 选项文本输入 -->
-                <input
-                  type="text"
-                  v-model="opt.text"
-                  :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                  class="form-input option-input"
-                  @input="renderOptionPreview(index, opt.text)"
-                />
-                <!-- 选项数学公式预览 -->
-                <div class="math-preview small" v-html="optionPreviews[index]"></div>
+                <!-- 选项富文本编辑器 -->
+                <div class="rich-text-editor-container small">
+                  <QuillEditor
+                    :ref="
+                      (el) => {
+                        optionEditors[index] = el;
+                      }
+                    "
+                    v-model:content="opt.text"
+                    contentType="html"
+                    :options="editorOptions"
+                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                    class="rich-text-editor option-editor"
+                  />
+                </div>
               </div>
               <div class="option-actions">
                 <!-- 多选题正确答案选择 -->
@@ -281,64 +254,32 @@
         <!-- 主观题答案区域（在问题类别不是选择题时显示） -->
         <div v-if="showSubjectiveAnswer" class="form-group">
           <label class="form-label">参考答案：</label>
-          <textarea
-            v-model="form.answer"
-            placeholder="请输入参考答案，数学公式使用 $公式$ "
-            class="form-textarea"
-            rows="4"
-            @input="renderMathPreview('answer', form.answer)"
-            required
-          ></textarea>
-          <div class="math-preview" v-html="answerPreview"></div>
+          <!-- 富文本编辑器 -->
+          <div class="rich-text-editor-container">
+            <QuillEditor
+              ref="answerEditor"
+              v-model:content="form.answer"
+              contentType="html"
+              :options="editorOptions"
+              placeholder="请输入参考答案，数学公式使用 $公式$ "
+              class="rich-text-editor"
+            />
+          </div>
         </div>
 
         <!-- 解析输入区域 -->
         <div class="form-group">
           <label class="form-label">解析：</label>
-          <textarea
-            v-model="form.notes"
-            placeholder="请输入题目解析，数学公式使用 $公式$ "
-            class="form-textarea"
-            rows="3"
-            @input="renderMathPreview('notes', form.notes)"
-            @paste="handleNotesPaste"
-          ></textarea>
-          <div class="math-preview" v-html="notesPreview"></div>
-
-          <!-- 解析图片上传区域 -->
-          <div class="image-upload-section">
-            <label class="form-label">解析图片：</label>
-            <div class="upload-controls">
-              <!-- 文件输入（隐藏） -->
-              <input
-                type="file"
-                @change="handleNotesImageUpload"
-                accept="image/*"
-                class="file-input"
-                ref="notesFileInput"
-              />
-              <!-- 触发文件选择的按钮 -->
-              <button
-                type="button"
-                @click="$refs.notesFileInput.click()"
-                class="btn-secondary"
-              >
-                选择图片
-              </button>
-              <span class="upload-tip">或使用 Ctrl+V 粘贴图片</span>
-            </div>
-            <!-- 图片预览 -->
-            <div v-if="form.notes_img_url" class="image-preview">
-              <img
-                :src="form.notes_img_url"
-                alt="预览"
-                class="preview-image"
-                @click="previewImage(form.notes_img_url)"
-              />
-              <button type="button" @click="removeNotesImage" class="btn-remove">
-                移除图片
-              </button>
-            </div>
+          <!-- 富文本编辑器 -->
+          <div class="rich-text-editor-container">
+            <QuillEditor
+              ref="notesEditor"
+              v-model:content="form.notes"
+              contentType="html"
+              :options="editorOptions"
+              placeholder="请输入题目解析，数学公式使用 $公式$ "
+              class="rich-text-editor"
+            />
           </div>
         </div>
 
@@ -417,7 +358,11 @@
             </button>
             <!-- 合并知识点按钮 -->
             <div>
-              <button @click="openMergeKnowledgeModal" class="btn-highlight">
+              <button
+                type="button"
+                @click="openMergeKnowledgeModal"
+                class="btn-highlight"
+              >
                 合并知识点
               </button>
             </div>
@@ -596,14 +541,17 @@
         <!-- 备注（remark） -->
         <div class="form-group">
           <label class="form-label">备注：</label>
-          <textarea
-            v-model="form.remark"
-            placeholder="请输入备注信息，数学公式使用 $公式$"
-            class="form-textarea"
-            rows="3"
-            @input="renderMathPreview('remark', form.remark)"
-          ></textarea>
-          <div class="math-preview" v-html="remarkPreview"></div>
+          <!-- 富文本编辑器 -->
+          <div class="rich-text-editor-container">
+            <QuillEditor
+              ref="remarkEditor"
+              v-model:content="form.remark"
+              contentType="html"
+              :options="editorOptions"
+              placeholder="请输入备注信息"
+              class="rich-text-editor"
+            />
+          </div>
         </div>
 
         <!-- 提交按钮 -->
@@ -915,60 +863,6 @@
       <!-- 检索结果区域 -->
       <div v-if="questionList.length" class="search-results">
         <h3>检索结果 (共 {{ totalItems }} 条)</h3>
-        <!-- 分页控件 -->
-        <div class="pagination-controls">
-          <!-- 首页按钮 -->
-          <button
-            @click="goToFirstPage"
-            :disabled="searchCriteria.page_num <= 1"
-            class="pagination-btn"
-          >
-            首页
-          </button>
-          <!-- 上一页按钮 -->
-          <button
-            @click="changePage(searchCriteria.page_num - 1)"
-            :disabled="searchCriteria.page_num <= 1"
-            class="pagination-btn"
-          >
-            上一页
-          </button>
-
-          <span
-            >第 {{ searchCriteria.page_num }} 页，共 {{ totalPages }} 页 ({{
-              totalItems
-            }}
-            条)</span
-          >
-
-          <!-- 下一页按钮 -->
-          <button
-            @click="changePage(searchCriteria.page_num + 1)"
-            :disabled="searchCriteria.page_num >= totalPages"
-            class="pagination-btn"
-          >
-            下一页
-          </button>
-          <!-- 末页按钮 -->
-          <button
-            @click="goToLastPage"
-            :disabled="searchCriteria.page_num >= totalPages"
-            class="pagination-btn"
-          >
-            末页
-          </button>
-
-          <input
-            type="number"
-            v-model.number="pageInput"
-            min="1"
-            :max="totalPages"
-            placeholder="页码"
-            @keyup.enter="goToPage"
-            class="page-input"
-          />
-          <button @click="goToPage" class="pagination-btn">跳转</button>
-        </div>
         <div class="results-table-container">
           <div class="results-table">
             <!-- 表格头部 -->
@@ -1032,10 +926,10 @@
                 </span>
               </div>
               <div class="table-cell">{{ q.difficulty_level }}星</div>
-              <!-- 题目内容单元格（截断显示） -->
-              <div class="table-cell title-cell">{{ q.title }}</div>
+              <!-- 题目内容单元格-->
+              <div class="table-cell title-cell" v-html="q.title"></div>
               <!-- 备注 -->
-              <div class="table-cell title-cell">{{ q.remark }}</div>
+              <div class="table-cell title-cell" v-html="q.remark"></div>
               <!-- 图片预览单元格 -->
               <div class="table-cell image-cell">
                 <img
@@ -1054,6 +948,60 @@
               </div>
             </div>
           </div>
+        </div>
+        <!-- 分页控件 -->
+        <div class="pagination-controls">
+          <!-- 首页按钮 -->
+          <button
+            @click="goToFirstPage"
+            :disabled="searchCriteria.page_num <= 1"
+            class="pagination-btn"
+          >
+            首页
+          </button>
+          <!-- 上一页按钮 -->
+          <button
+            @click="changePage(searchCriteria.page_num - 1)"
+            :disabled="searchCriteria.page_num <= 1"
+            class="pagination-btn"
+          >
+            上一页
+          </button>
+
+          <span
+            >第 {{ searchCriteria.page_num }} 页，共 {{ totalPages }} 页 ({{
+              totalItems
+            }}
+            条)</span
+          >
+
+          <!-- 下一页按钮 -->
+          <button
+            @click="changePage(searchCriteria.page_num + 1)"
+            :disabled="searchCriteria.page_num >= totalPages"
+            class="pagination-btn"
+          >
+            下一页
+          </button>
+          <!-- 末页按钮 -->
+          <button
+            @click="goToLastPage"
+            :disabled="searchCriteria.page_num >= totalPages"
+            class="pagination-btn"
+          >
+            末页
+          </button>
+
+          <input
+            type="number"
+            v-model.number="pageInput"
+            min="1"
+            :max="totalPages"
+            placeholder="页码"
+            @keyup.enter="goToPage"
+            class="page-input"
+          />
+          <button @click="goToPage" class="pagination-btn">跳转</button>
         </div>
       </div>
 
@@ -1424,48 +1372,16 @@
           <!-- 题目内容 -->
           <div class="form-group">
             <label class="form-label required">题目内容：</label>
-            <textarea
-              v-model="updateForm.title"
-              placeholder="请输入题干，数学公式使用 $公式$ "
-              class="form-textarea"
-              rows="3"
-              @input="renderMathPreview('updateTitle', updateForm.title)"
-              @paste="handleUpdateTitlePaste"
-              required
-            ></textarea>
-            <div class="math-preview" v-html="updateTitlePreview"></div>
-
-            <!-- 图片上传 -->
-            <div class="image-upload-section">
-              <label class="form-label">题干图片：</label>
-              <div class="upload-controls">
-                <input
-                  type="file"
-                  @change="handleUpdateImageUpload"
-                  accept="image/*"
-                  class="file-input"
-                  ref="updateFileInput"
-                />
-                <button
-                  type="button"
-                  @click="$refs.updateFileInput.click()"
-                  class="btn-secondary"
-                >
-                  选择图片
-                </button>
-                <span class="upload-tip">或使用 Ctrl+V 粘贴图片</span>
-              </div>
-              <div v-if="updateForm.img_url" class="image-preview">
-                <img
-                  :src="updateForm.img_url"
-                  alt="预览"
-                  class="preview-image"
-                  @click="previewImage(updateForm.img_url)"
-                />
-                <button type="button" @click="removeUpdateImage" class="btn-remove">
-                  移除图片
-                </button>
-              </div>
+            <!-- 富文本编辑器 -->
+            <div class="rich-text-editor-container">
+              <QuillEditor
+                ref="updateTitleEditor"
+                v-model:content="updateForm.title"
+                contentType="html"
+                :options="editorOptions"
+                placeholder="请输入题干，数学公式使用 $公式$ "
+                class="rich-text-editor"
+              />
             </div>
           </div>
 
@@ -1480,18 +1396,21 @@
               >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
                 <div class="option-input-container">
-                  <input
-                    type="text"
-                    v-model="opt.text"
-                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                    class="form-input option-input"
-                    @input="renderUpdateOptionPreview(index, opt.text)"
-                    required
-                  />
-                  <div
-                    class="math-preview small"
-                    v-html="updateOptionPreviews[index]"
-                  ></div>
+                  <!-- 选项富文本编辑器 -->
+                  <div class="rich-text-editor-container small">
+                    <QuillEditor
+                      :ref="
+                        (el) => {
+                          updateOptionEditors[index] = el;
+                        }
+                      "
+                      v-model:content="opt.text"
+                      contentType="html"
+                      :options="editorOptions"
+                      :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                      class="rich-text-editor option-editor"
+                    />
+                  </div>
                 </div>
                 <div class="option-actions">
                   <!-- 单选题答案选择 -->
@@ -1536,18 +1455,21 @@
               >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
                 <div class="option-input-container">
-                  <input
-                    type="text"
-                    v-model="opt.text"
-                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                    class="form-input option-input"
-                    @input="renderUpdateOptionPreview(index, opt.text)"
-                    required
-                  />
-                  <div
-                    class="math-preview small"
-                    v-html="updateOptionPreviews[index]"
-                  ></div>
+                  <!-- 选项富文本编辑器 -->
+                  <div class="rich-text-editor-container small">
+                    <QuillEditor
+                      :ref="
+                        (el) => {
+                          updateOptionEditors[index] = el;
+                        }
+                      "
+                      v-model:content="opt.text"
+                      contentType="html"
+                      :options="editorOptions"
+                      :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                      class="rich-text-editor option-editor"
+                    />
+                  </div>
                 </div>
                 <div class="option-actions">
                   <!-- 多选题答案选择 -->
@@ -1581,75 +1503,49 @@
           <!-- 主观题答案区域 -->
           <div v-if="showUpdateSubjectiveAnswer" class="form-group">
             <label class="form-label">参考答案：</label>
-            <textarea
-              v-model="updateForm.answer"
-              placeholder="请输入参考答案，数学公式使用 $公式$ "
-              class="form-textarea"
-              rows="4"
-              @input="renderMathPreview('updateAnswer', updateForm.answer)"
-              required
-            ></textarea>
-            <div class="math-preview" v-html="updateAnswerPreview"></div>
+            <!-- 富文本编辑器 -->
+            <div class="rich-text-editor-container">
+              <QuillEditor
+                ref="updateAnswerEditor"
+                v-model:content="updateForm.answer"
+                contentType="html"
+                :options="editorOptions"
+                placeholder="请输入参考答案，数学公式使用 $公式$ "
+                class="rich-text-editor"
+              />
+            </div>
           </div>
 
           <!-- 解析 -->
           <div class="form-group">
             <label class="form-label">解析：</label>
-            <textarea
-              v-model="updateForm.notes"
-              placeholder="请输入题目解析，数学公式使用 $公式$ "
-              class="form-textarea"
-              rows="3"
-              @input="renderMathPreview('updateNotes', updateForm.notes)"
-              @paste="handleUpdateNotesPaste"
-            ></textarea>
-            <div class="math-preview" v-html="updateNotesPreview"></div>
-
-            <!-- 解析图片上传区域 -->
-            <div class="image-upload-section">
-              <label class="form-label">解析图片：</label>
-              <div class="upload-controls">
-                <input
-                  type="file"
-                  @change="handleUpdateNotesImageUpload"
-                  accept="image/*"
-                  class="file-input"
-                  ref="updateNotesFileInput"
-                />
-                <button
-                  type="button"
-                  @click="$refs.updateNotesFileInput.click()"
-                  class="btn-secondary"
-                >
-                  选择图片
-                </button>
-                <span class="upload-tip">或使用 Ctrl+V 粘贴图片</span>
-              </div>
-              <div v-if="updateForm.notes_img_url" class="image-preview">
-                <img
-                  :src="updateForm.notes_img_url"
-                  alt="预览"
-                  class="preview-image"
-                  @click="previewImage(updateForm.notes_img_url)"
-                />
-                <button type="button" @click="removeUpdateNotesImage" class="btn-remove">
-                  移除图片
-                </button>
-              </div>
+            <!-- 富文本编辑器 -->
+            <div class="rich-text-editor-container">
+              <QuillEditor
+                ref="updateNotesEditor"
+                v-model:content="updateForm.notes"
+                contentType="html"
+                :options="editorOptions"
+                placeholder="请输入题目解析，数学公式使用 $公式$ "
+                class="rich-text-editor"
+              />
             </div>
           </div>
 
           <!-- 备注（更新表单） -->
           <div class="form-group">
             <label class="form-label">备注：</label>
-            <textarea
-              v-model="updateForm.remark"
-              placeholder="请输入备注，数学公式使用 $公式$ "
-              class="form-textarea"
-              rows="3"
-              @input="renderMathPreview('updateRemark', updateForm.remark)"
-            ></textarea>
-            <div class="math-preview" v-html="updateRemarkPreview"></div>
+            <!-- 富文本编辑器 -->
+            <div class="rich-text-editor-container">
+              <QuillEditor
+                ref="updateRemarkEditor"
+                v-model:content="updateForm.remark"
+                contentType="html"
+                :options="editorOptions"
+                placeholder="请输入备注信息"
+                class="rich-text-editor"
+              />
+            </div>
           </div>
 
           <!-- 更新操作按钮 -->
@@ -1779,7 +1675,7 @@
                 :class="{ 'correct-answer': isPreviewOptionCorrect(index) }"
               >
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
-                <span class="option-text" v-html="renderMath(opt.text)"></span>
+                <span class="option-text" v-html="opt.text"></span>
                 <span v-if="isPreviewOptionCorrect(index)" class="correct-badge"
                   >正确答案</span
                 >
@@ -1830,59 +1726,6 @@
             以下题目使用了该{{ deleteEntityType }}（共
             {{ dependentQuestionsTotalItems }} 条）：
           </h4>
-
-          <!-- 分页控件 -->
-          <div class="pagination-controls">
-            <button
-              @click="goToDependentFirstPage"
-              :disabled="dependentQuestionsPageNum <= 1"
-              class="pagination-btn"
-            >
-              首页
-            </button>
-            <button
-              @click="changeDependentPage(dependentQuestionsPageNum - 1)"
-              :disabled="dependentQuestionsPageNum <= 1"
-              class="pagination-btn"
-            >
-              上一页
-            </button>
-
-            <span
-              >第 {{ dependentQuestionsPageNum }} 页，共
-              {{ dependentQuestionsTotalPages }} 页 ({{
-                dependentQuestionsTotalItems
-              }}
-              条)</span
-            >
-
-            <button
-              @click="changeDependentPage(dependentQuestionsPageNum + 1)"
-              :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
-              class="pagination-btn"
-            >
-              下一页
-            </button>
-            <button
-              @click="goToDependentLastPage"
-              :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
-              class="pagination-btn"
-            >
-              末页
-            </button>
-
-            <input
-              type="number"
-              v-model.number="dependentQuestionsPageInput"
-              min="1"
-              :max="dependentQuestionsTotalPages"
-              placeholder="页码"
-              @keyup.enter="goToDependentPage"
-              class="page-input"
-            />
-            <button @click="goToDependentPage" class="pagination-btn">跳转</button>
-          </div>
-
           <div class="dependent-list">
             <div v-for="q in dependentQuestions" :key="q.id" class="dependent-question">
               <div class="dependent-question-preview">
@@ -1894,7 +1737,7 @@
                 </div>
                 <div
                   class="dependent-question-content"
-                  v-html="renderMath(q.title)"
+                  v-html="q.title"
                 ></div>
                 <div class="dependent-question-actions">
                   <button @click="deleteDependentQuestion(q)" class="btn-delete">
@@ -1904,6 +1747,57 @@
               </div>
             </div>
           </div>
+        </div>
+        <!-- 分页控件 -->
+        <div class="pagination-controls">
+          <button
+            @click="goToDependentFirstPage"
+            :disabled="dependentQuestionsPageNum <= 1"
+            class="pagination-btn"
+          >
+            首页
+          </button>
+          <button
+            @click="changeDependentPage(dependentQuestionsPageNum - 1)"
+            :disabled="dependentQuestionsPageNum <= 1"
+            class="pagination-btn"
+          >
+            上一页
+          </button>
+
+          <span
+            >第 {{ dependentQuestionsPageNum }} 页，共
+            {{ dependentQuestionsTotalPages }} 页 ({{
+              dependentQuestionsTotalItems
+            }}
+            条)</span
+          >
+
+          <button
+            @click="changeDependentPage(dependentQuestionsPageNum + 1)"
+            :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
+            class="pagination-btn"
+          >
+            下一页
+          </button>
+          <button
+            @click="goToDependentLastPage"
+            :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
+            class="pagination-btn"
+          >
+            末页
+          </button>
+
+          <input
+            type="number"
+            v-model.number="dependentQuestionsPageInput"
+            min="1"
+            :max="dependentQuestionsTotalPages"
+            placeholder="页码"
+            @keyup.enter="goToDependentPage"
+            class="page-input"
+          />
+          <button @click="goToDependentPage" class="pagination-btn">跳转</button>
         </div>
 
         <div class="modal-actions">
@@ -2082,10 +1976,7 @@
                       getQuestionCategoryName(q.question_category_id)
                     }}</span>
                   </div>
-                  <div
-                    class="affected-question-content"
-                    v-html="renderMath(q.title)"
-                  ></div>
+                  <div class="affected-question-content" v-html="q.title"></div>
                   <div class="affected-question-meta">
                     <span
                       >当前知识点: {{ getKnowledgePointName(q.knowledge_point_id) }}</span
@@ -2112,18 +2003,131 @@
 
 <script>
 // 导入Vue相关功能和依赖
-import { reactive, ref, onMounted, computed, watch, nextTick } from "vue";
+import { reactive, ref, onMounted, computed, watchEffect, nextTick, watch } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
+// 导入富文本编辑器
+import { QuillEditor } from "@vueup/vue-quill";
+import "@vueup/vue-quill/dist/vue-quill.snow.css";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 // 从环境变量获取API基础URL
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 export default {
+  components: {
+    QuillEditor,
+  },
   setup() {
     const router = useRouter();
 
-    // ==================== 新增合并知识点相关状态 ====================
+    // ==================== 富文本编辑器配置 ====================
+    const editorOptions = ref({
+      modules: {
+        toolbar: {
+          container: [
+            ["bold", "italic", "underline", "strike"],
+            ["blockquote", "code-block"],
+            [{ header: 1 }, { header: 2 }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            [{ script: "sub" }, { script: "super" }],
+            [{ indent: "-1" }, { indent: "+1" }],
+            [{ direction: "rtl" }],
+            [{ size: ["small", false, "large", "huge"] }],
+            [{ header: [1, 2, 3, 4, 5, 6, false] }],
+            [{ color: [] }, { background: [] }],
+            [{ font: [] }],
+            [{ align: [] }],
+            ["clean"],
+            ["link", "image", "video"],
+            ["formula"],
+          ],
+          handlers: {
+            // 重写图片处理逻辑
+            image: function () {
+              // 创建文件输入元素
+              const input = document.createElement("input");
+              input.setAttribute("type", "file");
+              input.setAttribute("accept", "image/*");
+              input.style.display = "none";
+              document.body.appendChild(input);
+
+              input.addEventListener("change", async () => {
+                const file = input.files[0];
+                if (file) {
+                  // 验证文件类型
+                  if (!file.type.startsWith("image/")) {
+                    showAlert("文件错误", "请选择图片文件");
+                    document.body.removeChild(input);
+                    return;
+                  }
+
+                  // 验证文件大小（5MB限制）
+                  if (file.size > 5 * 1024 * 1024) {
+                    showAlert("文件过大", "图片大小不能超过5MB");
+                    document.body.removeChild(input);
+                    return;
+                  }
+
+                  try {
+                    // 显示上传中提示
+                    showAlert("上传中", "图片正在上传到图床...");
+
+                    // 上传图片到图床
+                    const imageUrl = await uploadToImageBed(file);
+
+                    // 获取当前编辑器实例和光标位置
+                    const quill = this.quill;
+                    const range = quill.getSelection();
+
+                    if (range) {
+                      // 在光标位置插入图片
+                      quill.insertEmbed(range.index, "image", imageUrl);
+                      showAlert("上传成功", "图片已上传并插入到编辑器中");
+                    } else {
+                      // 如果没有选中范围，在末尾插入
+                      quill.insertEmbed(quill.getLength(), "image", imageUrl);
+                      showAlert("上传成功", "图片已上传并插入到编辑器中");
+                    }
+                  } catch (error) {
+                    console.error("图片上传失败:", error);
+                    showAlert("上传失败", error.message);
+                  }
+                }
+                // 移除输入元素
+                document.body.removeChild(input);
+              });
+
+              // 触发文件选择
+              input.click();
+            },
+            formula() {
+              const latex = prompt("请输入 LaTeX：例如 x^2+1");
+              if (latex) {
+                const cursor = this.quill.getSelection(true);
+                this.quill.insertText(cursor.index, `$${latex}$`);
+              }
+            },
+          },
+        },
+      },
+      placeholder: "请输入内容...",
+    });
+    // 编辑器引用
+    const titleEditor = ref(null);
+    const answerEditor = ref(null);
+    const notesEditor = ref(null);
+    const remarkEditor = ref(null);
+    const optionEditors = ref([]);
+
+    const updateTitleEditor = ref(null);
+    const updateAnswerEditor = ref(null);
+    const updateNotesEditor = ref(null);
+    const updateRemarkEditor = ref(null);
+    const updateOptionEditors = ref([]);
+
+    // ==================== 合并知识点相关状态 ====================
     const showMergeKnowledgeModal = ref(false); // 合并知识点模态框显示状态
     const mergeStep = ref(1); // 合并步骤：1-选择知识点，2-预览受影响题目
     const mergeKnowledgeSearch = ref(""); // 合并知识点搜索关键词
@@ -2142,43 +2146,28 @@ export default {
     const affectedQuestionsPageInput = ref(1); // 受影响题目页码输入
     const isMerging = ref(false); // 合并操作进行中状态
 
-    // ==================== 新增编辑知识点相关状态 ====================
+    // ==================== 编辑知识点相关状态 ====================
     const showEditKnowledgePointModal = ref(false); // 编辑知识点模态框显示状态
     const editingKnowledgePoint = ref(null); // 正在编辑的知识点对象
     const editingKnowledgePointName = ref(""); // 编辑中的知识点名称
     const editingKnowledgePointType = ref("知识点"); // 编辑的实体类型：知识点或副知识点
 
-    // ==================== 新增删除实体相关状态 ====================
+    // ==================== 删除实体相关状态 ====================
     const showDeleteEntityConfirm = ref(false); // 删除实体确认框显示状态
     const deleteEntityType = ref(""); // 删除的实体类型：knowledgePoint, solutionIdea, questionCategory
     const deleteEntityData = ref(null); // 要删除的实体数据
     const dependentQuestions = ref([]); // 依赖的题目列表
 
-    // ==================== 新增依赖题目分页相关状态 ====================
+    // ==================== 依赖题目分页相关状态 ====================
     const dependentQuestionsPageNum = ref(1); // 依赖题目当前页码
     const dependentQuestionsPageSize = ref(5); // 依赖题目每页数量
     const dependentQuestionsTotalPages = ref(1); // 依赖题目总页数
     const dependentQuestionsTotalItems = ref(0); // 依赖题目总条目数
     const dependentQuestionsPageInput = ref(1); // 依赖题目页码输入
 
-    // ==================== 新增预览功能相关状态 ====================
+    // ==================== 预览功能相关状态 ====================
     const showPreviewModal = ref(false); // 预览模态框显示状态
     const previewMode = ref("upload"); // 预览模式：upload 或 update
-
-    // ==================== 数学公式预览相关状态 ====================
-    // 上传界面的数学公式预览
-    const titlePreview = ref(""); // 题目内容预览
-    const answerPreview = ref(""); // 答案预览
-    const notesPreview = ref(""); // 解析预览
-    const optionPreviews = ref(Array(10).fill("")); // 选项预览数组
-    const remarkPreview = ref(""); // 备注预览
-
-    // 更新界面的数学公式预览
-    const updateTitlePreview = ref(""); // 更新题目内容预览
-    const updateAnswerPreview = ref(""); // 更新答案预览
-    const updateNotesPreview = ref(""); // 更新解析预览
-    const updateOptionPreviews = ref(Array(10).fill("")); // 更新选项预览数组
-    const updateRemarkPreview = ref(""); // 更新备注预览
 
     // ==================== 弹窗和提示相关状态 ====================
     const showAlertModal = ref(false); // 是否显示提示弹窗
@@ -2434,639 +2423,76 @@ export default {
     const totalItems = ref(0); // 总条目数
     const pageInput = ref(1); // 页码输入
 
-    // ==================== 合并知识点相关方法 ====================
-    /**
-     * 打开合并知识点模态框
-     */
-    const openMergeKnowledgeModal = () => {
-      showMergeKnowledgeModal.value = true;
-      mergeStep.value = 1;
-      selectedMergeKnowledgePoints.value = [];
-      selectedMergedKnowledgePoint.value = null;
-      mergedKnowledgePointName.value = "";
-      mergeKnowledgeSearch.value = "";
-      filteredMergeKnowledgePoints.value = knowledgePointList.value;
-      filteredMergedKnowledgePoints.value = knowledgePointList.value;
-    };
+    function walkTextNodes(node, callback) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    callback(node);
+  } else {
+    node.childNodes.forEach(n => walkTextNodes(n, callback));
+  }
+}
+function renderLatexInQuill(editorEl) {
+  if (!editorEl) return;
 
-    /**
-     * 关闭合并知识点模态框
-     */
-    const closeMergeKnowledgeModal = () => {
-      showMergeKnowledgeModal.value = false;
-      mergeStep.value = 1;
-      selectedMergeKnowledgePoints.value = [];
-      selectedMergedKnowledgePoint.value = null;
-      mergedKnowledgePointName.value = "";
-      affectedQuestions.value = [];
-    };
+  const textNodes = [];
+  walkTextNodes(editorEl, node => textNodes.push(node));
 
-    /**
-     * 过滤合并知识点列表
-     */
-    const filterMergeKnowledgePoints = () => {
-      if (!mergeKnowledgeSearch.value) {
-        filteredMergeKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredMergeKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(mergeKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
+  textNodes.forEach(textNode => {
+    const text = textNode.textContent;
+    if (!/(\${1,2})(.+?)\1/.test(text)) return;
 
-    /**
-     * 过滤合并后知识点列表
-     */
-    const filterMergedKnowledgePoints = () => {
-      if (!mergedKnowledgePointName.value) {
-        filteredMergedKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredMergedKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(mergedKnowledgePointName.value.toLowerCase())
-        );
-      }
-    };
+    const span = document.createElement("span");
+    span.innerHTML = text
+      .replace(/\$\$(.+?)\$\$/gs, (_, f) => katex.renderToString(f, { displayMode: true }))
+      .replace(/\$(.+?)\$/g, (_, f) => katex.renderToString(f, { displayMode: false }));
 
-    /**
-     * 选择要合并的知识点
-     * @param {Object} kp - 知识点对象
-     */
-    const selectMergeKnowledgePoint = (kp) => {
-      if (!selectedMergeKnowledgePoints.value.find((item) => item.id === kp.id)) {
-        selectedMergeKnowledgePoints.value.push(kp);
-      }
-      mergeKnowledgeSearch.value = "";
-      showMergeKnowledgeDropdown.value = false;
-    };
+    textNode.replaceWith(span);
+  });
+}
+function renderLatexInHtml(rootEl) {
+  if (!rootEl) return;
 
-    /**
-     * 检查知识点是否已选择用于合并
-     * @param {number} id - 知识点ID
-     * @returns {boolean} 是否已选择
-     */
-    const isMergeKnowledgeSelected = (id) => {
-      return selectedMergeKnowledgePoints.value.some((kp) => kp.id === id);
-    };
+  const textNodes = [];
+  walkTextNodes(rootEl, node => textNodes.push(node));
 
-    /**
-     * 移除要合并的知识点
-     * @param {number} id - 知识点ID
-     */
-    const removeMergeKnowledgePoint = (id) => {
-      selectedMergeKnowledgePoints.value = selectedMergeKnowledgePoints.value.filter(
-        (kp) => kp.id !== id
-      );
-    };
+  textNodes.forEach(textNode => {
+    const text = textNode.textContent;
+    if (!/(\${1,2})(.+?)\1/.test(text)) return;
 
-    /**
-     * 选择合并后的知识点
-     * @param {Object} kp - 知识点对象
-     */
-    const selectMergedKnowledgePoint = (kp) => {
-      selectedMergedKnowledgePoint.value = kp;
-      mergedKnowledgePointName.value = kp.name;
-      showMergedKnowledgeDropdown.value = false;
-    };
+    const span = document.createElement("span");
+    span.innerHTML = text
+      .replace(/\$\$(.+?)\$\$/gs, (_, f) => katex.renderToString(f, { displayMode: true }))
+      .replace(/\$(.+?)\$/g, (_, f) => katex.renderToString(f, { displayMode: false }));
 
-    /**
-     * 清除合并后知识点选择
-     */
-    const clearMergedKnowledgePoint = () => {
-      selectedMergedKnowledgePoint.value = null;
-      mergedKnowledgePointName.value = "";
-    };
+    textNode.replaceWith(span);
+  });
+}
 
-    /**
-     * 合并知识点下拉框失焦处理
-     */
-    const onMergeKnowledgeBlur = () => {
-      setTimeout(() => {
-        showMergeKnowledgeDropdown.value = false;
-      }, 200);
-    };
+function renderEditors() {
+  nextTick(() => {
+    document.querySelectorAll(".ql-editor").forEach(renderLatexInQuill);
+  });
+}
+watch(() => form, renderEditors, { deep: true });
+watch(() => updateForm, renderEditors, { deep: true });
+watch(questionList, () => {
+  nextTick(() => {
+    document.querySelectorAll(".title-cell, .remark-cell").forEach(renderLatexInHtml);
+  });
+}, { deep: true });
 
-    /**
-     * 合并后知识点下拉框失焦处理
-     */
-    const onMergedKnowledgeBlur = () => {
-      setTimeout(() => {
-        showMergedKnowledgeDropdown.value = false;
-      }, 200);
-    };
+watch(affectedQuestions, () => {
+  nextTick(() => {
+    document.querySelectorAll(".affected-question-content").forEach(renderLatexInHtml);
+  });
+}, { deep: true });
 
-    /**
-     * 预览合并
-     */
-    const previewMerge = async () => {
-      try {
-        isMerging.value = true;
-        // 确定合并后的知识点ID
-        let mergedKnowledgePointId = null;
-        // 如果选择了现有的知识点，使用其ID
-        if (selectedMergedKnowledgePoint.value) {
-          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
-        } else {
-          // 如果是新知识点，先创建
-          const newKnowledgePointResponse = await axios.post(
-            `${API_BASE}/questions/uploadKnowledgePoint`,
-            [mergedKnowledgePointName.value.trim()]
-          );
-          if (newKnowledgePointResponse.data.code === 500) {
-            closeMergeKnowledgeModal();
-            showAlert("创建失败", "知识点已存在");
-            isMerging.value = false;
-            return;
-          }
-          // 重新加载知识点列表以获取新创建的ID
-          await loadLists();
-          // 从更新后的列表中查找新创建的知识点
-          const newKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.name === mergedKnowledgePointName.value.trim()
-          );
-          if (newKnowledgePoint) {
-            mergedKnowledgePointId = newKnowledgePoint.id;
-          } else {
-            isMerging.value = false;
-            return;
-          }
-        }
-        // 第一次调用合并接口，confirm=false
-        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
-        const response = await axios.post(
-          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
-          sourceIds
-        );
-        const responseData = response.data.data;
-        affectedQuestions.value = Array.isArray(responseData) ? responseData : [];
+watch(dependentQuestions, () => {
+  nextTick(() => {
+    document.querySelectorAll(".dependent-question-content").forEach(renderLatexInHtml);
+  });
+}, { deep: true });
 
-        // 因为不分页，所以固定为 1 页
-        affectedQuestionsTotalItems.value = affectedQuestions.value.length;
-        affectedQuestionsTotalPages.value = 1;
 
-        affectedQuestionsPageNum.value = 1;
-        affectedQuestionsPageInput.value = 1;
-
-        // 进入步骤2
-        mergeStep.value = 2;
-      } catch (err) {
-        console.error("预览合并失败:", err);
-        closeMergeKnowledgeModal();
-        showAlert("预览失败", err.response?.data?.message || err.message);
-      } finally {
-        isMerging.value = false;
-      }
-    };
-
-    /**
-     * 确认合并
-     */
-    const confirmMerge = async () => {
-      try {
-        isMerging.value = true;
-
-        // 确定合并后的知识点ID
-        let mergedKnowledgePointId = null;
-
-        // 如果选择了现有的知识点，使用其ID
-        if (selectedMergedKnowledgePoint.value) {
-          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
-        } else {
-          // 从知识点列表中查找
-          const targetKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.name === mergedKnowledgePointName.value.trim()
-          );
-
-          if (targetKnowledgePoint) {
-            mergedKnowledgePointId = targetKnowledgePoint.id;
-          } else {
-            showAlert("合并失败", "无法找到目标知识点");
-            isMerging.value = false;
-            return;
-          }
-        }
-
-        // 第二次调用合并接口，confirm=true
-        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
-        await axios.post(
-          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/true`,
-          sourceIds
-        );
-
-        showAlert("合并成功", "知识点合并完成");
-        closeMergeKnowledgeModal();
-
-        // 重新加载知识点列表
-        await loadLists();
-      } catch (err) {
-        console.error("合并失败:", err);
-        showAlert("合并失败", err.response?.data?.message || err.message);
-      } finally {
-        isMerging.value = false;
-      }
-    };
-
-    /**
-     * 改变受影响题目页码
-     * @param {number} newPage - 新页码
-     */
-    const changeAffectedPage = (newPage) => {
-      if (newPage < 1 || newPage > affectedQuestionsTotalPages.value) {
-        return;
-      }
-      affectedQuestionsPageNum.value = newPage;
-      affectedQuestionsPageInput.value = newPage;
-      loadAffectedQuestions();
-    };
-
-    /**
-     * 跳转到受影响题目首页
-     */
-    const goToAffectedFirstPage = () => {
-      changeAffectedPage(1);
-    };
-
-    /**
-     * 跳转到受影响题目末页
-     */
-    const goToAffectedLastPage = () => {
-      changeAffectedPage(affectedQuestionsTotalPages.value);
-    };
-
-    /**
-     * 跳转到受影响题目指定页码
-     */
-    const goToAffectedPage = () => {
-      const page = parseInt(affectedQuestionsPageInput.value);
-      if (page >= 1 && page <= affectedQuestionsTotalPages.value) {
-        changeAffectedPage(page);
-      } else {
-        showAlert(
-          "输入错误",
-          `请输入 1 到 ${affectedQuestionsTotalPages.value} 之间的页码`
-        );
-      }
-    };
-
-    /**
-     * 加载受影响题目（用于分页）
-     */
-    const loadAffectedQuestions = async () => {
-      if (
-        selectedMergeKnowledgePoints.value.length < 2 ||
-        !mergedKnowledgePointName.value.trim()
-      ) {
-        return;
-      }
-
-      try {
-        // 确定合并后的知识点ID
-        let mergedKnowledgePointId = null;
-
-        if (selectedMergedKnowledgePoint.value) {
-          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
-        } else {
-          const targetKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.name === mergedKnowledgePointName.value.trim()
-          );
-
-          if (targetKnowledgePoint) {
-            mergedKnowledgePointId = targetKnowledgePoint.id;
-          } else {
-            return;
-          }
-        }
-
-        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
-        const response = await axios.post(
-          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
-          sourceIds,
-          {
-            params: {
-              page_num: affectedQuestionsPageNum.value,
-              page_size: affectedQuestionsPageSize.value,
-            },
-          }
-        );
-
-        const responseData = response.data.data;
-        affectedQuestions.value = responseData?.data_info || [];
-        affectedQuestionsTotalPages.value = responseData?.total_pages || 1;
-        affectedQuestionsTotalItems.value = responseData?.total_items || 0;
-        affectedQuestionsPageInput.value = affectedQuestionsPageNum.value;
-      } catch (err) {
-        console.error("加载受影响题目失败:", err);
-        showAlert("加载失败", "加载受影响题目失败");
-      }
-    };
-
-    // ==================== 编辑知识点相关方法 ====================
-    /**
-     * 编辑知识点
-     * @param {Object} knowledgePoint - 知识点对象
-     * @param {string} type - 类型：知识点或副知识点
-     */
-    const editKnowledgePoint = (knowledgePoint, type = "知识点") => {
-      editingKnowledgePoint.value = knowledgePoint;
-      editingKnowledgePointName.value = knowledgePoint.name;
-      editingKnowledgePointType.value = type;
-      showEditKnowledgePointModal.value = true;
-    };
-
-    /**
-     * 更新知识点名称
-     */
-    const updateKnowledgePointName = async () => {
-      if (!editingKnowledgePoint.value || !editingKnowledgePointName.value.trim()) {
-        cancelEditKnowledgePoint();
-        showAlert("输入错误", "请输入知识点名称");
-        return;
-      }
-
-      try {
-        const response = await axios.post(
-          `${API_BASE}/questions/updateKnowledgePointName`,
-          {
-            id: editingKnowledgePoint.value.id,
-            name: editingKnowledgePointName.value.trim(),
-          }
-        );
-        if (response.data?.code === 409) {
-          cancelEditKnowledgePoint();
-          showAlert("更新失败", response.data.message || "知识点已存在");
-          return; // 直接结束，不执行后面的成功逻辑
-        }
-
-        showAlert("更新成功", `${editingKnowledgePointType.value}名称更新成功`);
-
-        // 重新加载列表
-        await loadLists();
-
-        // 如果当前选中的知识点被编辑，更新选中状态
-        if (
-          selectedKnowledgePoint.value &&
-          selectedKnowledgePoint.value.id === editingKnowledgePoint.value.id
-        ) {
-          const updatedKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.id === editingKnowledgePoint.value.id
-          );
-          if (updatedKnowledgePoint) {
-            selectedKnowledgePoint.value = updatedKnowledgePoint;
-            form.knowledge_point_id = updatedKnowledgePoint.id;
-            knowledgeSearch.value = updatedKnowledgePoint.name;
-          }
-        }
-
-        // 如果更新表单中选中的知识点被编辑，更新选中状态
-        if (
-          selectedUpdateFormKnowledgePoint.value &&
-          selectedUpdateFormKnowledgePoint.value.id === editingKnowledgePoint.value.id
-        ) {
-          const updatedKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.id === editingKnowledgePoint.value.id
-          );
-          if (updatedKnowledgePoint) {
-            selectedUpdateFormKnowledgePoint.value = updatedKnowledgePoint;
-            updateForm.knowledge_point_id = updatedKnowledgePoint.id;
-            updateFormKnowledgeSearch.value = updatedKnowledgePoint.name;
-          }
-        }
-
-        cancelEditKnowledgePoint();
-      } catch (err) {
-        console.error("更新知识点名称失败:", err);
-        cancelEditKnowledgePoint();
-        showAlert("更新失败", err.response?.data?.message || err.message);
-      }
-    };
-
-    /**
-     * 取消编辑知识点
-     */
-    const cancelEditKnowledgePoint = () => {
-      showEditKnowledgePointModal.value = false;
-      editingKnowledgePoint.value = null;
-      editingKnowledgePointName.value = "";
-      editingKnowledgePointType.value = "知识点";
-    };
-
-    // ==================== 计算属性 ====================
-    /**
-     * 是否显示单选题选项区域
-     */
-    const showSingleOptions = computed(() => {
-      if (!selectedQuestionCategory.value) return false;
-      const name = selectedQuestionCategory.value.name;
-      return name === "单选题" || name.includes("单选");
-    });
-
-    /**
-     * 是否显示多选题选项区域
-     */
-    const showMultipleOptions = computed(() => {
-      if (!selectedQuestionCategory.value) return false;
-      const name = selectedQuestionCategory.value.name;
-      return name === "多选题" || name.includes("多选");
-    });
-
-    /**
-     * 是否显示主观题答案区域
-     */
-    const showSubjectiveAnswer = computed(() => {
-      if (!selectedQuestionCategory.value) return true; // 默认显示主观题区域
-      const name = selectedQuestionCategory.value.name;
-      return !(
-        name === "单选题" ||
-        name.includes("单选") ||
-        name === "多选题" ||
-        name.includes("多选")
-      );
-    });
-
-    /**
-     * 更新界面是否显示单选题选项区域
-     */
-    const showUpdateSingleOptions = computed(() => {
-      if (!selectedUpdateFormQuestionCategory.value) return false;
-      const name = selectedUpdateFormQuestionCategory.value.name;
-      return name === "单选题" || name.includes("单选");
-    });
-
-    /**
-     * 更新界面是否显示多选题选项区域
-     */
-    const showUpdateMultipleOptions = computed(() => {
-      if (!selectedUpdateFormQuestionCategory.value) return false;
-      const name = selectedUpdateFormQuestionCategory.value.name;
-      return name === "多选题" || name.includes("多选");
-    });
-
-    /**
-     * 更新界面是否显示主观题答案区域
-     */
-    const showUpdateSubjectiveAnswer = computed(() => {
-      if (!selectedUpdateFormQuestionCategory.value) return true; // 默认显示主观题区域
-      const name = selectedUpdateFormQuestionCategory.value.name;
-      return !(
-        name === "单选题" ||
-        name.includes("单选") ||
-        name === "多选题" ||
-        name.includes("多选")
-      );
-    });
-
-    /**
-     * 选中的副知识点对象列表
-     */
-    const selectedSubKnowledgePoints = computed(() => {
-      return form.sub_knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 选中的解题思想对象列表
-     */
-    const selectedSolutionIdeas = computed(() => {
-      return form.solution_idea_ids
-        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的知识点对象列表
-     */
-    const selectedUpdateKnowledgePoints = computed(() => {
-      return searchCriteria.knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的副知识点对象列表
-     */
-    const selectedUpdateSubKnowledgePoints = computed(() => {
-      return searchCriteria.sub_knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的解题思想对象列表
-     */
-    const selectedUpdateSolutionIdeas = computed(() => {
-      return searchCriteria.solution_idea_ids
-        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的问题类别对象列表
-     */
-    const selectedUpdateQuestionCategories = computed(() => {
-      return searchCriteria.question_category_ids
-        .map((id) => questionCategoryList.value.find((c) => c.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新表单选中的解题思想对象列表
-     */
-    const selectedUpdateFormSolutionIdeas = computed(() => {
-      return updateForm.solution_idea_ids
-        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新表单选中的副知识点对象列表
-     */
-    const selectedUpdateFormSubKnowledgePoints = computed(() => {
-      return updateForm.sub_knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    // ==================== 数学公式处理函数 ====================
-    /**
-     * 渲染数学公式
-     * @param {string} text - 包含数学公式的文本
-     * @returns {string} 渲染后的HTML
-     */
-    const renderMath = (text) => {
-      if (!text) return "";
-
-      try {
-        // 处理行内公式：$...$
-        let html = text.replace(/\$(.+?)\$/g, (match, formula) => {
-          try {
-            return katex.renderToString(formula, {
-              throwOnError: false,
-              displayMode: false,
-            });
-          } catch (e) {
-            return `<span class="math-error" title="${e.message}">${match}</span>`;
-          }
-        });
-
-        return html;
-      } catch (error) {
-        console.error("数学公式渲染错误:", error);
-        return text;
-      }
-    };
-
-    /**
-     * 渲染数学公式预览
-     * @param {string} type - 预览类型
-     * @param {string} text - 要渲染的文本
-     */
-    const renderMathPreview = (type, text) => {
-      const preview = renderMath(text);
-      switch (type) {
-        case "title":
-          titlePreview.value = preview; // 题目内容预览
-          break;
-        case "answer":
-          answerPreview.value = preview; // 答案预览
-          break;
-        case "notes":
-          notesPreview.value = preview; // 解析预览
-          break;
-        case "remark":
-          remarkPreview.value = preview; // 备注预览
-          break;
-        case "updateTitle":
-          updateTitlePreview.value = preview; // 更新题目内容预览
-          break;
-        case "updateAnswer":
-          updateAnswerPreview.value = preview; // 更新答案预览
-          break;
-        case "updateNotes":
-          updateNotesPreview.value = preview; // 更新解析预览
-          break;
-        case "updateRemark":
-          updateRemarkPreview.value = preview; // 更新备注预览
-          break;
-      }
-    };
-
-    /**
-     * 渲染选项数学公式预览
-     * @param {number} index - 选项索引
-     * @param {string} text - 选项文本
-     */
-    const renderOptionPreview = (index, text) => {
-      optionPreviews.value[index] = renderMath(text);
-    };
-
-    /**
-     * 渲染更新界面选项数学公式预览
-     * @param {number} index - 选项索引
-     * @param {string} text - 选项文本
-     */
-    const renderUpdateOptionPreview = (index, text) => {
-      updateOptionPreviews.value[index] = renderMath(text);
-    };
 
     // ==================== 图片粘贴处理函数 ====================
     /**
@@ -3729,7 +3155,7 @@ export default {
      */
     const getPreviewTitle = () => {
       const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return renderMath(currentForm.title || "无");
+      return currentForm.title || "无";
     };
 
     /**
@@ -3807,7 +3233,7 @@ export default {
      */
     const getPreviewAnswer = () => {
       const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return renderMath(currentForm.answer || "无");
+      return currentForm.answer;
     };
 
     /**
@@ -3815,7 +3241,7 @@ export default {
      */
     const getPreviewNotes = () => {
       const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return renderMath(currentForm.notes || "");
+      return currentForm.notes;
     };
 
     /**
@@ -3823,7 +3249,7 @@ export default {
      */
     const getPreviewRemark = () => {
       const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return renderMath(currentForm.remark || "");
+      return currentForm.remark;
     };
 
     // ==================== 选项操作方法 ====================
@@ -3848,7 +3274,6 @@ export default {
     const addOption = () => {
       if (form.options.length < 10) {
         form.options.push({ text: "", isAnswer: false });
-        optionPreviews.value.push("");
       }
     };
 
@@ -3859,7 +3284,6 @@ export default {
     const removeOption = (index) => {
       if (form.options.length > 2) {
         form.options.splice(index, 1);
-        optionPreviews.value.splice(index, 1);
         if (singleAnswerIndex.value === index) {
           singleAnswerIndex.value = null;
         }
@@ -3872,7 +3296,6 @@ export default {
     const addUpdateOption = () => {
       if (updateForm.options.length < 10) {
         updateForm.options.push({ text: "", isAnswer: false });
-        updateOptionPreviews.value.push("");
       }
     };
 
@@ -3883,7 +3306,6 @@ export default {
     const removeUpdateOption = (index) => {
       if (updateForm.options.length > 2) {
         updateForm.options.splice(index, 1);
-        updateOptionPreviews.value.splice(index, 1);
         if (updateSingleAnswerIndex.value === index) {
           updateSingleAnswerIndex.value = null;
         }
@@ -3904,10 +3326,6 @@ export default {
       ];
       singleAnswerIndex.value = null;
       form.answer = "";
-      optionPreviews.value = Array(10).fill("");
-      titlePreview.value = "";
-      answerPreview.value = "";
-      notesPreview.value = "";
 
       // 根据问题类别设置默认评分方法
       if (selectedQuestionCategory.value) {
@@ -3931,10 +3349,6 @@ export default {
       ];
       updateSingleAnswerIndex.value = null;
       updateForm.answer = "";
-      updateOptionPreviews.value = Array(10).fill("");
-      updateTitlePreview.value = "";
-      updateAnswerPreview.value = "";
-      updateNotesPreview.value = "";
     };
 
     // ==================== 知识点选择方法 ====================
@@ -5309,20 +4723,6 @@ export default {
         }
       }
 
-      // 初始化预览
-      await nextTick();
-      renderMathPreview("updateTitle", updateForm.title);
-      renderMathPreview("updateAnswer", updateForm.answer);
-      renderMathPreview("updateNotes", updateForm.notes);
-      renderMathPreview("updateRemark", updateForm.remark);
-
-      // 初始化选项预览
-      if (updateForm.options && updateForm.options.length) {
-        updateForm.options.forEach((opt, index) => {
-          renderUpdateOptionPreview(index, opt.text);
-        });
-      }
-
       // 滚动到更新表单
       if (updateFormRef.value) {
         updateFormRef.value.scrollIntoView({
@@ -5344,11 +4744,6 @@ export default {
       updateFormSubKnowledgeSearch.value = "";
       selectedUpdateFormKnowledgePoint.value = null;
       selectedUpdateFormQuestionCategory.value = null;
-      updateTitlePreview.value = "";
-      updateAnswerPreview.value = "";
-      updateNotesPreview.value = "";
-      updateRemarkPreview.value = "";
-      updateOptionPreviews.value = Array(10).fill("");
     };
 
     /**
@@ -5718,10 +5113,6 @@ export default {
       pendingImageFile.value = null;
       pendingNotesImageFile.value = null;
       selectedKnowledgePoint.value = null;
-      titlePreview.value = "";
-      answerPreview.value = "";
-      notesPreview.value = "";
-      optionPreviews.value = Array(10).fill("");
     };
 
     /**
@@ -5848,6 +5239,558 @@ export default {
         1: "人工评分",
       };
       return types[type] || "-";
+    };
+
+    // ==================== 计算属性 ====================
+    /**
+     * 是否显示单选题选项区域
+     */
+    const showSingleOptions = computed(() => {
+      if (!selectedQuestionCategory.value) return false;
+      const name = selectedQuestionCategory.value.name;
+      return name === "单选题" || name.includes("单选");
+    });
+
+    /**
+     * 是否显示多选题选项区域
+     */
+    const showMultipleOptions = computed(() => {
+      if (!selectedQuestionCategory.value) return false;
+      const name = selectedQuestionCategory.value.name;
+      return name === "多选题" || name.includes("多选");
+    });
+
+    /**
+     * 是否显示主观题答案区域
+     */
+    const showSubjectiveAnswer = computed(() => {
+      if (!selectedQuestionCategory.value) return true; // 默认显示主观题区域
+      const name = selectedQuestionCategory.value.name;
+      return !(
+        name === "单选题" ||
+        name.includes("单选") ||
+        name === "多选题" ||
+        name.includes("多选")
+      );
+    });
+
+    /**
+     * 更新界面是否显示单选题选项区域
+     */
+    const showUpdateSingleOptions = computed(() => {
+      if (!selectedUpdateFormQuestionCategory.value) return false;
+      const name = selectedUpdateFormQuestionCategory.value.name;
+      return name === "单选题" || name.includes("单选");
+    });
+
+    /**
+     * 更新界面是否显示多选题选项区域
+     */
+    const showUpdateMultipleOptions = computed(() => {
+      if (!selectedUpdateFormQuestionCategory.value) return false;
+      const name = selectedUpdateFormQuestionCategory.value.name;
+      return name === "多选题" || name.includes("多选");
+    });
+
+    /**
+     * 更新界面是否显示主观题答案区域
+     */
+    const showUpdateSubjectiveAnswer = computed(() => {
+      if (!selectedUpdateFormQuestionCategory.value) return true; // 默认显示主观题区域
+      const name = selectedUpdateFormQuestionCategory.value.name;
+      return !(
+        name === "单选题" ||
+        name.includes("单选") ||
+        name === "多选题" ||
+        name.includes("多选")
+      );
+    });
+
+    /**
+     * 选中的副知识点对象列表
+     */
+    const selectedSubKnowledgePoints = computed(() => {
+      return form.sub_knowledge_point_ids
+        .map((id) => knowledgePointList.value.find((k) => k.id === id))
+        .filter(Boolean);
+    });
+
+    /**
+     * 选中的解题思想对象列表
+     */
+    const selectedSolutionIdeas = computed(() => {
+      return form.solution_idea_ids
+        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+        .filter(Boolean);
+    });
+
+    /**
+     * 更新界面选中的知识点对象列表
+     */
+    const selectedUpdateKnowledgePoints = computed(() => {
+      return searchCriteria.knowledge_point_ids
+        .map((id) => knowledgePointList.value.find((k) => k.id === id))
+        .filter(Boolean);
+    });
+
+    /**
+     * 更新界面选中的副知识点对象列表
+     */
+    const selectedUpdateSubKnowledgePoints = computed(() => {
+      return searchCriteria.sub_knowledge_point_ids
+        .map((id) => knowledgePointList.value.find((k) => k.id === id))
+        .filter(Boolean);
+    });
+
+    /**
+     * 更新界面选中的解题思想对象列表
+     */
+    const selectedUpdateSolutionIdeas = computed(() => {
+      return searchCriteria.solution_idea_ids
+        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+        .filter(Boolean);
+    });
+
+    /**
+     * 更新界面选中的问题类别对象列表
+     */
+    const selectedUpdateQuestionCategories = computed(() => {
+      return searchCriteria.question_category_ids
+        .map((id) => questionCategoryList.value.find((c) => c.id === id))
+        .filter(Boolean);
+    });
+
+    /**
+     * 更新表单选中的解题思想对象列表
+     */
+    const selectedUpdateFormSolutionIdeas = computed(() => {
+      return updateForm.solution_idea_ids
+        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+        .filter(Boolean);
+    });
+
+    /**
+     * 更新表单选中的副知识点对象列表
+     */
+    const selectedUpdateFormSubKnowledgePoints = computed(() => {
+      return updateForm.sub_knowledge_point_ids
+        .map((id) => knowledgePointList.value.find((k) => k.id === id))
+        .filter(Boolean);
+    });
+
+    // ==================== 合并知识点相关方法 ====================
+    /**
+     * 打开合并知识点模态框
+     */
+    const openMergeKnowledgeModal = () => {
+      showMergeKnowledgeModal.value = true;
+      mergeStep.value = 1;
+      selectedMergeKnowledgePoints.value = [];
+      selectedMergedKnowledgePoint.value = null;
+      mergedKnowledgePointName.value = "";
+      mergeKnowledgeSearch.value = "";
+      filteredMergeKnowledgePoints.value = knowledgePointList.value;
+      filteredMergedKnowledgePoints.value = knowledgePointList.value;
+    };
+
+    /**
+     * 关闭合并知识点模态框
+     */
+    const closeMergeKnowledgeModal = () => {
+      showMergeKnowledgeModal.value = false;
+      mergeStep.value = 1;
+      selectedMergeKnowledgePoints.value = [];
+      selectedMergedKnowledgePoint.value = null;
+      mergedKnowledgePointName.value = "";
+      affectedQuestions.value = [];
+    };
+
+    /**
+     * 过滤合并知识点列表
+     */
+    const filterMergeKnowledgePoints = () => {
+      if (!mergeKnowledgeSearch.value) {
+        filteredMergeKnowledgePoints.value = knowledgePointList.value;
+      } else {
+        filteredMergeKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+          kp.name.toLowerCase().includes(mergeKnowledgeSearch.value.toLowerCase())
+        );
+      }
+    };
+
+    /**
+     * 过滤合并后知识点列表
+     */
+    const filterMergedKnowledgePoints = () => {
+      if (!mergedKnowledgePointName.value) {
+        filteredMergedKnowledgePoints.value = knowledgePointList.value;
+      } else {
+        filteredMergedKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+          kp.name.toLowerCase().includes(mergedKnowledgePointName.value.toLowerCase())
+        );
+      }
+    };
+
+    /**
+     * 选择要合并的知识点
+     * @param {Object} kp - 知识点对象
+     */
+    const selectMergeKnowledgePoint = (kp) => {
+      if (!selectedMergeKnowledgePoints.value.find((item) => item.id === kp.id)) {
+        selectedMergeKnowledgePoints.value.push(kp);
+      }
+      mergeKnowledgeSearch.value = "";
+      showMergeKnowledgeDropdown.value = false;
+    };
+
+    /**
+     * 检查知识点是否已选择用于合并
+     * @param {number} id - 知识点ID
+     * @returns {boolean} 是否已选择
+     */
+    const isMergeKnowledgeSelected = (id) => {
+      return selectedMergeKnowledgePoints.value.some((kp) => kp.id === id);
+    };
+
+    /**
+     * 移除要合并的知识点
+     * @param {number} id - 知识点ID
+     */
+    const removeMergeKnowledgePoint = (id) => {
+      selectedMergeKnowledgePoints.value = selectedMergeKnowledgePoints.value.filter(
+        (kp) => kp.id !== id
+      );
+    };
+
+    /**
+     * 选择合并后的知识点
+     * @param {Object} kp - 知识点对象
+     */
+    const selectMergedKnowledgePoint = (kp) => {
+      selectedMergedKnowledgePoint.value = kp;
+      mergedKnowledgePointName.value = kp.name;
+      showMergedKnowledgeDropdown.value = false;
+    };
+
+    /**
+     * 清除合并后知识点选择
+     */
+    const clearMergedKnowledgePoint = () => {
+      selectedMergedKnowledgePoint.value = null;
+      mergedKnowledgePointName.value = "";
+    };
+
+    /**
+     * 合并知识点下拉框失焦处理
+     */
+    const onMergeKnowledgeBlur = () => {
+      setTimeout(() => {
+        showMergeKnowledgeDropdown.value = false;
+      }, 200);
+    };
+
+    /**
+     * 合并后知识点下拉框失焦处理
+     */
+    const onMergedKnowledgeBlur = () => {
+      setTimeout(() => {
+        showMergedKnowledgeDropdown.value = false;
+      }, 200);
+    };
+
+    /**
+     * 预览合并
+     */
+    const previewMerge = async () => {
+      try {
+        isMerging.value = true;
+        // 确定合并后的知识点ID
+        let mergedKnowledgePointId = null;
+        // 如果选择了现有的知识点，使用其ID
+        if (selectedMergedKnowledgePoint.value) {
+          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+        } else {
+          // 如果是新知识点，先创建
+          const newKnowledgePointResponse = await axios.post(
+            `${API_BASE}/questions/uploadKnowledgePoint`,
+            [mergedKnowledgePointName.value.trim()]
+          );
+          if (newKnowledgePointResponse.data.code === 500) {
+            closeMergeKnowledgeModal();
+            showAlert("创建失败", "知识点已存在");
+            isMerging.value = false;
+            return;
+          }
+          // 重新加载知识点列表以获取新创建的ID
+          await loadLists();
+          // 从更新后的列表中查找新创建的知识点
+          const newKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.name === mergedKnowledgePointName.value.trim()
+          );
+          if (newKnowledgePoint) {
+            mergedKnowledgePointId = newKnowledgePoint.id;
+          } else {
+            isMerging.value = false;
+            return;
+          }
+        }
+        // 第一次调用合并接口，confirm=false
+        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+        const response = await axios.post(
+          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
+          sourceIds
+        );
+        const responseData = response.data.data;
+        affectedQuestions.value = Array.isArray(responseData) ? responseData : [];
+
+        // 因为不分页，所以固定为 1 页
+        affectedQuestionsTotalItems.value = affectedQuestions.value.length;
+        affectedQuestionsTotalPages.value = 1;
+
+        affectedQuestionsPageNum.value = 1;
+        affectedQuestionsPageInput.value = 1;
+
+        // 进入步骤2
+        mergeStep.value = 2;
+      } catch (err) {
+        console.error("预览合并失败:", err);
+        closeMergeKnowledgeModal();
+        showAlert("预览失败", err.response?.data?.message || err.message);
+      } finally {
+        isMerging.value = false;
+      }
+    };
+
+    /**
+     * 确认合并
+     */
+    const confirmMerge = async () => {
+      try {
+        isMerging.value = true;
+
+        // 确定合并后的知识点ID
+        let mergedKnowledgePointId = null;
+
+        // 如果选择了现有的知识点，使用其ID
+        if (selectedMergedKnowledgePoint.value) {
+          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+        } else {
+          // 从知识点列表中查找
+          const targetKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.name === mergedKnowledgePointName.value.trim()
+          );
+
+          if (targetKnowledgePoint) {
+            mergedKnowledgePointId = targetKnowledgePoint.id;
+          } else {
+            showAlert("合并失败", "无法找到目标知识点");
+            isMerging.value = false;
+            return;
+          }
+        }
+
+        // 第二次调用合并接口，confirm=true
+        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+        await axios.post(
+          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/true`,
+          sourceIds
+        );
+
+        showAlert("合并成功", "知识点合并完成");
+        closeMergeKnowledgeModal();
+
+        // 重新加载知识点列表
+        await loadLists();
+      } catch (err) {
+        console.error("合并失败:", err);
+        showAlert("合并失败", err.response?.data?.message || err.message);
+      } finally {
+        isMerging.value = false;
+      }
+    };
+
+    /**
+     * 改变受影响题目页码
+     * @param {number} newPage - 新页码
+     */
+    const changeAffectedPage = (newPage) => {
+      if (newPage < 1 || newPage > affectedQuestionsTotalPages.value) {
+        return;
+      }
+      affectedQuestionsPageNum.value = newPage;
+      affectedQuestionsPageInput.value = newPage;
+      loadAffectedQuestions();
+    };
+
+    /**
+     * 跳转到受影响题目首页
+     */
+    const goToAffectedFirstPage = () => {
+      changeAffectedPage(1);
+    };
+
+    /**
+     * 跳转到受影响题目末页
+     */
+    const goToAffectedLastPage = () => {
+      changeAffectedPage(affectedQuestionsTotalPages.value);
+    };
+
+    /**
+     * 跳转到受影响题目指定页码
+     */
+    const goToAffectedPage = () => {
+      const page = parseInt(affectedQuestionsPageInput.value);
+      if (page >= 1 && page <= affectedQuestionsTotalPages.value) {
+        changeAffectedPage(page);
+      } else {
+        showAlert(
+          "输入错误",
+          `请输入 1 到 ${affectedQuestionsTotalPages.value} 之间的页码`
+        );
+      }
+    };
+
+    /**
+     * 加载受影响题目（用于分页）
+     */
+    const loadAffectedQuestions = async () => {
+      if (
+        selectedMergeKnowledgePoints.value.length < 2 ||
+        !mergedKnowledgePointName.value.trim()
+      ) {
+        return;
+      }
+
+      try {
+        // 确定合并后的知识点ID
+        let mergedKnowledgePointId = null;
+
+        if (selectedMergedKnowledgePoint.value) {
+          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+        } else {
+          const targetKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.name === mergedKnowledgePointName.value.trim()
+          );
+
+          if (targetKnowledgePoint) {
+            mergedKnowledgePointId = targetKnowledgePoint.id;
+          } else {
+            return;
+          }
+        }
+
+        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+        const response = await axios.post(
+          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
+          sourceIds,
+          {
+            params: {
+              page_num: affectedQuestionsPageNum.value,
+              page_size: affectedQuestionsPageSize.value,
+            },
+          }
+        );
+
+        const responseData = response.data.data;
+        affectedQuestions.value = responseData?.data_info || [];
+        affectedQuestionsTotalPages.value = responseData?.total_pages || 1;
+        affectedQuestionsTotalItems.value = responseData?.total_items || 0;
+        affectedQuestionsPageInput.value = affectedQuestionsPageNum.value;
+      } catch (err) {
+        console.error("加载受影响题目失败:", err);
+        showAlert("加载失败", "加载受影响题目失败");
+      }
+    };
+
+    // ==================== 编辑知识点相关方法 ====================
+    /**
+     * 编辑知识点
+     * @param {Object} knowledgePoint - 知识点对象
+     * @param {string} type - 类型：知识点或副知识点
+     */
+    const editKnowledgePoint = (knowledgePoint, type = "知识点") => {
+      editingKnowledgePoint.value = knowledgePoint;
+      editingKnowledgePointName.value = knowledgePoint.name;
+      editingKnowledgePointType.value = type;
+      showEditKnowledgePointModal.value = true;
+    };
+
+    /**
+     * 更新知识点名称
+     */
+    const updateKnowledgePointName = async () => {
+      if (!editingKnowledgePoint.value || !editingKnowledgePointName.value.trim()) {
+        cancelEditKnowledgePoint();
+        showAlert("输入错误", "请输入知识点名称");
+        return;
+      }
+
+      try {
+        const response = await axios.post(
+          `${API_BASE}/questions/updateKnowledgePointName`,
+          {
+            id: editingKnowledgePoint.value.id,
+            name: editingKnowledgePointName.value.trim(),
+          }
+        );
+        if (response.data?.code === 409) {
+          cancelEditKnowledgePoint();
+          showAlert("更新失败", response.data.message || "知识点已存在");
+          return; // 直接结束，不执行后面的成功逻辑
+        }
+
+        showAlert("更新成功", `${editingKnowledgePointType.value}名称更新成功`);
+
+        // 重新加载列表
+        await loadLists();
+
+        // 如果当前选中的知识点被编辑，更新选中状态
+        if (
+          selectedKnowledgePoint.value &&
+          selectedKnowledgePoint.value.id === editingKnowledgePoint.value.id
+        ) {
+          const updatedKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.id === editingKnowledgePoint.value.id
+          );
+          if (updatedKnowledgePoint) {
+            selectedKnowledgePoint.value = updatedKnowledgePoint;
+            form.knowledge_point_id = updatedKnowledgePoint.id;
+            knowledgeSearch.value = updatedKnowledgePoint.name;
+          }
+        }
+
+        // 如果更新表单中选中的知识点被编辑，更新选中状态
+        if (
+          selectedUpdateFormKnowledgePoint.value &&
+          selectedUpdateFormKnowledgePoint.value.id === editingKnowledgePoint.value.id
+        ) {
+          const updatedKnowledgePoint = knowledgePointList.value.find(
+            (kp) => kp.id === editingKnowledgePoint.value.id
+          );
+          if (updatedKnowledgePoint) {
+            selectedUpdateFormKnowledgePoint.value = updatedKnowledgePoint;
+            updateForm.knowledge_point_id = updatedKnowledgePoint.id;
+            updateFormKnowledgeSearch.value = updatedKnowledgePoint.name;
+          }
+        }
+
+        cancelEditKnowledgePoint();
+      } catch (err) {
+        console.error("更新知识点名称失败:", err);
+        cancelEditKnowledgePoint();
+        showAlert("更新失败", err.response?.data?.message || err.message);
+      }
+    };
+
+    /**
+     * 取消编辑知识点
+     */
+    const cancelEditKnowledgePoint = () => {
+      showEditKnowledgePointModal.value = false;
+      editingKnowledgePoint.value = null;
+      editingKnowledgePointName.value = "";
+      editingKnowledgePointType.value = "知识点";
     };
 
     // ==================== 返回所有响应式数据和方法 ====================
@@ -6110,21 +6053,6 @@ export default {
       cancelLogout,
       silentFindQuestions,
 
-      // 数学公式预览相关
-      titlePreview,
-      answerPreview,
-      notesPreview,
-      optionPreviews,
-      remarkPreview,
-      updateTitlePreview,
-      updateAnswerPreview,
-      updateNotesPreview,
-      updateOptionPreviews,
-      updateRemarkPreview,
-      renderMathPreview,
-      renderOptionPreview,
-      renderUpdateOptionPreview,
-
       // 新增预览功能相关
       showPreviewModal,
       previewMode,
@@ -6151,7 +6079,6 @@ export default {
       getPreviewAnswer,
       getPreviewNotes,
       getPreviewRemark,
-      renderMath,
 
       // 分页相关
       totalPages,
@@ -6231,6 +6158,19 @@ export default {
       goToAffectedLastPage,
       goToAffectedPage,
       loadAffectedQuestions,
+
+      // 富文本编辑器相关
+      editorOptions,
+      titleEditor,
+      answerEditor,
+      notesEditor,
+      remarkEditor,
+      optionEditors,
+      updateTitleEditor,
+      updateAnswerEditor,
+      updateNotesEditor,
+      updateRemarkEditor,
+      updateOptionEditors,
     };
   },
 };
@@ -6244,6 +6184,103 @@ export default {
   margin: auto; /* 水平居中 */
   padding: 20px; /* 内边距 */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; /* 字体栈，优先使用系统字体 */
+}
+
+/* ==================== 富文本编辑器样式 ==================== */
+/* 容器样式 */
+.rich-text-editor-container {
+  margin-bottom: 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+/* 小编辑器（选项） */
+.rich-text-editor-container.small {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+/* 编辑器主体 */
+.rich-text-editor {
+  min-height: 180px;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 8px;
+  border: none; /* 容器已经有边框 */
+}
+
+/* 小编辑器高度 */
+.rich-text-editor.option-editor {
+  min-height: 80px;
+}
+
+/* 工具栏 */
+:deep(.ql-toolbar) {
+  border-bottom: 1px solid #dcdfe6;
+  background: #f8f9fa;
+  padding: 4px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+:deep(.ql-toolbar .ql-formats) {
+  margin-right: 4px;
+}
+
+:deep(.ql-toolbar button),
+:deep(.ql-toolbar select) {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* 编辑器内容区 */
+:deep(.ql-editor) {
+  min-height: 150px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 空内容提示 */
+:deep(.ql-editor.ql-blank::before) {
+  content: attr(data-placeholder);
+  color: #c0c4cc;
+  font-style: italic;
+}
+
+/* 列表、引用、代码块 */
+:deep(.ql-editor ul),
+:deep(.ql-editor ol) {
+  padding-left: 20px;
+}
+
+:deep(.ql-editor blockquote) {
+  border-left: 4px solid #ccc;
+  margin: 10px 0;
+  padding-left: 16px;
+  color: #666;
+}
+
+:deep(.ql-editor pre.ql-syntax) {
+  background-color: #23241f;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 3px;
+  overflow-x: auto;
+}
+
+/* 弹出框 / picker */
+:deep(.ql-tooltip),
+:deep(.ql-picker-options) {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  padding: 2px 100px;
 }
 
 /* ==================== 模式选择器样式 ==================== */
@@ -6398,7 +6435,7 @@ export default {
 .form-section,
 .update-section {
   background: white; /* 白色背景 */
-  padding: 30px; /* 内边距 */
+  padding: 20px; /* 内边距 */
   border-radius: 8px; /* 圆角 */
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); /* 阴影效果 */
 }
@@ -6485,6 +6522,7 @@ export default {
   box-sizing: border-box; /* 盒模型 */
   text-align: center; /* 文字居中 */
   word-break: break-word; /* 单词换行 */
+  white-space: normal !important; /* 正常换行 */
 }
 
 .table-header .table-cell {
@@ -6539,7 +6577,10 @@ export default {
   word-break: break-word; /* 单词换行 */
   line-height: 1.4; /* 行高 */
   text-align: left; /* 左对齐 */
+  max-height: 250px; /* 设置最大高度 */
+  overflow-y: auto; /* 垂直滚动条 */
 }
+
 
 .image-cell {
   text-align: center; /* 居中对齐 */
@@ -6615,7 +6656,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 20px;
+  padding: 30px 8px 8px;
 }
 
 .pagination-controls button {
@@ -6742,7 +6783,7 @@ export default {
   background: white; /* 白色背景 */
   padding: 40px; /* 内边距 */
   border-radius: 12px; /* 大圆角 */
-  max-width: 500px; /* 最大宽度 */
+  max-width: 1500px; /* 最大宽度 */
   width: 90%; /* 宽度90% */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
   text-align: center; /* 文字居中 */
@@ -6941,6 +6982,7 @@ export default {
   border: 1px solid #dcdfe6; /* 边框 */
   line-height: 1.6; /* 行高 */
   color: #303133; /* 深灰色文字 */
+  overflow: auto; /* 垂直滚动 */
 }
 
 .preview-image {
@@ -6973,6 +7015,7 @@ export default {
   border: 1px solid #dcdfe6; /* 边框 */
   border-radius: 6px; /* 圆角 */
   transition: all 0.3s; /* 过渡动画 */
+  overflow-y: auto; /* 允许垂直滚动 */
 }
 
 .preview-option.correct-answer {
@@ -7036,6 +7079,7 @@ export default {
 .dependent-questions h4 {
   color: #f56c6c;
   margin-bottom: 10px;
+  padding: 0px 0px 20px 0px;
   font-size: 16px;
 }
 
@@ -7090,9 +7134,9 @@ export default {
 .dependent-question-content {
   line-height: 1.4;
   color: #606266;
-  max-height: 60px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #606266;
+  overflow: visible;
+  max-height: none;
 }
 
 .dependent-question-actions {
@@ -7560,43 +7604,6 @@ export default {
   flex: 1; /* 弹性填充 */
 }
 
-/* ==================== 数学公式预览样式 ==================== */
-.math-preview {
-  border: 1px solid #e4e7ed; /* 边框 */
-  border-radius: 4px; /* 圆角 */
-  padding: 10px; /* 内边距 */
-  margin-top: 8px; /* 顶部外边距 */
-  background: #f8f9fa; /* 浅灰色背景 */
-  min-height: 40px; /* 最小高度 */
-  line-height: 1.5; /* 行高 */
-}
-
-.math-preview.small {
-  min-height: 30px; /* 较小高度 */
-  padding: 6px 8px; /* 较小内边距 */
-  font-size: 13px; /* 较小字体 */
-}
-
-.math-error {
-  color: #f56c6c; /* 红色文字 */
-  background: #fef0f0; /* 浅红色背景 */
-  padding: 2px 4px; /* 内边距 */
-  border-radius: 2px; /* 小圆角 */
-  border: 1px solid #fbc4c4; /* 红色边框 */
-}
-
-/* ==================== KaTeX 公式样式 ==================== */
-/* 深度选择器，确保样式能应用到子组件中的KaTeX元素 */
-:deep(.katex) {
-  font-size: 1.1em; /* 稍大的字体 */
-}
-
-:deep(.katex-display) {
-  margin: 0.5em 0; /* 外边距 */
-  overflow-x: auto; /* 水平滚动 */
-  overflow-y: hidden; /* 垂直隐藏 */
-}
-
 /* ==================== 表格列宽设置 ==================== */
 /* 按顺序为每个表格列设置固定宽度 */
 .table-cell:nth-child(1) {
@@ -7754,6 +7761,31 @@ export default {
     align-items: flex-start;
     gap: 5px;
   }
+
+  /* 富文本编辑器在小屏幕上的适配 */
+  .rich-text-editor-container {
+    margin-bottom: 8px;
+  }
+
+  .rich-text-editor {
+    height: 150px;
+  }
+
+  .rich-text-editor.option-editor {
+    height: 80px;
+  }
+
+  :deep(.ql-toolbar) {
+    padding: 4px;
+  }
+
+  :deep(.ql-toolbar .ql-formats) {
+    margin-right: 4px;
+  }
+
+  :deep(.ql-toolbar button) {
+    padding: 2px 4px;
+  }
 }
 </style>
-我发现我的合并知识点的模态框会因为overflow-y导致在选择知识点的时候下拉框里面的知识点显示模糊
+这是我的源码，我希望在检索结表格中，预览题目框中，如果题目内容，解析，备注，选项内容，参考答案过长时，可以够滚动条
