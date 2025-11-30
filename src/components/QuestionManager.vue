@@ -2771,8 +2771,44 @@ export default {
     /**
      * 确认提交
      */
-    const confirmSubmit = () => {
+    const replaceBlobUrls = async (targetForm) => {
+      if (!targetForm.pendingImages || targetForm.pendingImages.length === 0) return;
+
+      for (const img of targetForm.pendingImages) {
+        const url = await uploadToImageBed(img.file);
+
+        // 所有需要替换的字段
+        const fields = ["title", "remark", "answer", "notes"];
+
+        fields.forEach((key) => {
+          if (targetForm[key]) {
+            targetForm[key] = targetForm[key].replaceAll(img.localUrl, url);
+          }
+        });
+
+        // 替换选项
+        if (targetForm.options) {
+          targetForm.options = targetForm.options.map((opt) => {
+            if (opt.text) {
+              opt.text = opt.text.replaceAll(img.localUrl, url);
+            }
+            return opt;
+          });
+        }
+      }
+
+      // 清空 pending
+      targetForm.pendingImages = [];
+    };
+
+    const confirmSubmit = async () => {
+      const targetForm = previewMode.value === "upload" ? form : updateForm;
+
+      // 统一替换（创建或更新都可）
+      await replaceBlobUrls(targetForm);
+
       showPreviewModal.value = false;
+
       if (previewMode.value === "upload") {
         handleSubmit();
       } else {
@@ -3933,49 +3969,44 @@ export default {
       if (!formObject || !field) return;
 
       const items = event.clipboardData.items;
+
       for (let item of items) {
         if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
-          await handleMarkdownImage(file, textarea, formObject, field, optObj);
+          const localUrl = URL.createObjectURL(file);
+
+          if (!formObject.pendingImages) formObject.pendingImages = [];
+          formObject.pendingImages.push({ file, localUrl });
+
+          insertImageMarkdown(localUrl, textarea, formObject, field, optObj);
         }
       }
     };
+
+    const pendingImages = reactive([]);
+    function savePendingImage(file, blobUrl, formObject, field) {
+      pendingImages.push({
+        file,
+        blobUrl,
+        formObject,
+        field,
+      });
+    }
 
     const handleDrop = async (event) => {
       const textarea = event.target;
       const { formObject, field, optObj } = getFormInfo(textarea);
       if (!formObject || !field) return;
 
-      const files = Array.from(event.dataTransfer.files);
-      for (let file of files) {
+      for (let file of event.dataTransfer.files) {
         if (file.type.startsWith("image/")) {
-          await handleMarkdownImage(file, textarea, formObject, field, optObj);
+          const localUrl = URL.createObjectURL(file);
+
+          if (!formObject.pendingImages) formObject.pendingImages = [];
+          formObject.pendingImages.push({ file, localUrl });
+
+          insertImageMarkdown(localUrl, textarea, formObject, field, optObj);
         }
-      }
-    };
-
-    /**
-     * 处理 Markdown 图片上传
-     */
-    const handleMarkdownImage = async (file, textarea, formObject, field, optObj) => {
-      if (!file || !field || !formObject) return;
-
-      if (file.size > 5 * 1024 * 1024) {
-        showAlert("文件过大", "图片大小不能超过5MB");
-        return;
-      }
-
-      try {
-        showAlert("上传中", "图片正在上传到图床...", "info");
-
-        const url = await uploadToImageBed(file);
-
-        insertImageMarkdown(url, textarea, formObject, field, optObj);
-
-        showAlert("上传成功", "图片已插入 Markdown", "success");
-      } catch (error) {
-        console.error("Markdown 图片上传失败:", error);
-        showAlert("上传失败", error.message);
       }
     };
 
@@ -5878,7 +5909,6 @@ export default {
       //图片上传
       handlePaste,
       handleDrop,
-      handleMarkdownImage,
       insertImageMarkdown,
 
       // 退出登录
