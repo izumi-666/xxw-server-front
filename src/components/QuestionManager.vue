@@ -393,7 +393,10 @@
               placeholder="输入关键字搜索副知识点..."
               class="form-input search-input"
               @input="filterSubKnowledgePoints"
-              @focus="showSubKnowledgeDropdown = true"
+              @focus="
+                resetFilteredList('subKnowledge');
+                showSubKnowledgeDropdown = true;
+              "
               @blur="onSubKnowledgeBlur"
             />
             <div
@@ -474,7 +477,10 @@
               placeholder="输入关键字搜索解题思想..."
               class="form-input search-input"
               @input="filterSolutionIdeas"
-              @focus="showSolutionIdeaDropdown = true"
+              @focus="
+                resetFilteredList('solutionIdea');
+                showSolutionIdeaDropdown = true;
+              "
               @blur="onSolutionIdeaBlur"
             />
             <div
@@ -681,7 +687,10 @@
                 placeholder="输入关键字搜索知识点..."
                 class="form-input search-input"
                 @input="filterUpdateKnowledgePoints"
-                @focus="showUpdateKnowledgeDropdown = true"
+                @focus="
+                  resetFilteredList('updateKnowledge');
+                  showUpdateKnowledgeDropdown = true;
+                "
                 @blur="onUpdateKnowledgeBlur"
               />
               <div
@@ -742,7 +751,10 @@
                 placeholder="输入关键字搜索副知识点..."
                 class="form-input search-input"
                 @input="filterUpdateSubKnowledgePoints"
-                @focus="showUpdateSubKnowledgeDropdown = true"
+                @focus="
+                  resetFilteredList('updateSubKnowledge');
+                  showUpdateSubKnowledgeDropdown = true;
+                "
                 @blur="onUpdateSubKnowledgeBlur"
               />
               <div
@@ -807,7 +819,10 @@
                 placeholder="输入关键字搜索解题思想..."
                 class="form-input search-input"
                 @input="filterUpdateSolutionIdeas"
-                @focus="showUpdateSolutionIdeaDropdown = true"
+                @focus="
+                  resetFilteredList('updateSolutionIdea');
+                  showUpdateSolutionIdeaDropdown = true;
+                "
                 @blur="onUpdateSolutionIdeaBlur"
               />
               <div
@@ -1225,7 +1240,10 @@
                 placeholder="输入关键字搜索副知识点..."
                 class="form-input search-input"
                 @input="filterUpdateFormSubKnowledgePoints"
-                @focus="showUpdateFormSubKnowledgeDropdown = true"
+                @focus="
+                  resetFilteredList('updateFormSubKnowledge');
+                  showUpdateFormSubKnowledgeDropdown = true;
+                "
                 @blur="onUpdateFormSubKnowledgeBlur"
               />
               <div
@@ -1313,7 +1331,10 @@
                 placeholder="输入关键字搜索解题思想..."
                 class="form-input search-input"
                 @input="filterUpdateFormSolutionIdeas"
-                @focus="showUpdateFormSolutionIdeaDropdown = true"
+                @focus="
+                  resetFilteredList('updateFormSolutionIdea');
+                  showUpdateFormSolutionIdeaDropdown = true;
+                "
                 @blur="onUpdateFormSolutionIdeaBlur"
               />
               <div
@@ -1928,7 +1949,10 @@
                 placeholder="输入关键字搜索知识点..."
                 class="form-input search-input"
                 @input="filterMergeKnowledgePoints"
-                @focus="showMergeKnowledgeDropdown = true"
+                @focus="
+                  resetFilteredList('mergeKnowledge');
+                  showMergeKnowledgeDropdown = true;
+                "
                 @blur="onMergeKnowledgeBlur"
               />
               <div
@@ -3322,18 +3346,6 @@ export default {
     };
 
     /**
-     * 过滤更新界面副知识点列表
-     */
-    const filterUpdateSubKnowledgePoints = () => {
-      if (!updateSubKnowledgeSearch.value) {
-        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(updateSubKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-    /**
      * 更新界面副知识点下拉框失焦处理
      */
     const onUpdateSubKnowledgeBlur = () => {
@@ -3675,6 +3687,19 @@ export default {
     };
 
     /**
+     * 过滤更新界面副知识点列表
+     */
+    const filterUpdateSubKnowledgePoints = () => {
+      if (!updateSubKnowledgeSearch.value) {
+        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
+      } else {
+        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+          kp.name.toLowerCase().includes(updateSubKnowledgeSearch.value.toLowerCase())
+        );
+      }
+    };
+
+    /**
      * 过滤更新界面解题思想列表
      */
     const filterUpdateSolutionIdeas = () => {
@@ -3762,6 +3787,42 @@ export default {
         );
       }
     };
+
+    const resetFilteredList = (type) => {
+      switch (type) {
+        // =========== 上传界面 ===========
+        case "subKnowledge":
+          filteredSubKnowledgePoints.value = knowledgePointList.value;
+          break;
+        case "solutionIdea":
+          filteredSolutionIdeas.value = solutionIdeaList.value;
+          break;
+        // =========== 合并预览页面 ===========
+        case "mergeKnowledge":
+          filteredMergeKnowledgePoints.value = knowledgePointList.value;
+          break;
+
+        // =========== 更新界面 ===========
+        case "updateKnowledge":
+          filteredUpdateKnowledgePoints.value = knowledgePointList.value;
+          break;
+        case "updateSubKnowledge":
+          filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
+          break;
+        case "updateSolutionIdea":
+          filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
+          break;
+
+        // =========== 更新表单 ===========
+        case "updateFormSolutionIdea":
+          filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
+          break;
+        case "updateFormSubKnowledge":
+          filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
+          break;
+      }
+    };
+
     // ==================== 图片上传配置 ====================
     const IMAGE_BED_CONFIG = {
       apiUrl: "https://xxwpic.flito.art/api/index.php", // 图床API地址
@@ -5819,6 +5880,7 @@ export default {
       filterUpdateFormSolutionIdeas,
       filterUpdateFormQuestionCategories,
       filterUpdateFormSubKnowledgePoints,
+      resetFilteredList,
 
       // 选择方法
       selectKnowledgePoint,
