@@ -1771,9 +1771,6 @@
               class="preview-text-content"
               v-html="renderMarkdown(getPreviewNotes())"
             ></div>
-            <div v-if="getPreviewNotesImageUrl()" class="preview-image">
-              <img :src="getPreviewNotesImageUrl()" alt="解析图片" class="preview-img" />
-            </div>
           </div>
 
           <!-- 备注 -->
@@ -2318,7 +2315,6 @@ export default {
       ],
       answer: "", // 答案
       notes: "", // 解析
-      notes_img_url: "", // 解析图片URL
       remark: "", // 备注
       sub_knowledge_point_ids: [], // 副知识点ID数组
       img_url: "", // 图片URL
@@ -2344,7 +2340,6 @@ export default {
       ],
       answer: "",
       notes: "",
-      notes_img_url: "",
       remark: "",
       sub_knowledge_point_ids: [],
       img_url: "",
@@ -2374,10 +2369,6 @@ export default {
     const selectedQuestion = ref(null); // 选中的题目
     const showDeleteConfirm = ref(false); // 删除确认框显示状态
     const questionToDelete = ref(null); // 待删除的题目
-
-    // ==================== 图片粘贴相关状态 ====================
-    const pendingNotesImageFile = ref(null); // 解析图片待上传文件
-    const pendingUpdateNotesImageFile = ref(null); // 更新界面解析图片待上传文件
 
     // ==================== 搜索关键词状态 ====================
     // 上传界面的搜索关键词
@@ -2986,13 +2977,6 @@ export default {
       return currentForm.img_url || "";
     };
 
-    /**
-     * 获取预览的解析图片URL
-     */
-    const getPreviewNotesImageUrl = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.notes_img_url || "";
-    };
 
     /**
      * 获取预览的选项
@@ -3971,44 +3955,6 @@ export default {
     };
 
     /**
-     * 上传待处理的解析图片（在表单提交时调用）
-     * @param {string} mode - 模式：'upload' 或 'update'
-     * @returns {Promise<boolean>} 是否上传成功
-     */
-    const uploadPendingNotesImage = async (mode) => {
-      try {
-        const pendingFile =
-          mode === "upload"
-            ? pendingNotesImageFile.value
-            : pendingUpdateNotesImageFile.value;
-        const formData = mode === "upload" ? form : updateForm;
-
-        if (!pendingFile) {
-          return true; // 没有待上传的图片，直接返回成功
-        }
-
-        showAlert("上传中", "解析图片正在上传到图床...", "info");
-
-        // 上传到图床
-        const imageUrl = await uploadToImageBed(pendingFile);
-
-        // 使用图床返回的URL替换预览URL
-        formData.notes_img_url = imageUrl;
-
-        // 清空待处理文件
-        if (mode === "upload") {
-          pendingNotesImageFile.value = null;
-        } else {
-          pendingUpdateNotesImageFile.value = null;
-        }
-        return true;
-      } catch (error) {
-        console.error("解析图片上传失败:", error);
-        showAlert("上传失败", error.message);
-        return false;
-      }
-    };
-    /**
      * 获取 textarea 对应字段和表单对象
      * 这里通过 data-form="form" 或 data-form="updateForm" 来区分
      */
@@ -4577,7 +4523,6 @@ export default {
         : null;
       updateForm.answer = q.answer || "";
       updateForm.notes = q.notes || "";
-      updateForm.notes_img_url = q.notes_img_url || "";
       updateForm.remark = q.remark || "";
       updateForm.sub_knowledge_point_ids = (q.sub_knowledge_point_ids || []).map((id) =>
         Number(id)
@@ -4741,13 +4686,6 @@ export default {
           return;
         }
 
-        // 再上传解析图片到图床
-        const notesImageUploadSuccess = await uploadPendingNotesImage("upload");
-        if (!notesImageUploadSuccess) {
-          submitting.value = false;
-          return;
-        }
-
         let optionsPayload = {};
         let answerPayload = "";
 
@@ -4797,10 +4735,7 @@ export default {
           marking_type: form.marking_type,
           knowledge_point_id:
             form.knowledge_point_id !== null ? Number(form.knowledge_point_id) : null,
-          solution_idea_ids:
-            form.solution_idea_ids.length > 0
-              ? form.solution_idea_ids.map((id) => Number(id))
-              : null,
+          solution_idea_ids: form.solution_idea_ids.map((id) => Number(id)), 
           difficulty_level:
             form.difficulty_level !== null ? Number(form.difficulty_level) : null,
           title: form.title,
@@ -4813,12 +4748,8 @@ export default {
             : {}),
           answer: answerPayload,
           notes: form.notes,
-          notes_img_url: form.notes_img_url,
           remark: form.remark,
-          sub_knowledge_point_ids:
-            form.sub_knowledge_point_ids.length > 0
-              ? form.sub_knowledge_point_ids.map((id) => Number(id))
-              : null,
+          sub_knowledge_point_ids: form.sub_knowledge_point_ids.map((id) => Number(id)),
           img_url: form.img_url,
         };
 
@@ -4859,12 +4790,6 @@ export default {
           return;
         }
 
-        // 再上传解析图片到图床
-        const notesImageUploadSuccess = await uploadPendingNotesImage("update");
-        if (!notesImageUploadSuccess) {
-          submitting.value = false;
-          return;
-        }
 
         let optionsPayload = {};
         let answerPayload = "";
@@ -4921,10 +4846,7 @@ export default {
             updateForm.knowledge_point_id !== null
               ? Number(updateForm.knowledge_point_id)
               : null,
-          solution_idea_ids:
-            updateForm.solution_idea_ids.length > 0
-              ? updateForm.solution_idea_ids.map((id) => Number(id))
-              : null,
+          solution_idea_ids: updateForm.solution_idea_ids.map((id) => Number(id)),
           difficulty_level:
             updateForm.difficulty_level !== null
               ? Number(updateForm.difficulty_level)
@@ -4939,12 +4861,8 @@ export default {
             : {}),
           answer: answerPayload,
           notes: updateForm.notes,
-          notes_img_url: updateForm.notes_img_url,
           remark: updateForm.remark,
-          sub_knowledge_point_ids:
-            updateForm.sub_knowledge_point_ids.length > 0
-              ? updateForm.sub_knowledge_point_ids.map((id) => Number(id))
-              : null,
+          sub_knowledge_point_ids: updateForm.sub_knowledge_point_ids.map((id) => Number(id)),
           img_url: updateForm.img_url,
         };
 
@@ -5035,7 +4953,6 @@ export default {
         ],
         answer: "",
         notes: "",
-        notes_img_url: "",
         remark: "",
         sub_knowledge_point_ids: [],
         solution_idea_ids: [],
@@ -5046,7 +4963,6 @@ export default {
       subKnowledgeSearch.value = "";
       solutionIdeaSearch.value = "";
       pendingImageFile.value = null;
-      pendingNotesImageFile.value = null;
       selectedKnowledgePoint.value = null;
     };
 
@@ -6004,7 +5920,6 @@ export default {
       getPreviewSolutionIdeas,
       getPreviewTitle,
       getPreviewImageUrl,
-      getPreviewNotesImageUrl,
       getPreviewOptions,
       showPreviewOptions,
       isPreviewOptionCorrect,
