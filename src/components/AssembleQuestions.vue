@@ -3430,7 +3430,7 @@ export default {
 
 .option-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 8px;
   padding: 10px;
   border-radius: 6px;

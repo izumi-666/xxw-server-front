@@ -3,24 +3,16 @@
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">
-          考试管理
-        </h1>
+        <h1 class="page-title">考试管理</h1>
       </div>
     </div>
 
     <!-- 顶部操作区 - 有创建权限时才显示 -->
     <div v-if="hasCreatePermission" class="action-bar card">
       <div class="action-buttons">
-        <button class="btn-primary" @click="goCreateExam">
-          安排新考试
-        </button>
-        <button class="btn-success" @click="batchArrange">
-          批量安排
-        </button>
-        <button class="btn-info" @click="exportExamData">
-          导出数据
-        </button>
+        <button class="btn-primary" @click="goCreateExam">安排新考试</button>
+        <button class="btn-success" @click="batchArrange">批量安排</button>
+        <button class="btn-info" @click="exportExamData">导出数据</button>
       </div>
     </div>
 
@@ -33,28 +25,26 @@
           <button class="btn-secondary" @click="resetSearch">重置</button>
         </div>
       </div>
-      
+
       <div class="criteria-grid">
         <!-- 考试名称 -->
         <div class="criteria-item">
           <label class="criteria-label">考试名称</label>
           <input
             type="text"
-            v-model="searchForm.description"
+            v-model="searchForm.name"
             placeholder="请输入考试名称"
             class="form-input"
           />
         </div>
-      </div>
 
-      <div class="criteria-grid">
         <!-- 考试发起人 -->
         <div class="criteria-item">
           <label class="criteria-label">考试发起人</label>
           <input
             type="text"
-            v-model="searchForm.description"
-            placeholder="请输入考试发起人名"
+            v-model="searchForm.created_by"
+            placeholder="请输入考试发起人姓名，多个用逗号分隔"
             class="form-input"
           />
         </div>
@@ -67,7 +57,7 @@
         <div class="results-header">
           <h2 class="section-title">考试列表</h2>
           <div class="results-count" v-if="examList.length">
-            共 {{ examList.length }} 场考试
+            共 {{ totalItems }} 场考试
           </div>
         </div>
 
@@ -80,6 +70,7 @@
                   <th>科目</th>
                   <th>年级</th>
                   <th>考试时间</th>
+                  <th>状态</th>
                   <th>参考人数</th>
                   <th>平均分</th>
                   <th>操作</th>
@@ -89,7 +80,9 @@
                 <tr v-for="exam in examList" :key="exam.id">
                   <td>
                     <div class="exam-name">{{ exam.name }}</div>
-                    <div class="exam-desc" v-if="exam.description">{{ exam.description }}</div>
+                    <div class="exam-desc" v-if="exam.description">
+                      {{ exam.description }}
+                    </div>
                   </td>
                   <td>{{ exam.subject }}</td>
                   <td>{{ exam.grade }}</td>
@@ -114,52 +107,52 @@
                   <td>
                     <div class="action-buttons-cell">
                       <!-- 查看详情按钮 -->
-                      <button 
+                      <button
                         v-if="hasReadPermission"
                         class="btn-info btn-sm"
                         @click="viewExamDetails(exam)"
                       >
                         详情
                       </button>
-                      
+
                       <!-- 编辑按钮 -->
-                      <button 
+                      <button
                         v-if="hasUpdatePermission && exam.status === 'pending'"
                         class="btn-secondary btn-sm"
                         @click="editExam(exam)"
                       >
                         编辑
                       </button>
-                      
+
                       <!-- 监考安排按钮 -->
-                      <button 
+                      <button
                         v-if="hasUpdatePermission && exam.status === 'pending'"
                         class="btn-warning btn-sm"
                         @click="arrangeInvigilators(exam)"
                       >
                         监考
                       </button>
-                      
+
                       <!-- 成绩录入按钮 -->
-                      <button 
+                      <button
                         v-if="hasUpdatePermission && exam.status === 'completed'"
                         class="btn-success btn-sm"
                         @click="enterScores(exam)"
                       >
                         成绩
                       </button>
-                      
+
                       <!-- 成绩分析按钮 -->
-                      <button 
+                      <button
                         v-if="hasReadPermission && exam.status === 'graded'"
                         class="btn-primary btn-sm"
                         @click="analyzeScores(exam)"
                       >
                         分析
                       </button>
-                      
+
                       <!-- 删除按钮 -->
-                      <button 
+                      <button
                         v-if="hasDeletePermission && exam.status === 'pending'"
                         class="btn-delete btn-sm"
                         @click="deleteExam(exam)"
@@ -172,17 +165,17 @@
               </tbody>
             </table>
           </div>
-          
+
           <!-- 分页控件 -->
           <div class="pagination" v-if="totalPages > 1">
-            <button 
+            <button
               class="pagination-btn"
               :disabled="currentPage === 1"
               @click="goToPage(currentPage - 1)"
             >
               上一页
             </button>
-            
+
             <div class="page-numbers">
               <button
                 v-for="page in visiblePages"
@@ -195,21 +188,21 @@
               </button>
               <span v-if="showEllipsis" class="ellipsis">...</span>
             </div>
-            
-            <button 
+
+            <button
               class="pagination-btn"
               :disabled="currentPage === totalPages"
               @click="goToPage(currentPage + 1)"
             >
               下一页
             </button>
-            
+
             <div class="page-info">
               第 {{ currentPage }} / {{ totalPages }} 页，共 {{ totalItems }} 条记录
             </div>
           </div>
         </div>
-        
+
         <div v-else class="no-results">
           <div class="no-results-content">
             <p>暂无考试数据</p>
@@ -235,7 +228,7 @@
           <h3 class="modal-title">考试详情 - {{ detailExamData?.name }}</h3>
           <button @click="detailVisible = false" class="btn-close">×</button>
         </div>
-        
+
         <div class="detail-content">
           <div class="detail-sections">
             <!-- 基本信息 -->
@@ -256,11 +249,18 @@
                 </div>
                 <div class="info-item">
                   <label>考试时间：</label>
-                  <span>{{ formatDateTime(detailExamData?.start_time) }} - {{ formatDateTime(detailExamData?.end_time) }}</span>
+                  <span
+                    >{{ formatDateTime(detailExamData?.start_time) }} -
+                    {{ formatDateTime(detailExamData?.end_time) }}</span
+                  >
                 </div>
                 <div class="info-item">
                   <label>考试时长：</label>
                   <span>{{ calculateDuration(detailExamData) }}</span>
+                </div>
+                <div class="info-item">
+                  <label>考试发起人：</label>
+                  <span>{{ detailExamData?.created_by }}</span>
                 </div>
                 <div class="info-item full-width" v-if="detailExamData?.description">
                   <label>考试说明：</label>
@@ -268,14 +268,14 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 试卷信息 -->
             <div class="detail-section" v-if="detailExamData?.paper_info">
               <h4 class="section-subtitle">试卷信息</h4>
               <div class="paper-info-card">
                 <div class="paper-info-header">
                   <div class="paper-name">{{ detailExamData.paper_info.name }}</div>
-                  <button 
+                  <button
                     v-if="hasReadPermission"
                     class="btn-info btn-sm"
                     @click="previewPaper(detailExamData.paper_info)"
@@ -290,13 +290,16 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 监考安排 -->
-            <div class="detail-section" v-if="detailExamData?.invigilators && detailExamData.invigilators.length">
+            <div
+              class="detail-section"
+              v-if="detailExamData?.invigilators && detailExamData.invigilators.length"
+            >
               <h4 class="section-subtitle">监考安排</h4>
               <div class="invigilator-list">
-                <div 
-                  v-for="invigilator in detailExamData.invigilators" 
+                <div
+                  v-for="invigilator in detailExamData.invigilators"
                   :key="invigilator.id"
                   class="invigilator-item"
                 >
@@ -308,46 +311,54 @@
                     <div class="invigilator-role">{{ invigilator.role }}</div>
                   </div>
                   <div class="invigilator-contact">
-                    <div class="contact-item">📞 {{ invigilator.phone || '未提供' }}</div>
+                    <div class="contact-item">📞 {{ invigilator.phone || "未提供" }}</div>
                   </div>
                 </div>
               </div>
             </div>
-            
+
             <!-- 成绩概览 -->
             <div class="detail-section" v-if="detailExamData?.status === 'graded'">
               <h4 class="section-subtitle">成绩概览</h4>
               <div class="score-overview">
                 <div class="score-stats">
                   <div class="stat-item">
-                    <div class="stat-value">{{ detailExamData.participant_count || 0 }}</div>
+                    <div class="stat-value">
+                      {{ detailExamData.participant_count || 0 }}
+                    </div>
                     <div class="stat-label">参考人数</div>
                   </div>
                   <div class="stat-item">
-                    <div class="stat-value">{{ detailExamData.average_score?.toFixed(1) || '--' }}</div>
+                    <div class="stat-value">
+                      {{ detailExamData.average_score?.toFixed(1) || "--" }}
+                    </div>
                     <div class="stat-label">平均分</div>
                   </div>
                   <div class="stat-item">
-                    <div class="stat-value">{{ detailExamData.highest_score || '--' }}</div>
+                    <div class="stat-value">
+                      {{ detailExamData.highest_score || "--" }}
+                    </div>
                     <div class="stat-label">最高分</div>
                   </div>
                   <div class="stat-item">
-                    <div class="stat-value">{{ detailExamData.lowest_score || '--' }}</div>
+                    <div class="stat-value">
+                      {{ detailExamData.lowest_score || "--" }}
+                    </div>
                     <div class="stat-label">最低分</div>
                   </div>
                 </div>
-                
+
                 <div class="score-distribution" v-if="detailExamData.score_distribution">
                   <h5>分数分布</h5>
                   <div class="distribution-chart">
-                    <div 
+                    <div
                       v-for="(range, index) in detailExamData.score_distribution.ranges"
                       :key="index"
                       class="distribution-bar"
                     >
                       <div class="bar-label">{{ range.label }}</div>
                       <div class="bar-container">
-                        <div 
+                        <div
                           class="bar-fill"
                           :style="{ height: range.percentage + '%' }"
                         ></div>
@@ -366,19 +377,23 @@
     <!-- ============================
           安排监考弹窗
     ============================== -->
-    <div v-if="invigilatorVisible" class="modal-overlay" @click="invigilatorVisible = false">
+    <div
+      v-if="invigilatorVisible"
+      class="modal-overlay"
+      @click="invigilatorVisible = false"
+    >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">安排监考 - {{ currentExam?.name }}</h3>
           <button @click="invigilatorVisible = false" class="btn-close">×</button>
         </div>
-        
+
         <div class="invigilator-content">
           <div class="invigilator-form">
             <div class="form-group">
               <label>选择监考老师</label>
               <div class="teacher-selector">
-                <div 
+                <div
                   v-for="teacher in availableTeachers"
                   :key="teacher.id"
                   class="teacher-option"
@@ -393,11 +408,11 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="form-group" v-if="selectedInvigilators.length > 0">
               <label>分配角色</label>
               <div class="role-assignment">
-                <div 
+                <div
                   v-for="teacherId in selectedInvigilators"
                   :key="teacherId"
                   class="role-item"
@@ -405,10 +420,7 @@
                   <div class="teacher-name">
                     {{ getTeacherById(teacherId)?.name }}
                   </div>
-                  <select 
-                    v-model="invigilatorRoles[teacherId]"
-                    class="role-select"
-                  >
+                  <select v-model="invigilatorRoles[teacherId]" class="role-select">
                     <option value="main">主监考</option>
                     <option value="assistant">副监考</option>
                     <option value="reserve">备用监考</option>
@@ -418,10 +430,57 @@
             </div>
           </div>
         </div>
-        
+
         <div class="modal-footer">
           <button class="btn-secondary" @click="invigilatorVisible = false">取消</button>
           <button class="btn-primary" @click="saveInvigilators">保存安排</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑考试弹窗 -->
+    <div v-if="editVisible" class="modal-overlay" @click="editVisible = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">编辑考试 - {{ editExamData.name }}</h3>
+          <button @click="editVisible = false" class="btn-close">×</button>
+        </div>
+
+        <div class="edit-content">
+          <div class="edit-form">
+            <div class="form-group">
+              <label class="form-label">考试名称</label>
+              <input type="text" v-model="editExamData.name" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">考试时长（分钟）</label>
+              <input type="number" v-model="editExamData.duration" class="form-input" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">开始时间</label>
+              <input
+                type="datetime-local"
+                v-model="editExamData.start_time"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">试卷</label>
+              <select v-model="editExamData.paper_id" class="form-input">
+                <option v-for="paper in paperList" :key="paper.id" :value="paper.id">
+                  {{ paper.name }} ({{ paper.subject }} - {{ paper.grade }})
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="editVisible = false">取消</button>
+          <button class="btn-primary" @click="saveExam">保存修改</button>
         </div>
       </div>
     </div>
@@ -450,24 +509,31 @@ const getUserPermissions = () => {
 
 const hasPermission = (permission) => {
   const userPermissions = getUserPermissions();
-  return userPermissions.includes(permission) || userPermissions.includes('exam:*');
+  return userPermissions.includes(permission) || userPermissions.includes("exam:*");
 };
 
-const hasReadPermission = computed(() => hasPermission('exam:read'));
-const hasCreatePermission = computed(() => hasPermission('exam:create'));
-const hasUpdatePermission = computed(() => hasPermission('exam:update'));
-const hasDeletePermission = computed(() => hasPermission('exam:delete'));
-const hasDownloadPermission = computed(() => hasPermission('exam:download'));
+const hasReadPermission = computed(() => hasPermission("exam:read"));
+const hasCreatePermission = computed(() => hasPermission("exam:create"));
+const hasUpdatePermission = computed(() => hasPermission("exam:update"));
+const hasDeletePermission = computed(() => hasPermission("exam:delete"));
+const hasDownloadPermission = computed(() => hasPermission("exam:download"));
 
 const hasAnyExamPermission = computed(() => {
-  const perms = ['exam:read', 'exam:create', 'exam:update', 'exam:delete', 'exam:download'];
-  return perms.some(perm => hasPermission(perm));
+  const perms = [
+    "exam:read",
+    "exam:create",
+    "exam:update",
+    "exam:delete",
+    "exam:download",
+  ];
+  return perms.some((perm) => hasPermission(perm));
 });
 
 /* ==================== 数据状态 ==================== */
 const examList = ref([]);
 const subjectList = ref([]);
 const gradeList = ref([]);
+const paperList = ref([]);
 
 // 分页相关
 const currentPage = ref(1);
@@ -478,166 +544,114 @@ const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value));
 // 模态框状态
 const detailVisible = ref(false);
 const invigilatorVisible = ref(false);
+const editVisible = ref(false);
 const detailExamData = ref(null);
 const currentExam = ref(null);
 
+// 编辑考试数据
+const editExamData = ref({
+  id: null,
+  name: "",
+  paper_id: null,
+  created_by: "",
+  start_time: "",
+  duration: 120,
+});
+
 /* ==================== 搜索相关 ==================== */
 const searchForm = ref({
-  description: "",
-  created_by: [],
+  name: "",
+  created_by: "",
 });
+
+/* ==================== 用户信息 ==================== */
+const getUserInfo = () => {
+  try {
+    const userInfoStr = localStorage.getItem("userInfo");
+    return userInfoStr ? JSON.parse(userInfoStr) : {};
+  } catch (error) {
+    console.error("解析用户信息失败:", error);
+    return {};
+  }
+};
 
 /* ==================== 数据加载 ==================== */
 const loadExams = async () => {
   try {
-    const params = {
-      ...searchForm.value,
-      page: currentPage.value,
-      page_size: pageSize.value,
-      // 将数组转换为逗号分隔的字符串
-      subject_id: searchForm.value.subject_id.join(','),
-      grade_id: searchForm.value.grade_id.join(','),
-      status: searchForm.value.status.join(',')
-    };
-    
-    const res = await axios.get(`${API_BASE}/exam/list`, { params });
+    const userInfo = getUserInfo();
+    const { role, account } = userInfo;
+
+    if (!role || !account) {
+      ElMessage.error("无法获取用户信息，请重新登录");
+      return;
+    }
+
+    const res = await axios.get(`${API_BASE}/exam/getExamList/${role}/${account}`, {
+      params: {
+        page: currentPage.value,
+        page_size: pageSize.value,
+      },
+    });
+
     examList.value = res.data.data?.items || [];
     totalItems.value = res.data.data?.total || 0;
   } catch (error) {
     console.error("加载考试列表失败:", error);
-    // 模拟数据
-    examList.value = [
-      {
-        id: 1,
-        name: "2024学年第一学期期中考试",
-        subject: "数学",
-        grade: "七年级",
-        start_time: "2024-11-15T09:00:00",
-        end_time: "2024-11-15T11:00:00",
-        status: "graded",
-        description: "本学期期中考试，请各位同学认真备考",
-        participant_count: 45,
-        average_score: 85.5,
-        highest_score: 98,
-        lowest_score: 62,
-        paper_info: {
-          name: "七年级数学期中试卷",
-          total_score: 100,
-          question_count: 25,
-          difficulty: "中等"
-        },
-        invigilators: [
-          { id: 1, name: "张老师", role: "主监考", phone: "13800138000" },
-          { id: 2, name: "李老师", role: "副监考", phone: "13800138001" }
-        ],
-        score_distribution: {
-          ranges: [
-            { label: "90-100", count: 12, percentage: 26.7 },
-            { label: "80-89", count: 18, percentage: 40.0 },
-            { label: "70-79", count: 10, percentage: 22.2 },
-            { label: "60-69", count: 4, percentage: 8.9 },
-            { label: "0-59", count: 1, percentage: 2.2 }
-          ]
-        }
-      },
-      {
-        id: 2,
-        name: "英语单元测试",
-        subject: "英语",
-        grade: "八年级",
-        start_time: "2024-11-20T14:00:00",
-        end_time: "2024-11-20T15:30:00",
-        status: "completed",
-        description: "第三单元测试",
-        participant_count: 48,
-        average_score: null,
-        paper_info: {
-          name: "八年级英语第三单元测试卷",
-          total_score: 100,
-          question_count: 30,
-          difficulty: "简单"
-        }
-      },
-      {
-        id: 3,
-        name: "物理期末考试",
-        subject: "物理",
-        grade: "九年级",
-        start_time: "2024-12-25T09:00:00",
-        end_time: "2024-12-25T11:30:00",
-        status: "pending",
-        description: "本学期期末考试",
-        participant_count: 0,
-        average_score: null
-      }
-    ];
-    totalItems.value = examList.value.length;
-  }
-};
-
-const loadSubjectList = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/questions/getSubjectList`);
-    subjectList.value = Object.entries(res.data.data || {}).map(
-      ([id, name]) => ({ id: Number(id), name })
-    );
-    filteredSubjects.value = subjectList.value;
-  } catch (error) {
-    console.error("加载科目列表失败:", error);
-    // 模拟数据
-    subjectList.value = [
-      { id: 1, name: "数学" },
-      { id: 2, name: "英语" },
-      { id: 3, name: "语文" },
-      { id: 4, name: "物理" },
-      { id: 5, name: "化学" },
-      { id: 6, name: "生物" },
-      { id: 7, name: "历史" },
-      { id: 8, name: "地理" }
-    ];
-    filteredSubjects.value = subjectList.value;
-  }
-};
-
-const loadGradeList = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/questions/getGradeList`);
-    gradeList.value = Object.entries(res.data.data || {}).map(
-      ([id, name]) => ({ id: Number(id), name })
-    );
-    filteredGrades.value = gradeList.value;
-  } catch (error) {
-    console.error("加载年级列表失败:", error);
-    // 模拟数据
-    gradeList.value = [
-      { id: 1, name: "七年级" },
-      { id: 2, name: "八年级" },
-      { id: 3, name: "九年级" },
-      { id: 4, name: "高一年级" },
-      { id: 5, name: "高二年级" },
-      { id: 6, name: "高三年级" }
-    ];
-    filteredGrades.value = gradeList.value;
+    ElMessage.error("加载考试列表失败");
   }
 };
 
 const searchExam = async () => {
   if (!hasReadPermission.value) return;
-  currentPage.value = 1;
-  await loadExams();
+
+  try {
+    currentPage.value = 1;
+
+    // 处理created_by，如果是逗号分隔的字符串，转换为数组
+    const searchData = {
+      name: searchForm.value.name,
+      created_by: searchForm.value.created_by
+        ? searchForm.value.created_by.split(",").map((item) => item.trim())
+        : [],
+    };
+
+    const res = await axios.post(`${API_BASE}/exam/findExam`, searchData, {
+      params: {
+        page: currentPage.value,
+        page_size: pageSize.value,
+      },
+    });
+
+    examList.value = res.data.data?.items || [];
+    totalItems.value = res.data.data?.total || 0;
+  } catch (error) {
+    console.error("搜索考试失败:", error);
+    ElMessage.error("搜索考试失败");
+  }
 };
 
 const resetSearch = () => {
   searchForm.value = {
     name: "",
-    subject_id: [],
-    grade_id: [],
-    status: [],
-    start_time: "",
-    end_time: ""
+    created_by: "",
   };
   currentPage.value = 1;
   loadExams();
+};
+
+const loadPaperList = async () => {
+  try {
+    const res = await axios.get(`${API_BASE}/exam/getPaperList`);
+    paperList.value = res.data.data || [];
+  } catch (error) {
+    console.error("加载试卷列表失败:", error);
+    // 模拟数据
+    paperList.value = [
+      { id: 1, name: "七年级数学期中试卷", subject: "数学", grade: "七年级" },
+      { id: 2, name: "八年级英语第三单元测试卷", subject: "英语", grade: "八年级" },
+      { id: 3, name: "九年级物理期末试卷", subject: "物理", grade: "九年级" },
+    ];
+  }
 };
 
 /* ==================== 分页相关 ==================== */
@@ -646,11 +660,11 @@ const visiblePages = computed(() => {
   const half = Math.floor(maxVisible / 2);
   let start = Math.max(1, currentPage.value - half);
   let end = Math.min(totalPages.value, start + maxVisible - 1);
-  
+
   if (end - start + 1 < maxVisible) {
     start = Math.max(1, end - maxVisible + 1);
   }
-  
+
   const pages = [];
   for (let i = start; i <= end; i++) {
     pages.push(i);
@@ -665,7 +679,11 @@ const showEllipsis = computed(() => {
 const goToPage = (page) => {
   if (page < 1 || page > totalPages.value) return;
   currentPage.value = page;
-  loadExams();
+  if (searchForm.value.name || searchForm.value.created_by) {
+    searchExam();
+  } else {
+    loadExams();
+  }
 };
 
 /* ==================== 考试操作 ==================== */
@@ -702,13 +720,58 @@ const viewExamDetails = (exam) => {
   detailVisible.value = true;
 };
 
-const editExam = (exam) => {
+const editExam = async (exam) => {
   if (!hasUpdatePermission.value) {
     ElMessage.warning("您没有编辑考试的权限");
     return;
   }
-  ElMessage.info(`编辑考试 ID = ${exam.id}`);
-  // router.push(`/exam/edit/${exam.id}`)
+
+  try {
+    // 加载试卷列表
+    await loadPaperList();
+
+    // 填充编辑表单数据
+    editExamData.value = {
+      id: exam.id,
+      name: exam.name,
+      paper_id: exam.paper_id,
+      created_by: exam.created_by,
+      start_time: formatDateTimeForInput(exam.start_time),
+      duration: exam.duration || 120,
+    };
+
+    editVisible.value = true;
+  } catch (error) {
+    console.error("准备编辑考试失败:", error);
+    ElMessage.error("准备编辑考试失败");
+  }
+};
+
+const saveExam = async () => {
+  try {
+    const userInfo = getUserInfo();
+
+    // 准备请求数据
+    const examData = {
+      ...editExamData.value,
+      created_by: userInfo.account || userInfo.username || "",
+    };
+
+    await axios.post(`${API_BASE}/exam/updateExam`, examData);
+
+    ElMessage.success("考试更新成功");
+    editVisible.value = false;
+
+    // 刷新列表
+    if (searchForm.value.name || searchForm.value.created_by) {
+      await searchExam();
+    } else {
+      await loadExams();
+    }
+  } catch (error) {
+    console.error("更新考试失败:", error);
+    ElMessage.error("更新考试失败");
+  }
 };
 
 // 监考安排相关
@@ -721,13 +784,13 @@ const arrangeInvigilators = async (exam) => {
     ElMessage.warning("您没有安排监考的权限");
     return;
   }
-  
+
   currentExam.value = exam;
-  
+
   // 加载可用的教师
   try {
     const res = await axios.get(`${API_BASE}/exam/availableTeachers`, {
-      params: { exam_id: exam.id }
+      params: { exam_id: exam.id },
     });
     availableTeachers.value = res.data.data || [];
   } catch (error) {
@@ -738,22 +801,22 @@ const arrangeInvigilators = async (exam) => {
       { id: 2, name: "李老师", subject: "英语" },
       { id: 3, name: "王老师", subject: "语文" },
       { id: 4, name: "赵老师", subject: "物理" },
-      { id: 5, name: "刘老师", subject: "化学" }
+      { id: 5, name: "刘老师", subject: "化学" },
     ];
   }
-  
+
   // 如果考试已有监考安排，预选中
   if (exam.invigilators) {
-    selectedInvigilators.value = exam.invigilators.map(i => i.id);
-    exam.invigilators.forEach(inv => {
-      invigilatorRoles.value[inv.id] = inv.role === '主监考' ? 'main' : 
-                                       inv.role === '副监考' ? 'assistant' : 'reserve';
+    selectedInvigilators.value = exam.invigilators.map((i) => i.id);
+    exam.invigilators.forEach((inv) => {
+      invigilatorRoles.value[inv.id] =
+        inv.role === "主监考" ? "main" : inv.role === "副监考" ? "assistant" : "reserve";
     });
   } else {
     selectedInvigilators.value = [];
     invigilatorRoles.value = {};
   }
-  
+
   invigilatorVisible.value = true;
 };
 
@@ -764,29 +827,35 @@ const toggleInvigilator = (teacherId) => {
     delete invigilatorRoles.value[teacherId];
   } else {
     selectedInvigilators.value.push(teacherId);
-    invigilatorRoles.value[teacherId] = 'assistant'; // 默认设为副监考
+    invigilatorRoles.value[teacherId] = "assistant"; // 默认设为副监考
   }
 };
 
 const getTeacherById = (id) => {
-  return availableTeachers.value.find(teacher => teacher.id === id);
+  return availableTeachers.value.find((teacher) => teacher.id === id);
 };
 
 const saveInvigilators = async () => {
   try {
-    const invigilators = selectedInvigilators.value.map(teacherId => ({
+    const invigilators = selectedInvigilators.value.map((teacherId) => ({
       teacher_id: teacherId,
-      role: invigilatorRoles.value[teacherId]
+      role: invigilatorRoles.value[teacherId],
     }));
-    
+
     await axios.post(`${API_BASE}/exam/arrangeInvigilators`, {
       exam_id: currentExam.value.id,
-      invigilators
+      invigilators,
     });
-    
+
     ElMessage.success("监考安排保存成功");
     invigilatorVisible.value = false;
-    loadExams(); // 刷新列表
+
+    // 刷新列表
+    if (searchForm.value.name || searchForm.value.created_by) {
+      await searchExam();
+    } else {
+      await loadExams();
+    }
   } catch (error) {
     console.error("保存监考安排失败:", error);
     ElMessage.error("保存失败");
@@ -811,25 +880,25 @@ const analyzeScores = (exam) => {
   // router.push(`/exam/analysis/${exam.id}`)
 };
 
-const deleteExam = (exam) => {
+const deleteExam = async (exam) => {
   if (!hasDeletePermission.value) {
     ElMessage.warning("您没有删除考试的权限");
     return;
   }
-  
-  ElMessageBox.confirm(
-    `确定要删除考试《${exam.name}》吗？删除后无法恢复！`,
-    "警告",
-    { 
-      type: "warning",
-      confirmButtonText: "确认删除",
-      cancelButtonText: "取消"
-    }
-  )
+
+  ElMessageBox.confirm(`确定要删除考试《${exam.name}》吗？删除后无法恢复！`, "警告", {
+    type: "warning",
+    confirmButtonText: "确认删除",
+    cancelButtonText: "取消",
+  })
     .then(async () => {
       try {
-        await axios.delete(`${API_BASE}/exam/delete/${exam.id}`);
+        await axios.delete(`${API_BASE}/exam/deleteExam/${exam.id}`);
+
+        // 从列表中移除
         examList.value = examList.value.filter((e) => e.id !== exam.id);
+        totalItems.value -= 1;
+
         ElMessage.success("删除成功！");
       } catch (error) {
         console.error("删除考试失败:", error);
@@ -844,28 +913,34 @@ const previewPaper = (paper) => {
   // 这里可以打开试卷预览弹窗
 };
 
-const exportExamReport = (exam) => {
-  if (!hasDownloadPermission.value) {
-    ElMessage.warning("您没有导出报告的权限");
-    return;
-  }
-  ElMessage.info(`导出考试报告: ${exam.name}`);
-};
-
 /* ==================== 工具函数 ==================== */
 const formatDateTime = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).replace(/\//g, '-');
+  return date
+    .toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .replace(/\//g, "-");
+};
+
+const formatDateTimeForInput = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toISOString().slice(0, 16);
 };
 
 const calculateDuration = (exam) => {
+  if (exam?.duration) {
+    const hours = Math.floor(exam.duration / 60);
+    const minutes = exam.duration % 60;
+    return `${hours}小时${minutes}分钟`;
+  }
+
   if (!exam?.start_time || !exam?.end_time) return "";
   const start = new Date(exam.start_time);
   const end = new Date(exam.end_time);
@@ -879,11 +954,11 @@ const calculateDuration = (exam) => {
 
 const getStatusText = (status) => {
   const statusMap = {
-    'pending': '未开始',
-    'ongoing': '进行中',
-    'completed': '已结束',
-    'grading': '阅卷中',
-    'graded': '已出成绩'
+    pending: "未开始",
+    ongoing: "进行中",
+    completed: "已结束",
+    grading: "阅卷中",
+    graded: "已出成绩",
   };
   return statusMap[status] || status;
 };
@@ -891,15 +966,16 @@ const getStatusText = (status) => {
 /* ==================== 生命周期 ==================== */
 onMounted(() => {
   loadExams();
-  loadSubjectList();
-  loadGradeList();
-  filteredStatuses.value = statusList.value;
   document.addEventListener("click", handleClickOutside);
 });
 
 // 监听页码变化
 watch(currentPage, () => {
-  loadExams();
+  if (searchForm.value.name || searchForm.value.created_by) {
+    searchExam();
+  } else {
+    loadExams();
+  }
 });
 </script>
 
@@ -1008,22 +1084,6 @@ watch(currentPage, () => {
   gap: 12px;
 }
 
-.date-range-picker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.date-input {
-  flex: 1;
-}
-
-.date-separator {
-  color: #909399;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
 /* ==================== 表单控件样式 ==================== */
 .form-input {
   width: 100%;
@@ -1042,196 +1102,12 @@ watch(currentPage, () => {
   box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.1);
 }
 
-/* ==================== 多选下拉框样式 ==================== */
-.multi-select-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.multi-select-trigger {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  background-color: white;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.3s;
-  min-height: 46px;
-}
-
-.multi-select-trigger:hover {
-  border-color: #c0c4cc;
-}
-
-.multi-select-trigger:focus {
-  outline: none;
-  border-color: #67c23a;
-  box-shadow: 0 0 0 2px rgba(103, 194, 58, 0.1);
-}
-
-.placeholder {
-  color: #c0c4cc;
+.form-label {
+  display: block;
+  margin-bottom: 8px;
   font-size: 14px;
-}
-
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  flex: 1;
-}
-
-.selected-tag {
-  background: #f0f9eb;
-  color: #409eff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  border: 1px solid #e1f3d8;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.selected-tag.status-pending {
-  background: #fdf6ec;
-  color: #e6a23c;
-  border-color: #faecd8;
-}
-
-.selected-tag.status-ongoing {
-  background: #f0f9ff;
-  color: #409eff;
-  border-color: #d9ecff;
-}
-
-.selected-tag.status-completed {
-  background: #f4f4f5;
-  color: #909399;
-  border-color: #e9e9eb;
-}
-
-.selected-tag.status-grading {
-  background: #f0f9ff;
-  color: #409eff;
-  border-color: #d9ecff;
-}
-
-.selected-tag.status-graded {
-  background: #f0f9eb;
-  color: #67c23a;
-  border-color: #e1f3d8;
-}
-
-.selected-tag:hover {
-  transform: translateY(-1px);
-}
-
-.remove-icon {
-  font-weight: bold;
-  font-size: 14px;
-  color: #f56c6c;
-  padding: 2px;
-  border-radius: 2px;
-  transition: background-color 0.2s;
-}
-
-.remove-icon:hover {
-  background-color: rgba(245, 108, 108, 0.1);
-}
-
-.dropdown-arrow {
-  color: #c0c4cc;
-  font-size: 12px;
-  transition: transform 0.3s;
-}
-
-.multi-select-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  margin-top: 4px;
-  max-height: 250px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.search-input-container {
-  padding: 8px;
-  border-bottom: 1px solid #e6e9f0;
-}
-
-.search-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #409eff;
-}
-
-.dropdown-options {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.dropdown-option {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  gap: 8px;
-}
-
-.dropdown-option:hover {
-  background-color: #f5f7fa;
-}
-
-.checkbox {
-  width: 16px;
-  height: 16px;
-  border: 1px solid #dcdfe6;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: white;
-}
-
-.checkbox.checked {
-  background-color: #409eff;
-  border-color: #409eff;
-}
-
-.option-text {
-  flex: 1;
-  font-size: 14px;
-  color: #303133;
-}
-
-.no-options {
-  padding: 12px;
-  text-align: center;
-  color: #909399;
-  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
 }
 
 /* ==================== 按钮样式系统 ==================== */
@@ -2024,6 +1900,17 @@ watch(currentPage, () => {
   border-color: #409eff;
 }
 
+/* 编辑表单样式 */
+.edit-content {
+  margin: 20px 0;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -2038,7 +1925,7 @@ watch(currentPage, () => {
   .criteria-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
-  
+
   .info-grid {
     grid-template-columns: 1fr;
   }
@@ -2146,21 +2033,21 @@ watch(currentPage, () => {
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .action-buttons button {
     width: 100%;
     justify-content: center;
   }
-  
+
   .score-stats {
     grid-template-columns: 1fr;
   }
-  
+
   .distribution-chart {
     flex-wrap: wrap;
     height: auto;
   }
-  
+
   .distribution-bar {
     width: 45%;
   }
