@@ -11,7 +11,6 @@
 
         <!-- 登录表单区域 -->
         <div class="tab-content">
-          <!-- prevent 阻止默认提交行为 -->
           <form @submit.prevent="handleLogin">
             <!-- 用户名输入框 -->
             <label for="username">用户名</label>
@@ -63,17 +62,31 @@ export default {
   },
 
   mounted() {
-    const savedToken = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
     const tokenExpire = localStorage.getItem("tokenExpire");
+    const permissions = JSON.parse(localStorage.getItem("userPermissions") || "[]");
 
-    // 如果 token 存在且未过期，自动跳转到主页面
-    if (savedToken && tokenExpire && Date.now() < Number(tokenExpire)) {
-      console.log("已检测到有效 token，自动跳转中...");
-      this.$router.push("/upload");
+    if (token && tokenExpire && Date.now() < Number(tokenExpire)) {
+      this.redirectByPermissions(permissions);
     }
   },
 
   methods: {
+    // 根据角色跳转到对应页面
+    redirectByPermissions(permissions) {
+      if (permissions.includes("ROLE_ROOT") ||
+          permissions.includes("ROLE_ADMINISTRATOR") ||
+          permissions.includes("ROLE_TEACHER")) {
+        this.$router.push("/teacher/teacherdashboard");
+      } else if (permissions.includes("ROLE_STUDENT")) {
+        this.$router.push("/student");
+      } else if (permissions.includes("ROLE_VISITOR")) {
+        this.$router.push("/visitor");
+      } else {
+        this.$router.push("/login");
+      }
+    },
+
     // 显示弹窗
     showAlert(title, message) {
       this.modalTitle = title;
@@ -108,14 +121,50 @@ export default {
       return true;
     },
 
+    // 获取用户权限信息
+    async fetchUserPermissions(token) {
+      try {
+        const response = await fetch(`${API_BASE}/user/me`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        const data = await response.json();
+        
+        if (data.code === 200) {
+          // 成功获取权限信息
+          return {
+            success: true,
+            permissions: data.permissions || [],
+            userInfo: data.data || null
+          };
+        } else {
+          // 获取权限信息失败
+          return {
+            success: false,
+            message: data.message || "获取用户信息失败"
+          };
+        }
+      } catch (error) {
+        console.error("获取用户权限失败:", error);
+        return {
+          success: false,
+          message: "网络错误，请稍后重试"
+        };
+      }
+    },
+
     // 登录处理逻辑
     async handleLogin() {
       if (!this.validateForm()) return;
 
       this.loading = true;
       try {
-        // 向后端发送登录请求
-        const res = await fetch(`${API_BASE}/login`, {
+        // 1. 先进行登录
+        const loginRes = await fetch(`${API_BASE}/user/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -123,22 +172,48 @@ export default {
             password: this.password,
           }),
         });
-        const data = await res.json();
+        
+        const loginData = await loginRes.json();
 
-        // 登录成功处理
-        if (data.code && data.message != "用户名或密码错误") {
-          this.showAlert("登录成功", "欢迎回来！");
+        if (loginData.code && loginData.message !== "用户名或密码错误") {
+          const token = loginData.message;
           const expireTime = Date.now() + 24 * 60 * 60 * 1000;
-          localStorage.setItem("token", data.message);
+          
+          // 存储 token 和基本用户信息
+          localStorage.setItem("token", token);
           localStorage.setItem("tokenExpire", expireTime);
-
-          // 延迟跳转，让用户看到成功提示
-          setTimeout(() => {
-            this.$router.push("/upload");
-          }, 1500);
+          localStorage.setItem("userName", this.username.trim());
+          
+          // 2. 登录成功后获取用户权限信息
+          const permissionResult = await this.fetchUserPermissions(token);
+          
+          if (permissionResult.success) {
+            // 存储权限信息
+            localStorage.setItem("userPermissions", JSON.stringify(permissionResult.permissions));
+            
+            // 如果有额外的用户信息也存储
+            if (permissionResult.userInfo) {
+              localStorage.setItem("userInfo", JSON.stringify(permissionResult.userInfo));
+            }
+            
+            this.showAlert("登录成功", "欢迎回来！");
+            
+            // 延迟跳转，让用户看到成功提示
+            setTimeout(() => {
+              this.redirectByPermissions(permissionResult.permissions);
+            }, 1500);
+            
+          } else {
+            // 获取权限信息失败
+            this.showAlert("登录失败", permissionResult.message);
+            // 清除已存储的token
+            localStorage.removeItem("token");
+            localStorage.removeItem("tokenExpire");
+            localStorage.removeItem("userName");
+          }
+          
         } else {
-          this.showAlert("登录失败", data.message || "用户名或密码错误");
-          // 登录失败时清空密码框
+          this.showAlert("登录失败", loginData.message || "用户名或密码错误");
           this.password = "";
         }
       } catch (err) {
@@ -147,7 +222,7 @@ export default {
       } finally {
         this.loading = false;
       }
-    },
+    }
   },
 };
 </script>

@@ -2,28 +2,38 @@
   <!-- 主容器 -->
   <div class="container">
     <!-- 页面标题 -->
-    <h1>教育题库管理系统</h1>
-
-    <!-- 退出登录按钮 -->
-    <button @click="confirmLogout" class="logout-btn">
-      <span class="logout-icon"></span>
-      退出登录
-    </button>
+    <div class="page-header">
+      <div class="header-content">
+        <h1 class="page-title">
+          题库录入系统
+        </h1>
+      </div>
+    </div>
 
     <!-- 模式选择：上传题目 vs 更新题目 -->
     <div class="mode-select">
-      <!-- 上传题目按钮 -->
-      <button :class="{ active: !updateMode }" @click="exitUpdateMode" type="button">
+      <!-- 上传题目按钮 - 根据权限显示 -->
+      <button 
+        v-if="hasPermission('question:create')" 
+        :class="{ active: !updateMode }" 
+        @click="exitUpdateMode" 
+        type="button"
+      >
         上传题目
       </button>
-      <!-- 更新题目按钮 -->
-      <button :class="{ active: updateMode }" @click="enterUpdateMode" type="button">
+      <!-- 更新题目按钮 - 根据权限显示 -->
+      <button 
+        v-if="hasPermission('question:*')" 
+        :class="{ active: updateMode }" 
+        @click="enterUpdateMode" 
+        type="button"
+      >
         更新题目
       </button>
     </div>
 
     <!-- ==================== 上传题目表单部分 ==================== -->
-    <section v-if="!updateMode" class="form-section">
+    <section v-if="!updateMode && hasPermission('question:create')" class="form-section">
       <h2>上传题目</h2>
       <form @submit.prevent="handleSubmit">
         <!-- 学校选择 -->
@@ -92,8 +102,9 @@
                   class="selected-mark"
                   >✓</span
                 >
-                <!-- 删除问题类别按钮 -->
+                <!-- 删除问题类别按钮 - 根据权限显示 -->
                 <button
+                  v-if="hasPermission('question:delete')"
                   type="button"
                   @mousedown.stop="confirmDeleteQuestionCategory(item)"
                   class="btn-remove-small"
@@ -323,9 +334,10 @@
                 @mousedown="selectKnowledgePoint(kp)"
               >
                 {{ kp.name }}
-                <!-- 编辑知识点按钮 -->
+                <!-- 编辑知识点按钮 - 根据权限显示 -->
                 <div class="item-actions">
                   <button
+                    v-if="hasPermission('question:update')"
                     type="button"
                     @mousedown.stop="editKnowledgePoint(kp)"
                     class="btn-edit-small"
@@ -333,8 +345,9 @@
                   >
                     编辑
                   </button>
-                  <!-- 删除知识点按钮 -->
+                  <!-- 删除知识点按钮 - 根据权限显示 -->
                   <button
+                    v-if="hasPermission('question:delete')"
                     type="button"
                     @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
                     class="btn-remove-small"
@@ -370,8 +383,8 @@
             >
               新增知识点
             </button>
-            <!-- 合并知识点按钮 -->
-            <div>
+            <!-- 合并知识点按钮 - 根据权限显示 -->
+            <div v-if="hasPermission('question:*')">
               <button
                 type="button"
                 @click="openMergeKnowledgeModal"
@@ -412,9 +425,10 @@
                 {{ kp.name }}
                 <!-- 已选择标记 -->
                 <span v-if="isSubKnowledgeSelected(kp.id)" class="selected-mark">✓</span>
-                <!-- 编辑和删除副知识点按钮 -->
+                <!-- 编辑和删除副知识点按钮 - 根据权限显示 -->
                 <div class="item-actions">
                   <button
+                    v-if="hasPermission('question:update')"
                     type="button"
                     @mousedown.stop="editKnowledgePoint(kp)"
                     class="btn-edit-small"
@@ -422,8 +436,9 @@
                   >
                     编辑
                   </button>
-                  <!-- 删除副知识点按钮 -->
+                  <!-- 删除副知识点按钮 - 根据权限显示 -->
                   <button
+                    v-if="hasPermission('question:delete')"
                     type="button"
                     @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
                     class="btn-remove-small"
@@ -497,8 +512,9 @@
                 <span v-if="isSolutionIdeaSelected(item.id)" class="selected-mark"
                   >✓</span
                 >
-                <!-- 删除解题思想按钮 -->
+                <!-- 删除解题思想按钮 - 根据权限显示 -->
                 <button
+                  v-if="hasPermission('question:delete')"
                   type="button"
                   @mousedown.stop="confirmDeleteSolutionIdea(item)"
                   class="btn-remove-small"
@@ -593,7 +609,7 @@
     </section>
 
     <!-- ==================== 更新题目界面 ==================== -->
-    <section v-if="updateMode" class="update-section">
+    <section v-if="updateMode && hasPermission('question:read')" class="update-section">
       <!-- 检索条件区域 -->
       <div class="search-criteria">
         <h2>检索题目</h2>
@@ -652,8 +668,9 @@
                     class="selected-mark"
                     >✓</span
                   >
-                  <!-- 删除问题类别按钮（更新界面） -->
+                  <!-- 删除问题类别按钮（更新界面） - 根据权限显示 -->
                   <button
+                    v-if="hasPermission('question:delete')"
                     type="button"
                     @mousedown.stop="confirmDeleteQuestionCategory(item)"
                     class="btn-remove-small"
@@ -707,9 +724,10 @@
                   <span v-if="isUpdateKnowledgeSelected(kp.id)" class="selected-mark"
                     >✓</span
                   >
-                  <!-- 编辑和删除知识点按钮（更新界面） -->
+                  <!-- 编辑和删除知识点按钮（更新界面） - 根据权限显示 -->
                   <div class="item-actions">
                     <button
+                      v-if="hasPermission('question:update')"
                       type="button"
                       @mousedown.stop="editKnowledgePoint(kp)"
                       class="btn-edit-small"
@@ -718,6 +736,7 @@
                       编辑
                     </button>
                     <button
+                      v-if="hasPermission('question:delete')"
                       type="button"
                       @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
                       class="btn-remove-small"
@@ -774,9 +793,10 @@
                   <span v-if="isUpdateSubKnowledgeSelected(kp.id)" class="selected-mark"
                     >✓</span
                   >
-                  <!-- 编辑和删除副知识点按钮 -->
+                  <!-- 编辑和删除副知识点按钮 - 根据权限显示 -->
                   <div class="item-actions">
                     <button
+                      v-if="hasPermission('question:update')"
                       type="button"
                       @mousedown.stop="editKnowledgePoint(kp)"
                       class="btn-edit-small"
@@ -785,6 +805,7 @@
                       编辑
                     </button>
                     <button
+                      v-if="hasPermission('question:delete')"
                       type="button"
                       @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
                       class="btn-remove-small"
@@ -841,8 +862,9 @@
                   <span v-if="isUpdateSolutionIdeaSelected(item.id)" class="selected-mark"
                     >✓</span
                   >
-                  <!-- 删除解题思想按钮（更新界面） -->
+                  <!-- 删除解题思想按钮（更新界面） - 根据权限显示 -->
                   <button
+                    v-if="hasPermission('question:delete')"
                     type="button"
                     @mousedown.stop="confirmDeleteSolutionIdea(item)"
                     class="btn-remove-small"
@@ -976,8 +998,20 @@
               </div>
               <!-- 操作按钮单元格 -->
               <div class="table-cell actions-cell">
-                <button @click="loadQuestionForUpdate(q)" class="btn-update">更新</button>
-                <button @click="confirmDelete(q)" class="btn-delete">删除</button>
+                <button 
+                  v-if="hasPermission('question:update')" 
+                  @click="loadQuestionForUpdate(q)" 
+                  class="btn-update"
+                >
+                  更新
+                </button>
+                <button 
+                  v-if="hasPermission('question:delete')" 
+                  @click="confirmDelete(q)" 
+                  class="btn-delete"
+                >
+                  删除
+                </button>
               </div>
             </div>
           </div>
@@ -1045,7 +1079,8 @@
 
       <!-- 更新题目表单（选中题目后显示） -->
       <div
-        v-if="selectedQuestion && showUpdateForm"
+        v-if="selectedQuestion && showUpdateForm && hasPermission('question:update')"
+        :key="selectedQuestion.id"
         class="update-form-section"
         ref="updateFormRef"
       >
@@ -1119,8 +1154,9 @@
                     class="selected-mark"
                     >✓</span
                   >
-                  <!-- 删除问题类别按钮（更新表单） -->
+                  <!-- 删除问题类别按钮（更新表单） - 根据权限显示 -->
                   <button
+                    v-if="hasPermission('question:delete')"
                     type="button"
                     @mousedown.stop="confirmDeleteQuestionCategory(item)"
                     class="btn-remove-small"
@@ -1179,9 +1215,10 @@
                   @mousedown="selectUpdateFormKnowledgePoint(kp)"
                 >
                   {{ kp.name }}
-                  <!-- 编辑和删除知识点按钮（更新表单） -->
+                  <!-- 编辑和删除知识点按钮（更新表单） - 根据权限显示 -->
                   <div class="item-actions">
                     <button
+                      v-if="hasPermission('question:update')"
                       type="button"
                       @mousedown.stop="editKnowledgePoint(kp)"
                       class="btn-edit-small"
@@ -1190,6 +1227,7 @@
                       编辑
                     </button>
                     <button
+                      v-if="hasPermission('question:delete')"
                       type="button"
                       @mousedown.stop="confirmDeleteKnowledgePoint(kp)"
                       class="btn-remove-small"
@@ -1265,9 +1303,10 @@
                     class="selected-mark"
                     >✓</span
                   >
-                  <!-- 编辑和删除副知识点按钮（更新表单） -->
+                  <!-- 编辑和删除副知识点按钮（更新表单） - 根据权限显示 -->
                   <div class="item-actions">
                     <button
+                      v-if="hasPermission('question:update')"
                       type="button"
                       @mousedown.stop="editKnowledgePoint(kp)"
                       class="btn-edit-small"
@@ -1276,6 +1315,7 @@
                       编辑
                     </button>
                     <button
+                      v-if="hasPermission('question:delete')"
                       type="button"
                       @mousedown.stop="confirmDeleteSubKnowledgePoint(kp)"
                       class="btn-remove-small"
@@ -1356,8 +1396,9 @@
                     class="selected-mark"
                     >✓</span
                   >
-                  <!-- 删除解题思想按钮（更新表单） -->
+                  <!-- 删除解题思想按钮（更新表单） - 根据权限显示 -->
                   <button
+                    v-if="hasPermission('question:delete')"
                     type="button"
                     @mousedown.stop="confirmDeleteSolutionIdea(item)"
                     class="btn-remove-small"
@@ -1818,7 +1859,12 @@
                   v-html="renderMarkdown(q.title)"
                 ></div>
                 <div class="dependent-question-actions">
-                  <button @click="deleteDependentQuestion(q)" class="btn-delete">
+                  <!-- 删除按钮 - 根据权限显示 -->
+                  <button 
+                    v-if="hasPermission('question:delete')" 
+                    @click="deleteDependentQuestion(q)" 
+                    class="btn-delete"
+                  >
                     删除
                   </button>
                 </div>
@@ -1879,14 +1925,17 @@
         </div>
 
         <div class="modal-actions">
+          <!-- 全部删除按钮 - 根据权限显示 -->
           <button
-            v-if="dependentQuestions.length > 0"
+            v-if="dependentQuestions.length > 0 && hasPermission('question:delete')"
             @click="deleteAllDependentQuestions"
             class="btn-delete delete-all-btn"
           >
             全部删除（共 {{ dependentQuestionsTotalItems }} 道题目）
           </button>
+          <!-- 确认删除按钮 - 根据权限显示 -->
           <button
+            v-if="hasPermission('question:delete')"
             @click="deleteEntity"
             class="btn-delete"
             :disabled="dependentQuestions.length > 0"
@@ -1914,18 +1963,6 @@
         <div class="modal-actions">
           <button @click="updateKnowledgePointName" class="btn-primary">确认</button>
           <button @click="cancelEditKnowledgePoint" class="btn-secondary">取消</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ==================== 退出登录确认对话框 ==================== -->
-    <div v-if="showLogoutConfirm" class="modal-overlay">
-      <div class="modal-content">
-        <h3>确认退出</h3>
-        <p>确定要退出登录吗？</p>
-        <div class="modal-actions">
-          <button @click="handleLogout" class="btn-delete">确认退出</button>
-          <button @click="cancelLogout" class="btn-secondary">取消</button>
         </div>
       </div>
     </div>
@@ -2087,7 +2124,7 @@
 
 <script>
 // 导入Vue相关功能和依赖
-import { reactive, ref, onMounted, computed, watchEffect, nextTick, watch } from "vue";
+import { reactive, ref, onMounted, computed, nextTick } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
@@ -2110,6 +2147,42 @@ export default {
   setup() {
     const router = useRouter();
 
+    // ==================== 权限检查函数 ====================
+    /**
+     * 检查用户是否拥有指定权限
+     * @param {string} permission - 权限字符串
+     * @returns {boolean} 是否拥有权限
+     */
+    const hasPermission = (permission) => {
+      // 从localStorage获取权限列表
+      const permissions = JSON.parse(localStorage.getItem("userPermissions") || "[]");
+      
+      // 检查是否有精确权限
+      if (permissions.includes(permission)) {
+        return true;
+      }
+      
+      // 检查通配符权限
+      const permissionParts = permission.split(":");
+      if (permissionParts.length === 2) {
+        const [resource, action] = permissionParts;
+        // 检查 resource:* 形式的通配符
+        if (permissions.includes(`${resource}:*`)) {
+          return true;
+        }
+        // 检查 *:action 形式的通配符
+        if (permissions.includes(`*:${action}`)) {
+          return true;
+        }
+        // 检查 *:* 形式的通配符
+        if (permissions.includes("*:*")) {
+          return true;
+        }
+      }
+      
+      return false;
+    };
+
     // ==================== Markdown 渲染函数 ====================
     /**
      * 渲染 Markdown 文本为 HTML
@@ -2122,16 +2195,6 @@ export default {
       // 预处理 LaTeX 公式
       const processedText = text
         // 处理行内公式 $...$
-        .replace(/\$(.+?)\$/g, (match, formula) => {
-          try {
-            return katex.renderToString(formula, {
-              displayMode: false,
-              throwOnError: false,
-            });
-          } catch (error) {
-            return match; // 如果渲染失败，返回原公式
-          }
-        })
         // 处理块级公式 $$...$$
         .replace(/\$\$(.+?)\$\$/g, (match, formula) => {
           try {
@@ -2142,8 +2205,18 @@ export default {
           } catch (error) {
             return match; // 如果渲染失败，返回原公式
           }
+        })
+        .replace(/\$(.+?)\$/g, (match, formula) => {
+          try {
+            return katex.renderToString(formula, {
+              displayMode: false,
+              throwOnError: false,
+            });
+          } catch (error) {
+            return match; // 如果渲染失败，返回原公式
+          }
         });
-
+        
       // 渲染 Markdown
       return marked(processedText);
     };
@@ -2215,40 +2288,6 @@ export default {
       alertModalTimer.value = setTimeout(() => {
         showAlertModal.value = false;
       }, 1000);
-    };
-
-    // ==================== 退出登录相关状态 ====================
-    const showLogoutConfirm = ref(false); // 退出登录确认框显示状态
-
-    /**
-     * 确认退出登录
-     */
-    const confirmLogout = () => {
-      showLogoutConfirm.value = true;
-    };
-
-    /**
-     * 处理退出登录
-     */
-    const handleLogout = () => {
-      // 清除本地存储的token
-      localStorage.removeItem("token");
-      // 清除axios默认请求头中的Authorization
-      delete axios.defaults.headers.common["Authorization"];
-      // 显示退出成功提示
-      showAlert("退出成功", "已成功退出登录");
-      showLogoutConfirm.value = false;
-      // 延迟跳转，让用户看到退出成功的提示
-      setTimeout(() => {
-        router.push("/login");
-      }, 1500);
-    };
-
-    /**
-     * 取消退出登录
-     */
-    const cancelLogout = () => {
-      showLogoutConfirm.value = false;
     };
 
     // ==================== 数据列表状态 ====================
@@ -2976,7 +3015,6 @@ export default {
       const currentForm = previewMode.value === "upload" ? form : updateForm;
       return currentForm.img_url || "";
     };
-
 
     /**
      * 获取预览的选项
@@ -4054,11 +4092,6 @@ export default {
      * 组件挂载时执行
      */
     onMounted(() => {
-      // 设置axios认证token
-      const token = localStorage.getItem("token");
-      if (token) {
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      }
       loadLists();
     });
 
@@ -4494,6 +4527,19 @@ export default {
       }
     };
 
+    //查找某个元素的"真正负责滚动的父级容器"（scroll parent）
+    function findScrollParent(el) {
+      let current = el.parentNode;
+      while (current && current !== document.body) {
+        const overflowY = window.getComputedStyle(current).overflowY;
+        if (overflowY === "scroll" || overflowY === "auto") {
+          return current;
+        }
+        current = current.parentNode;
+      }
+      return window; // 找不到时退回 window
+    }
+
     /**
      * 加载题目到更新表单
      * @param {Object} q - 题目对象
@@ -4602,14 +4648,16 @@ export default {
           }
         }
       }
+      await nextTick();
 
       // 滚动到更新表单
-      if (updateFormRef.value) {
-        updateFormRef.value.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
+      const el = updateFormRef.value;
+      const scrollParent = findScrollParent(el);
+
+      scrollParent.scrollTo({
+        top: el.offsetTop - 20,
+        behavior: "smooth",
+      });
     };
 
     /**
@@ -4735,7 +4783,7 @@ export default {
           marking_type: form.marking_type,
           knowledge_point_id:
             form.knowledge_point_id !== null ? Number(form.knowledge_point_id) : null,
-          solution_idea_ids: form.solution_idea_ids.map((id) => Number(id)), 
+          solution_idea_ids: form.solution_idea_ids.map((id) => Number(id)),
           difficulty_level:
             form.difficulty_level !== null ? Number(form.difficulty_level) : null,
           title: form.title,
@@ -4789,7 +4837,6 @@ export default {
           submitting.value = false;
           return;
         }
-
 
         let optionsPayload = {};
         let answerPayload = "";
@@ -4862,7 +4909,9 @@ export default {
           answer: answerPayload,
           notes: updateForm.notes,
           remark: updateForm.remark,
-          sub_knowledge_point_ids: updateForm.sub_knowledge_point_ids.map((id) => Number(id)),
+          sub_knowledge_point_ids: updateForm.sub_knowledge_point_ids.map((id) =>
+            Number(id)
+          ),
           img_url: updateForm.img_url,
         };
 
@@ -5646,6 +5695,9 @@ export default {
 
     // ==================== 返回所有响应式数据和方法 ====================
     return {
+      // 权限检查函数
+      hasPermission,
+      
       // 表单数据
       form,
       updateForm,
@@ -5889,17 +5941,11 @@ export default {
       handleDrop,
       insertImageMarkdown,
 
-      // 退出登录
-      handleLogout,
-      confirmLogout,
-
       // 弹窗相关
       showAlertModal,
       alertModalTitle,
       alertModalMessage,
       showAlert,
-      showLogoutConfirm,
-      cancelLogout,
       silentFindQuestions,
 
       // 新增预览功能相关
@@ -6020,8 +6066,32 @@ export default {
 .container {
   max-width: 1800px; /* 最大宽度，适应大屏幕 */
   margin: auto; /* 水平居中 */
-  padding: 20px; /* 内边距 */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; /* 字体栈，优先使用系统字体 */
+}
+
+/* ==================== 页面头部样式 ==================== */
+.page-header {
+  background: linear-gradient(135deg, #409eff 0%, #3375e0 100%);
+  border-radius: 12px;
+  padding: 20px 30px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  color: white;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* ==================== Markdown 编辑器样式 ==================== */
@@ -6291,7 +6361,7 @@ export default {
 }
 
 .results-table {
-  min-width: 1600px; /* 最小宽度，确保表格内容完整显示 */
+  min-width: 1000px; /* 最小宽度，确保表格内容完整显示 */
   width: 100%; /* 宽度100% */
   display: flex; /* 弹性布局 */
   flex-direction: column; /* 垂直方向 */
@@ -7401,7 +7471,7 @@ export default {
 /* ==================== 表格列宽设置 ==================== */
 /* 按顺序为每个表格列设置固定宽度 */
 .table-cell:nth-child(1) {
-  width: 140px; /* 学校列 */
+  width: 115px; /* 学校列 */
 }
 
 .table-cell:nth-child(2) {
@@ -7413,11 +7483,11 @@ export default {
 }
 
 .table-cell:nth-child(4) {
-  width: 120px; /* 问题类别列 */
+  width: 90px; /* 问题类别列 */
 }
 
 .table-cell:nth-child(5) {
-  width: 90px; /* 评分方法列 */
+  width: 80px; /* 评分方法列 */
 }
 
 .table-cell:nth-child(6) {
@@ -7425,7 +7495,7 @@ export default {
 }
 
 .table-cell:nth-child(7) {
-  width: 120px; /* 解题思想列 */
+  width: 100px; /* 解题思想列 */
 }
 
 .table-cell:nth-child(8) {
@@ -7441,7 +7511,7 @@ export default {
 }
 
 .table-cell:nth-child(11) {
-  width: 200px; /* 备注列 */
+  width: 100px; /* 备注列 */
 }
 
 .table-cell:nth-child(12) {
@@ -7449,7 +7519,7 @@ export default {
 }
 
 .table-cell:nth-child(13) {
-  width: 80px; /* 操作列 */
+  width: 50px; /* 操作列 */
 }
 
 /* 表格行边框 */
@@ -7475,25 +7545,6 @@ export default {
 
 .sub-knowledge-tag {
   margin: 2px; /* 外边距 */
-}
-
-/* ==================== 退出登录按钮样式 ==================== */
-.logout-btn {
-  background-color: #f56c6c; /* 红色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 10px 20px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 14px; /* 字体大小 */
-  transition: background-color 0.3s; /* 背景色过渡 */
-  float: right; /* 右浮动 */
-}
-
-.logout-btn:hover {
-  background-color: red; /* 悬停时更红的红色 */
-  transform: translateY(-1px); /* 上移效果 */
-  box-shadow: 0 2px 6px rgba(245, 108, 108, 0.3); /* 阴影效果 */
 }
 
 /* ==================== 响应式设计 ==================== */
