@@ -182,27 +182,6 @@ export default {
       showNotificationDrawer: false,
 
       notifications: [
-        {
-          id: 1,
-          title: "新的作业提交",
-          message: "有5名学生提交了数学作业",
-          time: "10分钟前",
-          read: false,
-        },
-        {
-          id: 2,
-          title: "会议通知",
-          message: "明天下午3点教师会议",
-          time: "1小时前",
-          read: true,
-        },
-        {
-          id: 3,
-          title: "系统更新",
-          message: "系统将于今晚10点进行维护",
-          time: "2小时前",
-          read: true,
-        },
       ],
     };
   },

@@ -966,7 +966,6 @@ const getStatusText = (status) => {
 /* ==================== 生命周期 ==================== */
 onMounted(() => {
   loadExams();
-  document.addEventListener("click", handleClickOutside);
 });
 
 // 监听页码变化
