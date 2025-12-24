@@ -1326,12 +1326,47 @@ export default {
 
         showAlert("上传成功", "试卷已成功创建");
         closeUploadModal();
+        resetAfterUpload();
       } catch (err) {
         console.error(err);
         showAlert("上传失败", err.response?.data?.message || "试卷上传失败");
       } finally {
         isUploading.value = false;
       }
+    };
+
+    const resetAfterUpload = () => {
+      // 清空试卷
+      selectedQuestions.value = [];
+
+      // 清空试卷基本信息
+      paperTitle.value = "";
+      paperSubjectId.value = null;
+      paperGradeId.value = null;
+
+      // 清空批量选择状态
+      selectedQuestionIds.value = [];
+      selectedQuestionMap.value.clear();
+
+      // 清空分值设置状态
+      batchScoreMode.value = "type";
+      singleQuestionIndex.value = "";
+      singleQuestionScore.value = 5;
+      allQuestionsScore.value = 5;
+
+      // 关闭所有弹窗
+      showUploadModal.value = false;
+      showBatchScoreModal.value = false;
+
+      // 切回题目检索页（重要）
+      showPaperPreview.value = false;
+
+      // 清空检索结果
+      questionList.value = [];
+      hasSearched.value = false;
+
+      // 重置检索条件
+      clearSearchCriteria();
     };
 
     // ==================== 其他方法 ====================

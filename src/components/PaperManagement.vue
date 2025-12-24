@@ -2224,91 +2224,73 @@ const goAutoCreate = () => {
 };
 
 const previewPaper = async (paper) => {
-  if (!hasReadPermission.value) {
-    ElMessage.warning("您没有预览试卷的权限");
-    return;
-  }
+  previewVisible.value = true;
+  isPreviewLoading.value = true;
 
-  try {
-    // 重置分页状态
-    previewCurrentPage.value = 1;
-    previewPageSize.value = 10;
-    inputPage.value = 1;
-    isPreviewLoading.value = true;
+  previewCurrentPage.value = 1;
+  inputPage.value = 1;
 
-    // 设置基本信息
-    previewPaperData.value = {
-      ...paper,
-      question_ids: Array.isArray(paper.question_ids) ? paper.question_ids : [],
-      subject: getSubjectName(paper.subject_id),
-      grade: getGradeName(paper.grade_id),
-      questions: [],
-    };
-
-    // 设置预览弹窗可见
-    previewVisible.value = true;
-
-    // 加载第一页题目
-    await loadPreviewQuestions(1);
-  } catch (error) {
-    console.error("预览试卷失败:", error);
-    ElMessage.error("预览试卷失败");
-    isPreviewLoading.value = false;
-  }
+  await loadPreviewPage(paper, 1);
 };
 
-const loadPreviewQuestions = async (page) => {
-  if (!previewPaperData.value?.question_ids?.length) return;
+const loadPreviewPage = async (paper, page) => {
+  isPreviewLoading.value = true;
 
-  try {
-    isPreviewLoading.value = true;
+  const pageSize = 10;
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, paper.question_ids.length);
+  
+  // 获取当前页的题目ID（保持原始顺序）
+  const currentPageIds = paper.question_ids.slice(startIndex, endIndex);
+  
+  // 获取题目详情
+  const res = await axios.post(`${API_BASE}/questions/findQuestions`, {
+    ids: currentPageIds,
+    page_num: 1,
+    page_size: pageSize,
+  });
 
-    const res = await axios.post(`${API_BASE}/questions/findQuestions`, {
-      ids: previewPaperData.value.question_ids,
-      page_num: page,
-      page_size: 10,
-    });
+  const data = res.data.data;
+  const backendQuestions = data.data_info || [];
 
-    const data = res.data.data;
-    const list = data.data_info || [];
+  // 创建ID到题目的映射
+  const questionMap = new Map();
+  backendQuestions.forEach(q => {
+    questionMap.set(q.id, q);
+  });
 
-    const pageIds = previewPaperData.value.question_ids.slice(
-      (page - 1) * previewPageSize.value,
-      page * previewPageSize.value
-    );
-
-    // 建立 id -> 题目 映射
-    const map = new Map(list.map((q) => [q.id, q]));
-
-    // pageIds 强制重排（保持 ids[] 顺序）
-    const orderedList = pageIds.map((id) => map.get(id)).filter(Boolean);
-
-    // 再赋值到页面（globalIndex 连续）
-    previewPaperData.value.questions = orderedList.map((q, index) => ({
+  // 按照 currentPageIds 的顺序构建题目数组
+  const questions = currentPageIds.map((id, localIndex) => {
+    const q = questionMap.get(id);
+    const globalIndex = startIndex + localIndex + 1; // 计算全局题号
+    
+    return q ? {
       ...q,
-      score: q.score ?? 0,
-      globalIndex: (page - 1) * previewPageSize.value + index + 1,
-    }));
+      score: paper.scores?.[paper.question_ids.indexOf(id)],
+      globalIndex: globalIndex,
+    } : {
+      id,
+      title: `题目ID ${id}（数据加载失败）`,
+      score: paper.scores?.[paper.question_ids.indexOf(id)] || 0,
+      globalIndex: globalIndex,
+    };
+  });
 
-    previewTotalItems.value = data.total_items || 0;
-    previewTotalPages.value = data.total_pages || 1;
-    previewCurrentPage.value = page;
-    inputPage.value = page;
+  previewPaperData.value = {
+    ...paper,
+    questions: questions,
+  };
 
-    await nextTick();
+  previewCurrentPage.value = page;
+  previewTotalPages.value = Math.ceil(paper.question_ids.length / pageSize);
+  previewTotalItems.value = paper.question_ids.length;
 
-    if (window.MathJax) {
-      window.MathJax.typesetPromise();
-    }
-  } finally {
-    isPreviewLoading.value = false;
-  }
+  isPreviewLoading.value = false;
 };
 
-const changePreviewPage = (page) => {
+const changePreviewPage = async (page) => {
   if (page < 1 || page > previewTotalPages.value) return;
-  previewCurrentPage.value = page;
-  loadPreviewQuestions(page);
+  await loadPreviewPage(previewPaperData.value, page);
 };
 
 const goToFirstPreviewPage = () => {

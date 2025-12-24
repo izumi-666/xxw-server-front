@@ -178,7 +178,7 @@ export default {
       currentModule: "首页",
       currentPage: "仪表板",
       userName: localStorage.getItem("userName") || "教师",
-      notificationCount: 3,
+      // notificationCount: 3,
       showNotificationDrawer: false,
 
       notifications: [
