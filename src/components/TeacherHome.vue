@@ -111,12 +111,12 @@
         </div>
 
         <div class="top-bar-actions">
-          <el-button type="text" @click="showNotifications">
+          <!-- <el-button type="text" @click="showNotifications">
             <el-icon><Bell /></el-icon>
             <span class="badge" v-if="notificationCount > 0">{{
               notificationCount
             }}</span>
-          </el-button>
+          </el-button> -->
 
           <el-dropdown @command="handleUserCommand">
             <span class="user-dropdown">
@@ -227,13 +227,13 @@ export default {
           module: "学生管理",
           page: "学生列表",
         },
-        // "class-schedule": {
-        //   path: "/teacher/classroom/schedule",
-        //   module: "班级课堂",
-        //   page: "课程表",
-        // },
+        "class-schedule": {
+          // path: "/teacher/classroom/schedule",
+          module: "班级课堂",
+          page: "课程表",
+        },
         "course-materials": {
-          path: "/teacher",
+          // path: "/teacher",
           module: "教学管理",
           page: "课程资料",
         },
@@ -259,7 +259,7 @@ export default {
 
     showNotifications() {
       this.showNotificationDrawer = true;
-      this.notificationCount = 0;
+      // this.notificationCount = 0;
     },
 
     handleUserCommand(command) {

@@ -16,7 +16,6 @@
           <thead>
             <tr>
               <th>账号</th>
-              <th>姓名</th>
               <th>性别</th>
               <th>手机号</th>
               <th>邮箱</th>
@@ -27,7 +26,6 @@
           <tbody>
             <tr v-for="stu in studentList" :key="stu.id">
               <td>{{ stu.account }}</td>
-              <td>{{ stu.name }}</td>
               <td>{{ formatGender(stu.gender) }}</td>
               <td>{{ stu.phone || "-" }}</td>
               <td>{{ stu.email || "-" }}</td>
@@ -40,7 +38,11 @@
 
       <!-- 分页 -->
       <div v-if="studentTotal > studentPageSize && studentList.length" class="pagination">
-        <button class="page-btn" :disabled="studentPage === 1" @click="changeStudentPage(studentPage - 1)">
+        <button
+          class="page-btn"
+          :disabled="studentPage === 1"
+          @click="changeStudentPage(studentPage - 1)"
+        >
           上一页
         </button>
         <span class="page-info"> 第 {{ studentPage }} / {{ studentTotalPages }} 页 </span>
@@ -63,7 +65,6 @@
           <thead>
             <tr>
               <th>账号</th>
-              <th>姓名</th>
               <th>性别</th>
               <th>手机号</th>
               <th>邮箱</th>
@@ -73,7 +74,6 @@
           <tbody>
             <tr v-for="teacher in teacherList" :key="teacher.id">
               <td>{{ teacher.account }}</td>
-              <td>{{ teacher.name }}</td>
               <td>{{ formatGender(teacher.gender) }}</td>
               <td>{{ teacher.phone || "-" }}</td>
               <td>{{ teacher.email || "-" }}</td>
@@ -85,7 +85,11 @@
 
       <!-- 分页 -->
       <div v-if="teacherTotal > teacherPageSize && teacherList.length" class="pagination">
-        <button class="page-btn" :disabled="teacherPage === 1" @click="changeTeacherPage(teacherPage - 1)">
+        <button
+          class="page-btn"
+          :disabled="teacherPage === 1"
+          @click="changeTeacherPage(teacherPage - 1)"
+        >
           上一页
         </button>
         <span class="page-info"> 第 {{ teacherPage }} / {{ teacherTotalPages }} 页 </span>
@@ -100,7 +104,10 @@
     </div>
 
     <!-- 无数据提示 -->
-    <div v-if="hasReadPermission && !studentList.length && !teacherList.length" class="card">
+    <div
+      v-if="hasReadPermission && !studentList.length && !teacherList.length"
+      class="card"
+    >
       <div class="empty-tip">
         <p>暂无账户数据</p>
       </div>
@@ -121,7 +128,6 @@
     <!-- 无权限提示 -->
     <div v-if="!hasAnyPermission" class="card">
       <div class="no-permission-tip">
-        <i class="permission-icon">🔒</i>
         <p>您没有账户管理权限，请联系管理员</p>
       </div>
     </div>
@@ -147,7 +153,7 @@
 
         <div class="criteria-item">
           <label class="criteria-label">账号</label>
-          <input v-model="form.account" class="form-input" required />
+          <input v-model="form.account" class="form-input" autocomplete="username" required />
         </div>
 
         <div class="criteria-item">
@@ -158,6 +164,7 @@
               v-model="form.password"
               class="form-input"
               required
+              autocomplete="new-password"
             />
             <span class="toggle-password" @click="showPassword = !showPassword">
               {{ showPassword ? "🙈" : "👁️" }}
@@ -166,17 +173,12 @@
         </div>
 
         <div class="criteria-item">
-          <label class="criteria-label">姓名</label>
-          <input v-model="form.name" class="form-input" required />
-        </div>
-
-        <div class="criteria-item">
           <label class="criteria-label">性别</label>
           <div class="select-wrapper">
             <select v-model="form.gender" class="form-select" required>
               <option value="">请选择</option>
-              <option value="male">男</option>
-              <option value="female">女</option>
+              <option value="1">男</option>
+              <option value="0">女</option>
             </select>
             <span class="select-arrow">▾</span>
           </div>
@@ -249,9 +251,19 @@ const hasCreatePermission = computed(() => {
   return hasPermission("user:create");
 });
 
+// 计算属性：是否有更新权限
+const hasUpdatePermission = computed(() => {
+  return hasPermission("user:update");
+});
+
+// 计算属性：是否有删除权限
+const hasDeletePermission = computed(() => {
+  return hasPermission("user:delete");
+});
+
 // 计算属性：是否有任何用户管理权限
 const hasAnyPermission = computed(() => {
-  return hasReadPermission.value || hasCreatePermission.value;
+  return hasPermission("user:*");
 });
 
 /* ==================== 状态 ==================== */
@@ -279,9 +291,8 @@ const form = reactive({
   school_id: "",
   account: "",
   password: "",
-  name: "",
-  gender: "",
-  date_of_birth: "",
+  gender: 0,
+  date_of_birth: null,
   phone: "",
   email: "",
   emergency_call: "", // 仅学生用
@@ -296,8 +307,18 @@ const submitButtonText = computed(() => {
   return accountType.value === "student" ? "创建学生账户" : "创建教师账户";
 });
 
-const studentTotalPages = computed(() => Math.ceil(studentTotal.value / studentPageSize.value));
-const teacherTotalPages = computed(() => Math.ceil(teacherTotal.value / teacherPageSize.value));
+const studentTotalPages = computed(() =>
+  Math.ceil(studentTotal.value / studentPageSize.value)
+);
+const teacherTotalPages = computed(() =>
+  Math.ceil(teacherTotal.value / teacherPageSize.value)
+);
+
+//时间格式化
+const formatDateToDateTime = (dateStr) => {
+  if (!dateStr) return null;
+  return `${dateStr} 00:00:00`;
+};
 
 /* ==================== API ==================== */
 // 从环境变量获取API基础URL
@@ -332,14 +353,14 @@ const fetchStudentList = async () => {
   }
 
   try {
-    const res = await axios.get(`${API_BASE}//user/studentList`, {
+    const res = await axios.get(`${API_BASE}/user/getStudentList`, {
       params: {
         page: studentPage.value,
         pageSize: studentPageSize.value,
       },
     });
-    studentList.value = res.data.list || [];
-    studentTotal.value = res.data.total || 0;
+    studentList.value = res.data.data || [];
+    studentTotal.value = res.data.data?.length || 0;
   } catch (error) {
     console.error("获取学生列表失败:", error);
     studentList.value = [];
@@ -357,14 +378,14 @@ const fetchTeacherList = async () => {
   }
 
   try {
-    const res = await axios.get(`${API_BASE}/user/staffList`, {
+    const res = await axios.get(`${API_BASE}/user/getStaffList`, {
       params: {
         page: teacherPage.value,
         pageSize: teacherPageSize.value,
       },
     });
-    teacherList.value = res.data.list || [];
-    teacherTotal.value = res.data.total || 0;
+    teacherList.value = res.data.data || [];
+    teacherTotal.value = res.data.data?.length || 0;
   } catch (error) {
     console.error("获取教师列表失败:", error);
     teacherList.value = [];
@@ -389,11 +410,19 @@ const submitForm = async () => {
   try {
     let url = "";
     let requestData = { ...form };
+    //时间格式化处理
+    if (requestData.date_of_birth) {
+  requestData.date_of_birth = formatDateToDateTime(
+    requestData.date_of_birth
+  );
+} else {
+  requestData.date_of_birth = null;
+}
 
     if (accountType.value === "student") {
-      url = "/user/studentSignup";
+      url = `${API_BASE}/user/SignupForStudent`;
     } else {
-      url = "/user/staffSignup";
+      url = `${API_BASE}/user/SignupForStaff`;
       delete requestData.emergency_call;
     }
 
@@ -459,13 +488,17 @@ const changeTeacherPage = (p) => {
   fetchTeacherList();
 };
 
-const formatGender = (g) => (g === "male" ? "男" : g === "female" ? "女" : "-");
+const formatGender = (g) => {
+  if (g === 1) return "男";
+  if (g === 0) return "女";
+  return "-";
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return "-";
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('zh-CN');
+    return date.toLocaleDateString("zh-CN");
   } catch (e) {
     return dateString;
   }
@@ -638,10 +671,14 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   min-width: 1000px;
+  border-radius: 3px; 
+  background: #ffffff;
+  border-radius: 14px;
+  overflow: hidden;
 }
 
 .data-table th {
-  background-color: #f5f7fa;
+  background: #c0e0ff; 
   color: #303133;
   font-weight: 600;
   text-align: left;
@@ -651,12 +688,12 @@ onMounted(() => {
 
 .data-table td {
   padding: 14px 12px;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid #dcdee4;
   color: #606266;
 }
 
 .data-table tbody tr:hover {
-  background-color: #f5f7fa;
+  background-color: #f0f9ff;
 }
 
 /* ===== 分页 ===== */
@@ -692,6 +729,11 @@ onMounted(() => {
 .page-info {
   color: #606266;
   font-size: 14px;
+}
+
+.data-table th,
+.data-table td {
+  text-align: center;
 }
 
 /* ===== 按钮样式 ===== */

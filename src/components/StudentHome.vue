@@ -43,6 +43,11 @@
           <span>自我分析</span>
         </el-menu-item>
 
+        <el-menu-item index="exam-management">
+          <el-icon><Edit /></el-icon>
+          <span>考试中心</span>
+        </el-menu-item>
+
         <el-menu-item index="homework">
           <el-icon><Notebook /></el-icon>
           <span>课后作业</span>
@@ -95,17 +100,19 @@
         <div class="breadcrumb">
           <el-breadcrumb separator="/">
             <el-breadcrumb-item>{{ currentModule }}</el-breadcrumb-item>
-            <el-breadcrumb-item>{{ currentPage }}</el-breadcrumb-item>
+            <el-breadcrumb-item v-if="currentPage">
+              {{ currentPage }}
+            </el-breadcrumb-item>
           </el-breadcrumb>
         </div>
 
         <div class="top-bar-actions">
-          <el-button type="text" @click="showNotifications">
+          <!-- <el-button type="text" @click="showNotifications">
             <el-icon><Bell /></el-icon>
             <span class="badge" v-if="notificationCount > 0">
               {{ notificationCount }}
             </span>
-          </el-button>
+          </el-button> -->
 
           <el-dropdown @command="handleUserCommand">
             <span class="user-dropdown">
@@ -166,25 +173,10 @@ export default {
       currentModule: "首页",
       currentPage: "仪表板",
       userName: localStorage.getItem("userName") || "学生",
-      notificationCount: 2,
+      // notificationCount: 2,
       showNotificationDrawer: false,
 
-      notifications: [
-        {
-          id: 1,
-          title: "作业提醒",
-          message: "数学第5章作业今晚11点前提交",
-          time: "20分钟前",
-          read: false,
-        },
-        {
-          id: 2,
-          title: "课堂直播链接更新",
-          message: "明天的语文课直播地址已更新",
-          time: "1小时前",
-          read: true,
-        },
-      ],
+      notifications: [],
     };
   },
 
@@ -216,46 +208,49 @@ export default {
 
       const routes = {
         "student-dashboard": {
-          path: "/student/dashboard",
+          path: "/student/studentdashboard",
           module: "首页",
           page: "仪表板",
         },
-        "self-analysis": {
-          path: "/student/self/analysis",
-          module: "自我分析",
-          page: "数据分析",
+        // "self-analysis": {
+        //   path: "/student/self/analysis",
+        //   module: "自我分析",
+        //   page: "数据分析",
+        // },
+        "exam-management": {
+          path: "/student/exammanagement",
+          module: "考试中心",
         },
-        homework: {
-          path: "/student/homework",
-          module: "课后作业",
-          page: "作业列表",
-        },
-        "online-class": {
-          path: "/student/online/class",
-          module: "线上课堂",
-          page: "课程直播",
-        },
-        // 自主学习子项的路由映射
-        "learning-resources": {
-          path: "/student/self/study/resources",
-          module: "自主学习",
-          page: "学习资源",
-        },
-        "study-plan": {
-          path: "/student/self/study/plan",
-          module: "自主学习",
-          page: "学习计划",
-        },
-        "mistakes-book": {
-          path: "/student/self/study/mistakes",
-          module: "自主学习",
-          page: "错题本",
-        },
-        "student-settings": {
-          path: "/student/settings",
-          module: "设置",
-          page: "个人设置",
-        },
+        // homework: {
+        //   path: "/student/homework",
+        //   module: "课后作业",
+        //   page: "作业列表",
+        // },
+        // "online-class": {
+        //   path: "/student/online/class",
+        //   module: "线上课堂",
+        //   page: "课程直播",
+        // },
+        // "learning-resources": {
+        //   path: "/student/self/study/resources",
+        //   module: "自主学习",
+        //   page: "学习资源",
+        // },
+        // "study-plan": {
+        //   path: "/student/self/study/plan",
+        //   module: "自主学习",
+        //   page: "学习计划",
+        // },
+        // "mistakes-book": {
+        //   path: "/student/self/study/mistakes",
+        //   module: "自主学习",
+        //   page: "错题本",
+        // },
+        // "student-settings": {
+        //   path: "/student/settings",
+        //   module: "设置",
+        //   page: "个人设置",
+        // },
       };
 
       if (routes[index]) {
@@ -267,7 +262,7 @@ export default {
 
     showNotifications() {
       this.showNotificationDrawer = true;
-      this.notificationCount = 0;
+      // this.notificationCount = 0;
     },
 
     handleUserCommand(command) {
@@ -389,7 +384,7 @@ export default {
   padding: 2px 8px;
   border-radius: 10px;
   background-color: #e0f2fe;
-  color:#03a164;
+  color: #03a164;
 }
 
 /* ===================== 菜单 ===================== */

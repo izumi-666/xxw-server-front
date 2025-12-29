@@ -2,18 +2,40 @@ import { createRouter, createWebHistory } from "vue-router";
 import Login from "../Login.vue";
 import QuestionManager from "../components/QuestionManager.vue";
 import PaperManagement from "../components/PaperManagement.vue";
-import ExamManagement from "../components/ExamManagement.vue";
+import ExamManagement from "../components/ExamManagement.vue"; //教师用
+import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
 import TeacherHome from "../components/TeacherHome.vue";
 import StudentHome from "../components/StudentHome.vue";
 import VisitorHome from "../components/VisitorHome.vue";
 import AccountManagement from "../components/AccountManagement.vue";
 import TeacherDashboard from "../components/TeacherDashboard.vue";
+import StudentDashboard from "../components/StudentDashboard.vue";
 import HomeworkManagement from "../components/HomeworkManagement.vue";
 
 const routes = [
   { path: "/", redirect: "/login" },
   { path: "/login", component: Login },
-  { path: "/student", component: StudentHome,  meta: { requiresAuth: true },},
+  { path: "/student", 
+    component: StudentHome,  
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: "studentdashboard",
+        name: "student-dashboard",
+        component: StudentDashboard,
+        meta: { requiresAuth: true,
+          breadcrumb: ["首页"]
+         }
+      },
+      {
+        path: "exammanagement",
+        name: "student-exammanagement",
+        component: ExamDashboard,
+        meta: { requiresAuth: true,
+          breadcrumb: ["考试中心"]
+         }
+      }
+    ]},
   { path: "/visitor", component: VisitorHome,  meta: { requiresAuth: true },},
   {
     path: "/teacher",

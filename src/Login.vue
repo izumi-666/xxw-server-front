@@ -79,7 +79,7 @@ export default {
           permissions.includes("ROLE_TEACHER")) {
         this.$router.push("/teacher/teacherdashboard");
       } else if (permissions.includes("ROLE_STUDENT")) {
-        this.$router.push("/student");
+        this.$router.push("/student/studentdashboard");
       } else if (permissions.includes("ROLE_VISITOR")) {
         this.$router.push("/visitor");
       } else {

@@ -3,7 +3,7 @@
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">教务管理首页</h1>
+        <h1 class="page-title">学生首页</h1>
       </div>
     </div>
 

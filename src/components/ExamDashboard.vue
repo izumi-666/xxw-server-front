@@ -3,30 +3,30 @@
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">考试管理</h1>
+        <h1 class="page-title">考试中心</h1>
       </div>
     </div>
 
     <!-- 顶部操作区 -->
-    <div class="action-bar card">
+    <!-- <div class="action-bar card">
       <div class="action-buttons">
-        <button class="btn-primary" @click="CreateExam">安排新考试</button>
+        <button class="btn-primary" @click="goCreateExam">安排新考试</button>
       </div>
-    </div>
+    </div> -->
 
     <!-- 查询条件 -->
-    <div class="search-bar card">
+    <!-- <div class="search-bar card">
       <div class="card-header">
         <h2 class="section-title">筛选条件</h2>
         <div class="header-actions">
           <button class="btn-primary search-btn" @click="searchExam">查询</button>
           <button class="btn-secondary" @click="resetSearch">重置</button>
         </div>
-      </div>
+      </div> -->
 
-      <div class="criteria-grid">
+      <!-- <div class="criteria-grid"> -->
         <!-- 考试名称 -->
-        <div class="criteria-item">
+        <!-- <div class="criteria-item">
           <label class="criteria-label">考试名称</label>
           <input
             type="text"
@@ -34,61 +34,17 @@
             placeholder="请输入考试名称"
             class="form-input"
           />
-        </div>
+        </div> -->
 
-        <!-- 考试发起人筛选（改为多选下拉框） -->
-        <div class="criteria-item">
+        <!-- 考试发起人 -->
+        <!-- <div class="criteria-item">
           <label class="criteria-label">考试发起人</label>
-          <div class="multi-select-wrapper" ref="creatorWrapper">
-            <div class="multi-select-trigger" @click="toggleCreatorDropdown">
-              <span class="placeholder" v-if="searchForm.created_by.length === 0">
-                请选择考试发起人
-              </span>
-              <span class="selected-tags" v-else>
-                <span
-                  v-for="creator in selectedCreators"
-                  :key="creator.id"
-                  class="selected-tag"
-                  @click.stop="removeCreator(creator.id)"
-                >
-                  {{ creator.name }}
-                  <span class="remove-icon">×</span>
-                </span>
-              </span>
-              <span class="dropdown-arrow">▼</span>
-            </div>
-
-            <div class="multi-select-dropdown" v-if="showCreatorDropdown">
-              <div class="search-input-container">
-                <input
-                  type="text"
-                  v-model="creatorSearch"
-                  placeholder="搜索教职工..."
-                  class="search-input"
-                  @input="filterCreators"
-                />
-              </div>
-              <div class="dropdown-options">
-                <div
-                  v-for="creator in filteredCreators"
-                  :key="creator.id"
-                  class="dropdown-option"
-                  @click="toggleCreator(creator)"
-                >
-                  <span
-                    class="checkbox"
-                    :class="{ checked: isCreatorSelected(creator.id) }"
-                  >
-                    {{ isCreatorSelected(creator.id) ? "✓" : "" }}
-                  </span>
-                  <span class="option-text">{{ creator.name }}</span>
-                </div>
-                <div v-if="filteredCreators.length === 0" class="no-options">
-                  无匹配选项
-                </div>
-              </div>
-            </div>
-          </div>
+          <input
+            type="text"
+            v-model="searchForm.created_by"
+            placeholder="请输入考试发起人姓名，多个用逗号分隔"
+            class="form-input"
+          />
         </div>
       </div>
     </div>
@@ -148,15 +104,6 @@
                       >
                         删除
                       </button>
-
-                      <!-- 发布按钮 -->
-                      <button
-                        v-if="exam.status === 'pending'"
-                        class="btn-success btn-sm"
-                        @click="openPublishExam(exam)"
-                      >
-                        发布
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -204,13 +151,14 @@
         <div v-else class="no-results">
           <div class="no-results-content">
             <p>暂无考试数据</p>
-            <p class="no-results-tip">请安排新考试或调整筛选条件</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 考试详情弹窗 -->
+    <!-- ============================
+          考试详情弹窗
+    ============================== -->
     <div v-if="detailVisible" class="modal-overlay" @click="detailVisible = false">
       <div class="modal-content large-modal" @click.stop>
         <div class="modal-header">
@@ -305,7 +253,6 @@
                 type="datetime-local"
                 v-model="editExamData.start_time"
                 class="form-input"
-                :min="minStartTime"
               />
             </div>
 
@@ -326,149 +273,11 @@
         </div>
       </div>
     </div>
-
-    <!-- 创建考试弹窗 -->
-    <div v-if="createVisible" class="modal-overlay" @click="createVisible = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">安排新考试</h3>
-          <button class="btn-close" @click="createVisible = false">×</button>
-        </div>
-
-        <div class="edit-content">
-          <div class="edit-form">
-            <!-- 考试名称 -->
-            <div class="form-group">
-              <label class="form-label">考试名称</label>
-              <input
-                type="text"
-                v-model="createExamData.name"
-                class="form-input"
-                placeholder="请输入考试名称"
-              />
-            </div>
-
-            <!-- 试卷选择 -->
-            <div class="form-group">
-              <label class="form-label">选择试卷</label>
-              <select v-model="createExamData.paper_id" class="form-input">
-                <option disabled value="">请选择试卷</option>
-                <option v-for="paper in paperOptions" :key="paper.id" :value="paper.id">
-                  {{ paper.name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- 开始时间 -->
-            <div class="form-group">
-              <label class="form-label">开始时间</label>
-              <input
-                type="datetime-local"
-                v-model="createExamData.start_time"
-                class="form-input"
-                :min="minStartTime"
-              />
-            </div>
-
-            <!-- 持续时间 -->
-            <div class="form-group">
-              <label class="form-label">考试时长（分钟）</label>
-              <input
-                type="number"
-                v-model="createExamData.duration"
-                class="form-input"
-                min="1"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn-secondary" @click="createVisible = false">取消</button>
-          <button class="btn-primary" @click="submitCreateExam">安排考试</button>
-        </div>
-      </div>
-    </div>
-    <!-- 发布考试弹窗 -->
-    <div v-if="publishVisible" class="modal-overlay" @click="publishVisible = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">发布考试 - {{ publishExamData?.name }}</h3>
-          <button class="btn-close" @click="publishVisible = false">×</button>
-        </div>
-
-        <div class="edit-content">
-          <div class="form-group">
-            <label class="form-label">选择接收考试的学生</label>
-
-            <div class="multi-select-wrapper" ref="studentWrapper">
-              <div class="multi-select-trigger" @click="toggleStudentDropdown">
-                <span class="placeholder" v-if="selectedStudents.length === 0">
-                  请选择学生
-                </span>
-
-                <span class="selected-tags" v-else>
-                  <span
-                    v-for="stu in selectedStudents"
-                    :key="stu.id"
-                    class="selected-tag"
-                    @click.stop="removeStudent(stu.id)"
-                  >
-                    {{ stu.name }}
-                    <span class="remove-icon">×</span>
-                  </span>
-                </span>
-
-                <span class="dropdown-arrow">▼</span>
-              </div>
-
-              <div class="multi-select-dropdown" v-if="showStudentDropdown">
-                <div class="search-input-container">
-                  <input
-                    type="text"
-                    v-model="studentSearch"
-                    placeholder="搜索学生..."
-                    class="search-input"
-                    @input="filterStudents"
-                  />
-                </div>
-
-                <div class="dropdown-options">
-                  <div
-                    v-for="stu in filteredStudents"
-                    :key="stu.id"
-                    class="dropdown-option"
-                    @click="toggleStudent(stu)"
-                  >
-                    <span
-                      class="checkbox"
-                      :class="{ checked: isStudentSelected(stu.id) }"
-                    >
-                      {{ isStudentSelected(stu.id) ? "✓" : "" }}
-                    </span>
-                    <span class="option-text">{{ stu.name }}</span>
-                  </div>
-
-                  <div v-if="filteredStudents.length === 0" class="no-options">
-                    无匹配学生
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn-secondary" @click="publishVisible = false">取消</button>
-          <button class="btn-primary" @click="submitPublishExam">确认发布</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, onBeforeUnmount } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import axios from "axios";
 import { useRouter } from "vue-router";
@@ -491,47 +300,6 @@ const detailVisible = ref(false);
 const editVisible = ref(false);
 const detailExamData = ref(null);
 
-// 时间格式化
-const formatDateTimeForBackend = (datetimeLocalStr) => {
-  if (!datetimeLocalStr) return "";
-
-  const date = new Date(datetimeLocalStr);
-
-  const pad = (n) => (n < 10 ? "0" + n : n);
-
-  return (
-    date.getFullYear() +
-    "-" +
-    pad(date.getMonth() + 1) +
-    "-" +
-    pad(date.getDate()) +
-    " " +
-    pad(date.getHours()) +
-    ":" +
-    pad(date.getMinutes()) +
-    ":" +
-    pad(date.getSeconds())
-  );
-};
-
-// 时间选择不可用当前时间之前的时间
-const minStartTime = computed(() => {
-  const now = new Date();
-  const pad = (n) => (n < 10 ? "0" + n : n);
-
-  return (
-    now.getFullYear() +
-    "-" +
-    pad(now.getMonth() + 1) +
-    "-" +
-    pad(now.getDate()) +
-    "T" +
-    pad(now.getHours()) +
-    ":" +
-    pad(now.getMinutes())
-  );
-});
-
 // 编辑考试数据
 const editExamData = ref({
   id: null,
@@ -545,91 +313,8 @@ const editExamData = ref({
 /* ==================== 搜索相关 ==================== */
 const searchForm = ref({
   name: "",
-  created_by: [], // 改为数组，支持多选
+  created_by: [],
 });
-
-/* ==================== 考试发起人多选下拉框相关 ==================== */
-const creatorList = ref([]);
-const creatorSearch = ref("");
-const showCreatorDropdown = ref(false);
-const filteredCreators = ref([]);
-
-// 计算属性：选中的发起人
-const selectedCreators = computed(() => {
-  return searchForm.value.created_by
-    .map((id) => creatorList.value.find((c) => c.id === id))
-    .filter(Boolean);
-});
-
-// 加载教职工列表
-const loadCreatorList = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/user/getStaffList`);
-    const staffData = res.data.data || [];
-
-    // 格式化数据，使用account作为id和name
-    creatorList.value = staffData
-      .filter((item) => item && item.account)
-      .map((item) => ({
-        id: item.account,
-        name: item.account,
-      }));
-
-    filteredCreators.value = creatorList.value;
-  } catch (error) {
-    console.error("加载教职工列表失败:", error);
-    ElMessage.error("加载教职工列表失败");
-  }
-};
-
-// 切换下拉框显示
-const toggleCreatorDropdown = () => {
-  showCreatorDropdown.value = !showCreatorDropdown.value;
-  if (showCreatorDropdown.value) {
-    filterCreators();
-  }
-};
-
-// 过滤教职工
-const filterCreators = () => {
-  if (!creatorSearch.value) {
-    filteredCreators.value = creatorList.value;
-  } else {
-    filteredCreators.value = creatorList.value.filter((creator) =>
-      creator.name.toLowerCase().includes(creatorSearch.value.toLowerCase())
-    );
-  }
-};
-
-// 切换选择
-const toggleCreator = (creator) => {
-  const index = searchForm.value.created_by.indexOf(creator.id);
-  if (index > -1) {
-    searchForm.value.created_by.splice(index, 1);
-  } else {
-    searchForm.value.created_by.push(creator.id);
-  }
-};
-
-// 移除已选发起人
-const removeCreator = (id) => {
-  searchForm.value.created_by = searchForm.value.created_by.filter(
-    (creatorId) => creatorId !== id
-  );
-};
-
-// 检查是否已选择
-const isCreatorSelected = (id) => {
-  return searchForm.value.created_by.includes(id);
-};
-
-// 点击外部关闭下拉框
-const creatorWrapper = ref(null);
-const handleClickOutside = (event) => {
-  if (creatorWrapper.value && !creatorWrapper.value.contains(event.target)) {
-    showCreatorDropdown.value = false;
-  }
-};
 
 /* ==================== 用户信息 ==================== */
 const getUserInfo = () => {
@@ -646,7 +331,7 @@ const getUserInfo = () => {
   }
 
   return {
-    account: userName,
+    account: userName,   
     username: userName,
     permissions,
   };
@@ -680,12 +365,15 @@ const loadExams = async () => {
     }
 
     const mappedRole = getUserType(); // 获取用户类型
-    const res = await axios.get(`${API_BASE}/exam/getExamList/${mappedRole}/${account}`, {
-      params: {
-        page: currentPage.value,
-        page_size: pageSize.value,
-      },
-    });
+    const res = await axios.get(
+      `${API_BASE}/exam/getExamList/${mappedRole}/${account}`,
+      {
+        params: {
+          page: currentPage.value,
+          page_size: pageSize.value,
+        },
+      }
+    );
 
     examList.value = res.data.data?.items || [];
     totalItems.value = res.data.data?.total || 0;
@@ -695,15 +383,16 @@ const loadExams = async () => {
   }
 };
 
-// 搜索考试
 const searchExam = async () => {
   try {
     currentPage.value = 1;
 
-    // 处理created_by，使用数组格式
+    // 处理created_by，如果是逗号分隔的字符串，转换为数组
     const searchData = {
       name: searchForm.value.name,
-      created_by: searchForm.value.created_by,
+      created_by: searchForm.value.created_by
+        ? searchForm.value.created_by.split(",").map((item) => item.trim())
+        : [],
     };
 
     const res = await axios.post(`${API_BASE}/exam/findExam`, searchData, {
@@ -764,7 +453,7 @@ const showEllipsis = computed(() => {
 const goToPage = (page) => {
   if (page < 1 || page > totalPages.value) return;
   currentPage.value = page;
-  if (searchForm.value.name || searchForm.value.created_by.length > 0) {
+  if (searchForm.value.name || searchForm.value.created_by) {
     searchExam();
   } else {
     loadExams();
@@ -772,79 +461,8 @@ const goToPage = (page) => {
 };
 
 /* ==================== 考试操作 ==================== */
-/* ==================== 创建考试弹窗 ==================== */
-const createVisible = ref(false);
-
-const createExamData = ref({
-  paper_id: null,
-  name: "",
-  start_time: "",
-  duration: 120,
-});
-
-const paperOptions = ref([]);
-
-const loadPaperOptions = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/paper/getPaperList`);
-    paperOptions.value = res.data.data || [];
-  } catch (error) {
-    console.error("获取试卷列表失败", error);
-    ElMessage.error("获取试卷列表失败");
-  }
-};
-
-const CreateExam = async () => {
-  await loadPaperOptions();
-
-  // 重置表单
-  createExamData.value = {
-    paper_id: null,
-    name: "",
-    start_time: "",
-    duration: 120,
-  };
-
-  createVisible.value = true;
-};
-
-const submitCreateExam = async () => {
-  try {
-    const userInfo = getUserInfo();
-    if (!userInfo) {
-      ElMessage.error("无法获取用户信息");
-      return;
-    }
-
-    if (!createExamData.value.paper_id) {
-      ElMessage.warning("请选择试卷");
-      return;
-    }
-
-    if (!createExamData.value.name.trim()) {
-      ElMessage.warning("请输入考试名称");
-      return;
-    }
-
-    const payload = {
-      paper_id: createExamData.value.paper_id,
-      name: createExamData.value.name,
-      start_time: formatDateTimeForBackend(createExamData.value.start_time),
-      duration: createExamData.value.duration,
-      created_by: userInfo.account || "",
-    };
-
-    await axios.post(`${API_BASE}/exam/createExam`, payload);
-
-    ElMessage.success("考试创建成功");
-    createVisible.value = false;
-
-    // 刷新列表
-    await loadExams();
-  } catch (error) {
-    console.error("创建考试失败", error);
-    ElMessage.error("创建考试失败");
-  }
+const goCreateExam = () => {
+  router.push("/teacher/exam/create");
 };
 
 const editExam = async (exam) => {
@@ -885,7 +503,7 @@ const saveExam = async () => {
     editVisible.value = false;
 
     // 刷新列表
-    if (searchForm.value.name || searchForm.value.created_by.length > 0) {
+    if (searchForm.value.name || searchForm.value.created_by) {
       await searchExam();
     } else {
       await loadExams();
@@ -922,100 +540,6 @@ const deleteExam = async (exam) => {
 const previewPaper = (paper) => {
   ElMessage.info(`预览试卷: ${paper.name}`);
   // 这里可以打开试卷预览弹窗
-};
-
-/* ==================== 发布考试 ==================== */
-const publishVisible = ref(false);
-const publishExamData = ref(null);
-
-// 学生列表
-const studentList = ref([]);
-const filteredStudents = ref([]);
-const studentSearch = ref("");
-const showStudentDropdown = ref(false);
-
-// 选中的学生 id
-const selectedStudentIds = ref([]);
-const loadStudentList = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/user/getStudentList`);
-    const list = res.data.data || [];
-
-    // 使用 account 或 name，避免 null
-    studentList.value = list.map((item) => ({
-      id: item.id,
-      name: item.name || item.account,
-    }));
-
-    filteredStudents.value = studentList.value;
-  } catch (err) {
-    ElMessage.error("加载学生列表失败");
-  }
-};
-const openPublishExam = async (exam) => {
-  publishExamData.value = exam;
-  selectedStudentIds.value = [];
-
-  await loadStudentList();
-  publishVisible.value = true;
-};
-const selectedStudents = computed(() =>
-  selectedStudentIds.value
-    .map((id) => studentList.value.find((s) => s.id === id))
-    .filter(Boolean)
-);
-
-const toggleStudentDropdown = () => {
-  showStudentDropdown.value = !showStudentDropdown.value;
-  filterStudents();
-};
-
-const filterStudents = () => {
-  if (!studentSearch.value) {
-    filteredStudents.value = studentList.value;
-  } else {
-    filteredStudents.value = studentList.value.filter((s) =>
-      s.name.toLowerCase().includes(studentSearch.value.toLowerCase())
-    );
-  }
-};
-
-const toggleStudent = (stu) => {
-  const idx = selectedStudentIds.value.indexOf(stu.id);
-  if (idx > -1) {
-    selectedStudentIds.value.splice(idx, 1);
-  } else {
-    selectedStudentIds.value.push(stu.id);
-  }
-};
-
-const removeStudent = (id) => {
-  selectedStudentIds.value = selectedStudentIds.value.filter((sid) => sid !== id);
-};
-
-const isStudentSelected = (id) => {
-  return selectedStudentIds.value.includes(id);
-};
-const submitPublishExam = async () => {
-  if (selectedStudentIds.value.length === 0) {
-    ElMessage.warning("请选择至少一名学生");
-    return;
-  }
-
-  try {
-    await axios.post(`${API_BASE}/exam/publishExam`, {
-      exam_id: publishExamData.value.id,
-      students: selectedStudentIds.value,
-    });
-
-    ElMessage.success("考试发布成功");
-    publishVisible.value = false;
-
-    await loadExams();
-  } catch (err) {
-    console.error(err);
-    ElMessage.error("发布考试失败");
-  }
 };
 
 /* ==================== 工具函数 ==================== */
@@ -1060,20 +584,11 @@ const calculateDuration = (exam) => {
 /* ==================== 生命周期 ==================== */
 onMounted(() => {
   loadExams();
-  loadCreatorList();
-
-  // 添加点击外部关闭下拉框的事件监听
-  document.addEventListener("click", handleClickOutside);
-});
-
-onBeforeUnmount(() => {
-  // 移除事件监听
-  document.removeEventListener("click", handleClickOutside);
 });
 
 // 监听页码变化
 watch(currentPage, () => {
-  if (searchForm.value.name || searchForm.value.created_by.length > 0) {
+  if (searchForm.value.name || searchForm.value.created_by) {
     searchExam();
   } else {
     loadExams();
@@ -1564,175 +1079,6 @@ watch(currentPage, () => {
   text-align: center;
   padding: 40px;
   color: #909399;
-}
-
-.no-results-tip {
-  font-size: 14px;
-  margin-top: 8px;
-  opacity: 0.7;
-}
-
-/* 多选下拉框样式 */
-.multi-select-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.multi-select-trigger {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  background-color: white;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.3s;
-  min-height: 46px;
-}
-
-.multi-select-trigger:hover {
-  border-color: #c0c4cc;
-}
-
-.multi-select-trigger:focus {
-  outline: none;
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-}
-
-.placeholder {
-  color: #c0c4cc;
-  font-size: 14px;
-}
-
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  flex: 1;
-}
-
-.selected-tag {
-  background: #ecf5ff;
-  color: #409eff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  border: 1px solid #d9ecff;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.selected-tag:hover {
-  background: #d9ecff;
-  transform: translateY(-1px);
-}
-
-.remove-icon {
-  font-weight: bold;
-  font-size: 14px;
-  color: #f56c6c;
-  padding: 2px;
-  border-radius: 2px;
-  transition: background-color 0.2s;
-}
-
-.remove-icon:hover {
-  background-color: rgba(245, 108, 108, 0.1);
-}
-
-.dropdown-arrow {
-  color: #c0c4cc;
-  font-size: 12px;
-  transition: transform 0.3s;
-}
-
-.multi-select-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  margin-top: 4px;
-  max-height: 250px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.search-input-container {
-  padding: 8px;
-  border-bottom: 1px solid #e6e9f0;
-}
-
-.search-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #409eff;
-}
-
-.dropdown-options {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.dropdown-option {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  gap: 8px;
-}
-
-.dropdown-option:hover {
-  background-color: #f5f7fa;
-}
-
-.checkbox {
-  width: 16px;
-  height: 16px;
-  border: 1px solid #dcdfe6;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: white;
-}
-
-.checkbox.checked {
-  background-color: #409eff;
-  border-color: #409eff;
-}
-
-.option-text {
-  flex: 1;
-  font-size: 14px;
-  color: #303133;
-}
-
-.no-options {
-  padding: 12px;
-  text-align: center;
-  color: #909399;
-  font-size: 14px;
 }
 
 /* ==================== 模态框样式 ==================== */

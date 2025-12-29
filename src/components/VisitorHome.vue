@@ -200,7 +200,6 @@
         <el-icon size="60" color="#03a164"><School /></el-icon>
         <h3>感谢您的访问！</h3>
         <p>新希望特长学校致力于为学生提供优质的特长教育，培养全面发展的人才。</p>
-        <p>请点击左侧菜单了解更多信息，或直接注册成为我们的学员。</p>
       </div>
       <template #footer>
         <span class="dialog-footer">
@@ -342,70 +341,70 @@ export default {
           page: "欢迎",
           showDefault: true,
         },
-        // 学校介绍
-        "about-us": {
-          path: "/visitor/about",
-          module: "学校介绍",
-          page: "关于我们",
-        },
-        "school-features": {
-          path: "/visitor/features",
-          module: "学校介绍",
-          page: "学校特色",
-        },
-        facilities: {
-          path: "/visitor/facilities",
-          module: "学校介绍",
-          page: "教学设施",
-        },
-        // 课程展示
-        "course-catalog": {
-          path: "/visitor/courses",
-          module: "课程展示",
-          page: "课程目录",
-        },
-        "highlight-courses": {
-          path: "/visitor/highlight-courses",
-          module: "课程展示",
-          page: "精品课程",
-        },
-        "teacher-team": {
-          path: "/visitor/teachers",
-          module: "课程展示",
-          page: "师资团队",
-        },
-        // 其他页面
-        achievements: {
-          path: "/visitor/achievements",
-          module: "学生成果",
-          page: "荣誉展示",
-        },
-        "campus-life": {
-          path: "/visitor/campus",
-          module: "校园生活",
-          page: "活动照片",
-        },
-        // 招生信息
-        "enrollment-policy": {
-          path: "/visitor/enrollment",
-          module: "招生信息",
-          page: "招生政策",
-        },
-        "apply-online": {
-          path: "/visitor/apply",
-          module: "招生信息",
-          page: "在线报名",
-        },
-        faq: {
-          path: "/visitor/faq",
-          module: "招生信息",
-          page: "常见问题",
-        },
-        contact: {
-          path: "/visitor/contact",
-          module: "联系我们",
-          page: "联系方式",
-        },
+        // // 学校介绍
+        // "about-us": {
+        //   path: "/visitor/about",
+        //   module: "学校介绍",
+        //   page: "关于我们",
+        // },
+        // "school-features": {
+        //   path: "/visitor/features",
+        //   module: "学校介绍",
+        //   page: "学校特色",
+        // },
+        // facilities: {
+        //   path: "/visitor/facilities",
+        //   module: "学校介绍",
+        //   page: "教学设施",
+        // },
+        // // 课程展示
+        // "course-catalog": {
+        //   path: "/visitor/courses",
+        //   module: "课程展示",
+        //   page: "课程目录",
+        // },
+        // "highlight-courses": {
+        //   path: "/visitor/highlight-courses",
+        //   module: "课程展示",
+        //   page: "精品课程",
+        // },
+        // "teacher-team": {
+        //   path: "/visitor/teachers",
+        //   module: "课程展示",
+        //   page: "师资团队",
+        // },
+        // // 其他页面
+        // achievements: {
+        //   path: "/visitor/achievements",
+        //   module: "学生成果",
+        //   page: "荣誉展示",
+        // },
+        // "campus-life": {
+        //   path: "/visitor/campus",
+        //   module: "校园生活",
+        //   page: "活动照片",
+        // },
+        // // 招生信息
+        // "enrollment-policy": {
+        //   path: "/visitor/enrollment",
+        //   module: "招生信息",
+        //   page: "招生政策",
+        // },
+        // "apply-online": {
+        //   path: "/visitor/apply",
+        //   module: "招生信息",
+        //   page: "在线报名",
+        // },
+        // faq: {
+        //   path: "/visitor/faq",
+        //   module: "招生信息",
+        //   page: "常见问题",
+        // },
+        // contact: {
+        //   path: "/visitor/contact",
+        //   module: "联系我们",
+        //   page: "联系方式",
+        // },
       };
 
       if (routes[index]) {
@@ -650,11 +649,6 @@ export default {
 
 .logout-menu-item .el-icon {
   color: #e6a23c !important;
-}
-
-/* 子菜单项样式 */
-.nav-menu .el-menu-item {
-  padding-left: 40px !important;
 }
 
 /* ===================== 底部信息 ===================== */
