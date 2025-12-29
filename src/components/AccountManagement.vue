@@ -153,7 +153,12 @@
 
         <div class="criteria-item">
           <label class="criteria-label">账号</label>
-          <input v-model="form.account" class="form-input" autocomplete="username" required />
+          <input
+            v-model="form.account"
+            class="form-input"
+            autocomplete="username"
+            required
+          />
         </div>
 
         <div class="criteria-item">
@@ -412,12 +417,10 @@ const submitForm = async () => {
     let requestData = { ...form };
     //时间格式化处理
     if (requestData.date_of_birth) {
-  requestData.date_of_birth = formatDateToDateTime(
-    requestData.date_of_birth
-  );
-} else {
-  requestData.date_of_birth = null;
-}
+      requestData.date_of_birth = formatDateToDateTime(requestData.date_of_birth);
+    } else {
+      requestData.date_of_birth = null;
+    }
 
     if (accountType.value === "student") {
       url = `${API_BASE}/user/SignupForStudent`;
@@ -521,9 +524,11 @@ onMounted(() => {
 .container {
   max-width: 2000px;
   margin: 0 auto;
-  padding: 20px;
-  background: #f5f7fa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+  Arial, sans-serif;
+  background-color: #f5f7fa;
   min-height: 100vh;
+  color: #333;
 }
 
 .page-header {
@@ -671,14 +676,14 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   min-width: 1000px;
-  border-radius: 3px; 
+  border-radius: 3px;
   background: #ffffff;
   border-radius: 14px;
   overflow: hidden;
 }
 
 .data-table th {
-  background: #c0e0ff; 
+  background: #c0e0ff;
   color: #303133;
   font-weight: 600;
   text-align: left;
