@@ -159,15 +159,41 @@
               </div>
             </div>
 
-            <!-- 简答题输入框 -->
-            <div class="short-answer-area" v-if="currentQuestion.marking_type === 1">
-              <textarea
-                v-model="userAnswers[currentQuestion.id]"
-                placeholder="请输入答案..."
-                rows="6"
-                class="short-answer-input"
-              ></textarea>
-            </div>
+            <!-- 简答题输入 + Markdown 预览 -->
+<div class="short-answer-area" v-if="currentQuestion.marking_type === 1">
+  <!-- 公式工具栏 -->
+  <div class="formula-toolbar">
+    <button
+      v-for="formula in commonFormulas"
+      :key="formula.label"
+      class="formula-btn"
+      @click="insertFormula(formula.value)"
+      type="button"
+    >
+      {{ formula.label }}
+    </button>
+  </div>
+
+  <div class="markdown-answer">
+    <!-- 输入区 -->
+    <textarea
+      ref="answerTextarea"
+      v-model="userAnswers[currentQuestion.id]"
+      placeholder="支持 Markdown 与 LaTeX 数学公式，例如 $x^2 + y^2 = 1$"
+      rows="8"
+      class="short-answer-input"
+    ></textarea>
+
+    <!-- 预览区 -->
+    <div class="markdown-preview">
+      <div class="preview-title">预览</div>
+      <div
+        class="preview-content"
+        v-html="markdownToHtml(userAnswers[currentQuestion.id])"
+      ></div>
+    </div>
+  </div>
+</div>
 
             <!-- 答案解析（仅当showAnswer为true时显示） -->
             <div class="answer-analysis" v-if="showAnswer && currentQuestion.notes">
@@ -320,7 +346,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -551,26 +577,78 @@ marked.setOptions({
 // Markdown转HTML
 const markdownToHtml = (text) => {
   if (!text) return "";
+
   try {
-    // 如果是数学公式，可以在这里特殊处理
-    // 例如：$$公式$$ 或 $公式$
-    let html = marked(text);
+    let content = text;
 
-    // 处理常见的数学公式表示
-    html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) =>
-      katex.renderToString(formula, { displayMode: true })
-    );
+    // 先处理 $$...$$（显示公式，允许多行）
+    content = content.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) => {
+      return katex.renderToString(formula.trim(), {
+        displayMode: true,
+        throwOnError: false,
+      });
+    });
 
-    html = html.replace(/\$([^$]+)\$/g, (_, formula) =>
-      katex.renderToString(formula, { displayMode: false })
-    );
+    // 再处理 $...$（允许多行，用 [\s\S]）
+    content = content.replace(/\$([\s\S]+?)\$/g, (_, formula) => {
+      return katex.renderToString(formula.trim(), {
+        displayMode: false,
+        throwOnError: false,
+      });
+    });
 
-    return html;
-  } catch (error) {
-    console.error("Markdown解析失败:", error);
+    // 最后再交给 marked
+    return marked(content);
+  } catch (err) {
+    console.error("Markdown + KaTeX 渲染失败:", err);
     return text;
   }
 };
+
+const answerTextarea = ref(null);
+
+// 常用数学公式（LaTeX）
+const commonFormulas = [
+  { label: "分数", value: "\\frac{a}{b}" },
+  { label: "幂", value: "x^i" },
+  { label: "下标", value: "x_i" },
+  { label: "根号", value: "\\sqrt[x]{y}" },
+  { label: "大括号", value: "\\begin{cases} a \\\\ c \\end{cases}" },
+  { label: "求和", value: "\\sum_{i=1}^n" },
+  { label: "极限", value: "\\lim_{x \\to 0}" },
+  { label: "绝对值", value: "\\left| x \\right|" },
+  { label: "排列", value: "\{A}_x^y" },
+  { label: "组合", value: "\{C}_x^y" },
+  { label: "角度", value: "\\angle ABC" },
+  { label: "向量", value: "\\vec{v}" },
+  { label: "积分", value: "\\int_a^b f(x) dx" },
+];
+
+/* 插入公式到当前答案文本框(随光标变化) */
+const insertFormula = async (formula) => {
+  const textarea = answerTextarea.value;
+  if (!textarea || !currentQuestion.value) return;
+
+  const questionId = currentQuestion.value.id;
+  const text = userAnswers.value[questionId] || "";
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  // 插入为行内公式 $...$
+  const insertText = `$${formula}$`;
+
+  userAnswers.value[questionId] =
+    text.slice(0, start) + insertText + text.slice(end);
+
+  await nextTick();
+
+  // 重新聚焦并移动光标
+  textarea.focus();
+  textarea.selectionStart = textarea.selectionEnd =
+    start + insertText.length;
+};
+
 
 /* ==================== 计时器相关 ==================== */
 // 开始计时
@@ -1241,6 +1319,30 @@ const getQuestionTypeText = (markingType) => {
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
 }
 
+.formula-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.formula-btn {
+  padding: 6px 10px;
+  font-size: 13px;
+  background-color: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #303133;
+  transition: all 0.2s;
+}
+
+.formula-btn:hover {
+  background-color: #ecf5ff;
+  border-color: #409eff;
+  color: #409eff;
+}
+
 /* 答案解析 */
 .answer-analysis {
   margin-top: 40px;
@@ -1704,6 +1806,32 @@ const getQuestionTypeText = (markingType) => {
   font-weight: bold;
   font-size: 16px;
 }
+.markdown-answer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.markdown-preview {
+  border: 2px solid #ebeef5;
+  border-radius: 10px;
+  padding: 16px;
+  background-color: #fafafa;
+  overflow-y: auto;
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #909399;
+  margin-bottom: 10px;
+}
+
+.preview-content {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
 
 /* ==================== 响应式设计 ==================== */
 @media (max-width: 1200px) {
@@ -1784,6 +1912,13 @@ const getQuestionTypeText = (markingType) => {
 
   .modal-content {
     padding: 20px;
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .markdown-answer {
+    grid-template-columns: 1fr;
   }
 }
 </style>
