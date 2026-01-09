@@ -4,6 +4,7 @@ import QuestionManager from "../components/QuestionManager.vue";
 import PaperManagement from "../components/PaperManagement.vue";
 import ExamManagement from "../components/ExamManagement.vue"; //教师用
 import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
+import TakeExam from "../components/TakeExam.vue"; //学生参加考试
 import TeacherHome from "../components/TeacherHome.vue";
 import StudentHome from "../components/StudentHome.vue";
 import VisitorHome from "../components/VisitorHome.vue";
@@ -34,7 +35,15 @@ const routes = [
         meta: { requiresAuth: true,
           breadcrumb: ["考试中心"]
          }
-      }
+      },
+      {
+  path: "exam/take",
+  name: "take-exam",
+  component: TakeExam,
+  meta: { requiresAuth: true,
+    breadcrumb: ["考试中心", "参加考试"]
+  }
+},
     ]},
   { path: "/visitor", component: VisitorHome,  meta: { requiresAuth: true },},
   {

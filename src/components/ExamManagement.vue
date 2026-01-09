@@ -109,8 +109,7 @@
               <thead>
                 <tr>
                   <th>考试名称</th>
-                  <th>科目</th>
-                  <th>年级</th>
+                  <th>状态</th>
                   <th>考试时间</th>
                   <th>操作</th>
                 </tr>
@@ -123,17 +122,35 @@
                       {{ exam.description }}
                     </div>
                   </td>
-                  <td>{{ exam.subject }}</td>
-                  <td>{{ exam.grade }}</td>
                   <td>
-                    <div>{{ formatDateTime(exam.start_time) }}</div>
-                    <div class="time-range">至 {{ formatDateTime(exam.end_time) }}</div>
+                    <span
+  class="status-badge"
+  :class="getStatusClass(getExamDisplayStatus(exam))"
+>
+  {{ getStatusText(getExamDisplayStatus(exam)) }}
+</span>
+                  </td>
+                  <td>
+                    <div class="exam-time-range">
+                      <div class="time-item">
+                        <span class="time-label">开始时间：</span>
+                        <span class="time-value">{{ formatDateTime(exam.start_time) }}</span>
+                      </div>
+                      <div class="time-item">
+                        <span class="time-label">结束时间：</span>
+                        <span class="time-value">{{ formatDateTime(calculateEndTime(exam)) }}</span>
+                      </div>
+                      <div class="time-item">
+                        <span class="time-label">考试时长：</span>
+                        <span class="time-value">{{ calculateDuration(exam) }}</span>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <div class="action-buttons-cell">
                       <!-- 编辑按钮 -->
                       <button
-                        v-if="exam.status === 'pending'"
+                        v-if="exam.status === 'DRAFT'"
                         class="btn-secondary btn-sm"
                         @click="editExam(exam)"
                       >
@@ -142,7 +159,7 @@
 
                       <!-- 删除按钮 -->
                       <button
-                        v-if="exam.status === 'pending'"
+                        v-if="exam.status === 'DRAFT'"
                         class="btn-delete btn-sm"
                         @click="deleteExam(exam)"
                       >
@@ -151,11 +168,19 @@
 
                       <!-- 发布按钮 -->
                       <button
-                        v-if="exam.status === 'pending'"
+                        v-if="exam.status === 'DRAFT'"
                         class="btn-success btn-sm"
                         @click="openPublishExam(exam)"
                       >
                         发布
+                      </button>
+                      
+                      <!-- 查看详情按钮（所有状态都可查看） -->
+                      <button
+                        class="btn-info btn-sm"
+                        @click="viewExamDetails(exam)"
+                      >
+                        详情
                       </button>
                     </div>
                   </td>
@@ -229,19 +254,26 @@
                   <span>{{ detailExamData?.name }}</span>
                 </div>
                 <div class="info-item">
+                  <label>考试状态：</label>
+                  <span class="status-badge" :class="getStatusClass(detailExamData?.status)">
+                    {{ getStatusText(detailExamData?.status) }}
+                  </span>
+                </div>
+                <div class="info-item" v-if="detailExamData?.subject">
                   <label>科目：</label>
                   <span>{{ detailExamData?.subject }}</span>
                 </div>
-                <div class="info-item">
+                <div class="info-item" v-if="detailExamData?.grade">
                   <label>年级：</label>
                   <span>{{ detailExamData?.grade }}</span>
                 </div>
                 <div class="info-item">
-                  <label>考试时间：</label>
-                  <span
-                    >{{ formatDateTime(detailExamData?.start_time) }} -
-                    {{ formatDateTime(detailExamData?.end_time) }}</span
-                  >
+                  <label>开始时间：</label>
+                  <span>{{ formatDateTime(detailExamData?.start_time) }}</span>
+                </div>
+                <div class="info-item">
+                  <label>结束时间：</label>
+                  <span>{{ formatDateTime(calculateEndTime(detailExamData)) }}</span>
                 </div>
                 <div class="info-item">
                   <label>考试时长：</label>
@@ -270,7 +302,7 @@
                 <div class="paper-info-details">
                   <div>总分：{{ detailExamData.paper_info.total_score }} 分</div>
                   <div>题量：{{ detailExamData.paper_info.question_count }} 题</div>
-                  <div>难度：{{ detailExamData.paper_info.difficulty }}</div>
+                  <div v-if="detailExamData.paper_info.difficulty">难度：{{ detailExamData.paper_info.difficulty }}</div>
                 </div>
               </div>
             </div>
@@ -389,6 +421,7 @@
         </div>
       </div>
     </div>
+    
     <!-- 发布考试弹窗 -->
     <div v-if="publishVisible" class="modal-overlay" @click="publishVisible = false">
       <div class="modal-content" @click.stop>
@@ -481,10 +514,19 @@ const examList = ref([]);
 const paperList = ref([]);
 
 // 分页相关
+const fullExamList = ref([]);
 const currentPage = ref(1);
 const pageSize = ref(10);
 const totalItems = ref(0);
 const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value));
+const updatePagedExams = () => {
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
+
+  examList.value = fullExamList.value.slice(start, end);
+  totalItems.value = fullExamList.value.length;
+};
+
 
 // 模态框状态
 const detailVisible = ref(false);
@@ -548,6 +590,53 @@ const searchForm = ref({
   created_by: [], // 改为数组，支持多选
 });
 
+/* ==================== 状态相关函数 ==================== */
+// 获取状态文本
+const getStatusText = (status) => {
+  const statusMap = {
+    DRAFT: "未发布",
+    PUBLISHED: "已发布",
+    ONGOING: "考试中",
+    FINISHED: "已完成"
+  };
+  return statusMap[status] || status;
+};
+
+// 获取状态样式类
+const getStatusClass = (status) => {
+  const classMap = {
+    DRAFT: "status-draft",
+    PUBLISHED: "status-published",
+    ONGOING: "status-ongoing",
+    FINISHED: "status-finished"
+  };
+  return classMap[status] || "";
+};
+
+const getExamDisplayStatus = (exam) => {
+  // 1. 未发布，直接返回
+  if (exam.status === "DRAFT") {
+    return "DRAFT";
+  }
+
+  // 2. 已发布，按时间判断
+  const now = new Date();
+  const start = new Date(exam.start_time);
+  const end = exam.end_time
+    ? new Date(exam.end_time)
+    : new Date(start.getTime() + exam.duration * 60000);
+
+  if (now < start) {
+    return "PUBLISHED";
+  }
+
+  if (now >= start && now <= end) {
+    return "ONGOING";
+  }
+
+  return "FINISHED";
+};
+
 /* ==================== 考试发起人多选下拉框相关 ==================== */
 const creatorList = ref([]);
 const creatorSearch = ref("");
@@ -566,13 +655,11 @@ const loadCreatorList = async () => {
   try {
     const res = await axios.get(`${API_BASE}/user/getStaffList`);
     const staffData = res.data.data || [];
-
-    // 格式化数据，使用account作为id和name
     creatorList.value = staffData
       .filter((item) => item && item.account)
       .map((item) => ({
-        id: item.account,
-        name: item.account,
+        id: item.account, // 使用 account 作为 id
+        name: item.account, // 显示名称为 account
       }));
 
     filteredCreators.value = creatorList.value;
@@ -611,16 +698,16 @@ const toggleCreator = (creator) => {
   }
 };
 
-// 移除已选发起人
-const removeCreator = (id) => {
+// 移除已选发起人（现在处理的是字符串）
+const removeCreator = (account) => {
   searchForm.value.created_by = searchForm.value.created_by.filter(
-    (creatorId) => creatorId !== id
+    (creatorAccount) => creatorAccount !== account
   );
 };
 
-// 检查是否已选择
-const isCreatorSelected = (id) => {
-  return searchForm.value.created_by.includes(id);
+// 检查是否已选择（现在检查的是字符串）
+const isCreatorSelected = (account) => {
+  return searchForm.value.created_by.includes(account);
 };
 
 // 点击外部关闭下拉框
@@ -633,92 +720,110 @@ const handleClickOutside = (event) => {
 
 /* ==================== 用户信息 ==================== */
 const getUserInfo = () => {
-  const userName = localStorage.getItem("userName");
-  const permissionsStr = localStorage.getItem("userPermissions");
-
-  if (!userName) return null;
-
-  let permissions = [];
   try {
-    permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
-  } catch (e) {
-    console.warn("权限解析失败", permissionsStr);
-  }
+    const userInfoStr = localStorage.getItem("userInfo");
+    const permissionsStr = localStorage.getItem("userPermissions");
 
-  return {
-    account: userName,
-    username: userName,
-    permissions,
-  };
+    if (!userInfoStr) {
+      // 尝试从其他可能的地方获取
+      const userName = localStorage.getItem("userName");
+      if (userName) {
+        return {
+          id: null,
+          account: userName,
+          username: userName,
+        };
+      }
+      return null;
+    }
+
+    const userInfo = JSON.parse(userInfoStr);
+    let permissions = [];
+    
+    try {
+      permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
+    } catch (e) {
+      console.warn("权限解析失败", permissionsStr);
+    }
+
+    return {
+      id: userInfo.id,  // 添加 id 字段
+      account: userInfo.account,
+      username: userInfo.name || userInfo.account,
+      permissions,
+    };
+  } catch (error) {
+    console.error("获取用户信息失败:", error);
+    return null;
+  }
 };
 
-const getUserType = () => {
-  const userInfoStr = localStorage.getItem("userInfo");
-  if (!userInfoStr) return null;
+// const getUserType = () => {
+//   const userInfoStr = localStorage.getItem("userPermissions");
+//   if (!userInfoStr) return null;
 
-  const userInfo = JSON.parse(userInfoStr);
-  const permissions = userInfo.permissions || [];
+//   const userInfo = JSON.parse(userInfoStr);
+//   const permissions = userInfo.permissions || [];
 
-  // 只要包含 ROLE_STUDENT，就是学生
-  if (permissions.includes("ROLE_STUDENT")) {
-    return "student";
-  }
+//   // 只要包含 ROLE_STUDENT，就是学生
+//   if (permissions.includes("ROLE_STUDENT")) {
+//     return "student";
+//   }
 
-  // 其余 ROLE_ROOT / ROLE_TEACHER / ROLE_ADMINISTRATOR
-  return "staff";
-};
+//   // 其余 ROLE_ROOT / ROLE_TEACHER / ROLE_ADMINISTRATOR
+//   return "staff";
+// };
 
 /* ==================== 数据加载 ==================== */
 const loadExams = async () => {
-  try {
-    const userInfo = getUserInfo();
-    const { account } = userInfo;
+  const userInfo = getUserInfo();
+  // const role = getUserType();
 
-    if (!account) {
-      ElMessage.error("无法获取用户信息，请重新登录");
-      return;
-    }
-
-    const mappedRole = getUserType(); // 获取用户类型
-    const res = await axios.get(`${API_BASE}/exam/getExamList/${mappedRole}/${account}`, {
-      params: {
-        page: currentPage.value,
-        page_size: pageSize.value,
-      },
-    });
-
-    examList.value = res.data.data?.items || [];
-    totalItems.value = res.data.data?.total || 0;
-  } catch (error) {
-    console.error("加载考试列表失败:", error);
-    ElMessage.error("加载考试列表失败");
+  // 确保 userInfo 存在且包含 id
+  if (!userInfo) {
+    ElMessage.error("用户信息获取失败");
+    return;
   }
+
+  // 尝试从 localStorage 获取 userInfo，看看是否有 id
+  const userInfoStr = localStorage.getItem("userInfo");
+  let userId = userInfo.account; // 默认使用 account
+  
+  if (userInfoStr) {
+    try {
+      const userDetail = JSON.parse(userInfoStr);
+      userId = userDetail.id || userInfo.account;
+    } catch (e) {
+      console.warn("解析用户信息失败");
+    }
+  }
+
+  const res = await axios.get(
+    `${API_BASE}/exam/getExamList/staff/${userId}`
+  );
+
+  fullExamList.value = Array.isArray(res.data.data)
+    ? res.data.data
+    : [];
+
+  currentPage.value = 1;
+  updatePagedExams();
 };
 
 // 搜索考试
 const searchExam = async () => {
-  try {
-    currentPage.value = 1;
+  // 直接传递账户名字符串数组
+  const res = await axios.post(`${API_BASE}/exam/findExam`, {
+    name: searchForm.value.name,
+    staffs: searchForm.value.created_by
+  });
 
-    // 处理created_by，使用数组格式
-    const searchData = {
-      name: searchForm.value.name,
-      created_by: searchForm.value.created_by,
-    };
+  fullExamList.value = Array.isArray(res.data.data)
+    ? res.data.data
+    : [];
 
-    const res = await axios.post(`${API_BASE}/exam/findExam`, searchData, {
-      params: {
-        page: currentPage.value,
-        page_size: pageSize.value,
-      },
-    });
-
-    examList.value = res.data.data?.items || [];
-    totalItems.value = res.data.data?.total || 0;
-  } catch (error) {
-    console.error("搜索考试失败:", error);
-    ElMessage.error("搜索考试失败");
-  }
+  currentPage.value = 1;
+  updatePagedExams();
 };
 
 const resetSearch = () => {
@@ -732,7 +837,7 @@ const resetSearch = () => {
 
 const loadPaperList = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/exam/getPaperList`);
+    const res = await axios.get(`${API_BASE}/paper/getPaperList`);
     paperList.value = res.data.data || [];
   } catch (error) {
     console.error("加载试卷列表失败:", error);
@@ -764,14 +869,15 @@ const showEllipsis = computed(() => {
 const goToPage = (page) => {
   if (page < 1 || page > totalPages.value) return;
   currentPage.value = page;
-  if (searchForm.value.name || searchForm.value.created_by.length > 0) {
-    searchExam();
-  } else {
-    loadExams();
-  }
 };
 
 /* ==================== 考试操作 ==================== */
+// 查看考试详情
+const viewExamDetails = (exam) => {
+  detailExamData.value = exam;
+  detailVisible.value = true;
+};
+
 /* ==================== 创建考试弹窗 ==================== */
 const createVisible = ref(false);
 
@@ -816,22 +922,13 @@ const submitCreateExam = async () => {
       return;
     }
 
-    if (!createExamData.value.paper_id) {
-      ElMessage.warning("请选择试卷");
-      return;
-    }
-
-    if (!createExamData.value.name.trim()) {
-      ElMessage.warning("请输入考试名称");
-      return;
-    }
-
+    // 直接使用账户名作为 created_by
     const payload = {
       paper_id: createExamData.value.paper_id,
       name: createExamData.value.name,
       start_time: formatDateTimeForBackend(createExamData.value.start_time),
       duration: createExamData.value.duration,
-      created_by: userInfo.account || "",
+      created_by: userInfo.account, // 直接使用账户名字符串
     };
 
     await axios.post(`${API_BASE}/exam/createExam`, payload);
@@ -873,10 +970,10 @@ const saveExam = async () => {
   try {
     const userInfo = getUserInfo();
 
-    // 准备请求数据
     const examData = {
       ...editExamData.value,
-      created_by: userInfo.account || userInfo.username || "",
+      start_time: formatDateTimeForBackend(editExamData.value.start_time),
+      created_by: userInfo.account, // 直接使用账户名字符串
     };
 
     await axios.post(`${API_BASE}/exam/updateExam`, examData);
@@ -884,7 +981,6 @@ const saveExam = async () => {
     ElMessage.success("考试更新成功");
     editVisible.value = false;
 
-    // 刷新列表
     if (searchForm.value.name || searchForm.value.created_by.length > 0) {
       await searchExam();
     } else {
@@ -934,17 +1030,19 @@ const filteredStudents = ref([]);
 const studentSearch = ref("");
 const showStudentDropdown = ref(false);
 
-// 选中的学生 id
-const selectedStudentIds = ref([]);
+// 选中的学生姓名数组
+const selectedStudentNames = ref([]);
+
 const loadStudentList = async () => {
   try {
     const res = await axios.get(`${API_BASE}/user/getStudentList`);
     const list = res.data.data || [];
 
-    // 使用 account 或 name，避免 null
+    // 确保每个学生对象都有 name 字段
     studentList.value = list.map((item) => ({
       id: item.id,
-      name: item.name || item.account,
+      name: item.name || item.account, // 使用姓名，如果没有则使用账号
+      account: item.account // 保留账号字段备用
     }));
 
     filteredStudents.value = studentList.value;
@@ -952,16 +1050,19 @@ const loadStudentList = async () => {
     ElMessage.error("加载学生列表失败");
   }
 };
+
 const openPublishExam = async (exam) => {
   publishExamData.value = exam;
-  selectedStudentIds.value = [];
-
+  selectedStudentNames.value = [];
+  
   await loadStudentList();
   publishVisible.value = true;
 };
+
+// 计算属性：选中的学生对象（用于显示）
 const selectedStudents = computed(() =>
-  selectedStudentIds.value
-    .map((id) => studentList.value.find((s) => s.id === id))
+  selectedStudentNames.value
+    .map((name) => studentList.value.find((s) => s.name === name))
     .filter(Boolean)
 );
 
@@ -981,23 +1082,26 @@ const filterStudents = () => {
 };
 
 const toggleStudent = (stu) => {
-  const idx = selectedStudentIds.value.indexOf(stu.id);
+  const idx = selectedStudentNames.value.indexOf(stu.name);
   if (idx > -1) {
-    selectedStudentIds.value.splice(idx, 1);
+    selectedStudentNames.value.splice(idx, 1);
   } else {
-    selectedStudentIds.value.push(stu.id);
+    selectedStudentNames.value.push(stu.name);
   }
 };
 
-const removeStudent = (id) => {
-  selectedStudentIds.value = selectedStudentIds.value.filter((sid) => sid !== id);
+const removeStudent = (name) => {
+  selectedStudentNames.value = selectedStudentNames.value.filter(
+    (stuName) => stuName !== name
+  );
 };
 
-const isStudentSelected = (id) => {
-  return selectedStudentIds.value.includes(id);
+const isStudentSelected = (name) => {
+  return selectedStudentNames.value.includes(name);
 };
+
 const submitPublishExam = async () => {
-  if (selectedStudentIds.value.length === 0) {
+  if (selectedStudentNames.value.length === 0) {
     ElMessage.warning("请选择至少一名学生");
     return;
   }
@@ -1005,7 +1109,7 @@ const submitPublishExam = async () => {
   try {
     await axios.post(`${API_BASE}/exam/publishExam`, {
       exam_id: publishExamData.value.id,
-      students: selectedStudentIds.value,
+      students: selectedStudentNames.value, // 传递学生姓名数组
     });
 
     ElMessage.success("考试发布成功");
@@ -1039,11 +1143,34 @@ const formatDateTimeForInput = (dateString) => {
   return date.toISOString().slice(0, 16);
 };
 
+// 计算结束时间
+const calculateEndTime = (exam) => {
+  if (exam?.end_time) {
+    return exam.end_time;
+  }
+  
+  if (exam?.start_time && exam?.duration) {
+    const startTime = new Date(exam.start_time);
+    const endTime = new Date(startTime.getTime() + exam.duration * 60000);
+    return endTime;
+  }
+  
+  return "";
+};
+
+// 计算考试时长
 const calculateDuration = (exam) => {
   if (exam?.duration) {
     const hours = Math.floor(exam.duration / 60);
     const minutes = exam.duration % 60;
-    return `${hours}小时${minutes}分钟`;
+    
+    if (hours === 0) {
+      return `${minutes}分钟`;
+    } else if (minutes === 0) {
+      return `${hours}小时`;
+    } else {
+      return `${hours}小时${minutes}分钟`;
+    }
   }
 
   if (!exam?.start_time || !exam?.end_time) return "";
@@ -1053,7 +1180,9 @@ const calculateDuration = (exam) => {
   if (duration < 60) {
     return `${duration}分钟`;
   } else {
-    return `${Math.floor(duration / 60)}小时${duration % 60}分钟`;
+    const hours = Math.floor(duration / 60);
+    const minutes = duration % 60;
+    return `${hours}小时${minutes}分钟`;
   }
 };
 
@@ -1071,14 +1200,7 @@ onBeforeUnmount(() => {
   document.removeEventListener("click", handleClickOutside);
 });
 
-// 监听页码变化
-watch(currentPage, () => {
-  if (searchForm.value.name || searchForm.value.created_by.length > 0) {
-    searchExam();
-  } else {
-    loadExams();
-  }
-});
+watch(currentPage, updatePagedExams);
 </script>
 
 <style scoped>
@@ -1363,6 +1485,41 @@ watch(currentPage, () => {
   font-size: 14px;
 }
 
+/* ==================== 状态标签样式 ==================== */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  min-width: 60px;
+}
+
+.status-draft {
+  background-color: #f4f4f5;
+  color: #909399;
+  border: 1px solid #e4e7ed;
+}
+
+.status-published {
+  background-color: #ecf5ff;
+  color: #409eff;
+  border: 1px solid #d9ecff;
+}
+
+.status-ongoing {
+  background-color: #f0f9eb;
+  color: #67c23a;
+  border: 1px solid #e1f3d8;
+}
+
+.status-finished {
+  background-color: #fdf6ec;
+  color: #e6a23c;
+  border: 1px solid #faecd8;
+}
+
 /* ==================== 考试列表表格样式 ==================== */
 .search-results {
   margin-bottom: 30px;
@@ -1397,7 +1554,7 @@ watch(currentPage, () => {
   background-color: #fafafa;
   color: #606266;
   font-weight: 600;
-  text-align: left;
+  text-align: center;
   padding: 16px 12px;
   border-bottom: 1px solid #e6e9f0;
   white-space: nowrap;
@@ -1406,7 +1563,7 @@ watch(currentPage, () => {
 .table td {
   padding: 16px 12px;
   border-bottom: 1px solid #e6e9f0;
-  vertical-align: top;
+   text-align: center;
 }
 
 .table tr:hover {
@@ -1425,10 +1582,32 @@ watch(currentPage, () => {
   line-height: 1.4;
 }
 
-.time-range {
-  font-size: 12px;
+/* 考试时间样式 */
+.exam-time-range {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 auto;  
+  width: fit-content;
+}
+
+
+.time-item {
+  display: flex;
+  align-items: center;
+}
+
+.time-label {
   color: #909399;
-  margin-top: 4px;
+  font-size: 12px;
+  min-width: 60px;
+}
+
+.time-value {
+  color: #303133;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .status-badge {
@@ -1482,6 +1661,7 @@ watch(currentPage, () => {
 
 .action-buttons-cell {
   display: flex;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 6px;
 }
