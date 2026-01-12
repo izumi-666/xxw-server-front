@@ -20,7 +20,7 @@
               <th>手机号</th>
               <th>邮箱</th>
               <th>紧急联系人电话</th>
-              <th>创建时间</th>
+              <th>出生年月</th>
             </tr>
           </thead>
           <tbody>
@@ -30,14 +30,14 @@
               <td>{{ stu.phone || "-" }}</td>
               <td>{{ stu.email || "-" }}</td>
               <td>{{ stu.emergency_call || "-" }}</td>
-              <td>{{ formatDate(stu.created_at) }}</td>
+              <td>{{ formatDate(stu.date_of_birth) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- 分页 -->
-      <div v-if="studentTotal > studentPageSize && studentList.length" class="pagination">
+      <div v-if="studentTotalPages > 1" class="pagination">
         <button
           class="page-btn"
           :disabled="studentPage === 1"
@@ -68,7 +68,7 @@
               <th>性别</th>
               <th>手机号</th>
               <th>邮箱</th>
-              <th>创建时间</th>
+              <th>出生年月</th>
             </tr>
           </thead>
           <tbody>
@@ -77,14 +77,14 @@
               <td>{{ formatGender(teacher.gender) }}</td>
               <td>{{ teacher.phone || "-" }}</td>
               <td>{{ teacher.email || "-" }}</td>
-              <td>{{ formatDate(teacher.created_at) }}</td>
+              <td>{{ formatDate(teacher.date_of_birth) }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- 分页 -->
-      <div v-if="teacherTotal > teacherPageSize && teacherList.length" class="pagination">
+      <div v-if="teacherTotalPages > 1" class="pagination">
         <button
           class="page-btn"
           :disabled="teacherPage === 1"
@@ -291,6 +291,12 @@ const teacherPage = ref(1);
 const teacherPageSize = ref(10);
 const teacherTotal = ref(0);
 
+// 学生全量数据（前端分页用）
+const allStudentList = ref([]);
+
+// 教师全量数据（前端分页用）
+const allTeacherList = ref([]);
+
 /* ==================== 表单 ==================== */
 const form = reactive({
   school_id: "",
@@ -350,7 +356,6 @@ const fetchSchoolList = async () => {
 
 // 获取学生列表
 const fetchStudentList = async () => {
-  // 如果没有读权限，不调用API
   if (!hasReadPermission.value) {
     studentList.value = [];
     studentTotal.value = 0;
@@ -358,14 +363,19 @@ const fetchStudentList = async () => {
   }
 
   try {
-    const res = await axios.get(`${API_BASE}/user/getStudentList`, {
-      params: {
-        page: studentPage.value,
-        pageSize: studentPageSize.value,
-      },
-    });
-    studentList.value = res.data.data || [];
-    studentTotal.value = res.data.data?.length || 0;
+    const res = await axios.get(`${API_BASE}/user/getStudentList`);
+
+    // 保存全量数据
+    allStudentList.value = res.data.data || [];
+
+    // 计算总数
+    studentTotal.value = allStudentList.value.length;
+
+    // 前端分页 slice
+    const start = (studentPage.value - 1) * studentPageSize.value;
+    const end = start + studentPageSize.value;
+
+    studentList.value = allStudentList.value.slice(start, end);
   } catch (error) {
     console.error("获取学生列表失败:", error);
     studentList.value = [];
@@ -375,7 +385,6 @@ const fetchStudentList = async () => {
 
 // 获取教师列表
 const fetchTeacherList = async () => {
-  // 如果没有读权限，不调用API
   if (!hasReadPermission.value) {
     teacherList.value = [];
     teacherTotal.value = 0;
@@ -383,14 +392,19 @@ const fetchTeacherList = async () => {
   }
 
   try {
-    const res = await axios.get(`${API_BASE}/user/getStaffList`, {
-      params: {
-        page: teacherPage.value,
-        pageSize: teacherPageSize.value,
-      },
-    });
-    teacherList.value = res.data.data || [];
-    teacherTotal.value = res.data.data?.length || 0;
+    const res = await axios.get(`${API_BASE}/user/getStaffList`);
+
+    // 保存全量数据
+    allTeacherList.value = res.data.data || [];
+
+    // 计算总数
+    teacherTotal.value = allTeacherList.value.length;
+
+    // 前端分页 slice
+    const start = (teacherPage.value - 1) * teacherPageSize.value;
+    const end = start + teacherPageSize.value;
+
+    teacherList.value = allTeacherList.value.slice(start, end);
   } catch (error) {
     console.error("获取教师列表失败:", error);
     teacherList.value = [];

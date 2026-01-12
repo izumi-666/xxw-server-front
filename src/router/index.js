@@ -3,6 +3,7 @@ import Login from "../Login.vue";
 import QuestionManager from "../components/QuestionManager.vue";
 import PaperManagement from "../components/PaperManagement.vue";
 import ExamManagement from "../components/ExamManagement.vue"; //教师用
+import AssessExam from "../components/AssessExam.vue"; //批改考试
 import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
 import TakeExam from "../components/TakeExam.vue"; //学生参加考试
 import TeacherHome from "../components/TeacherHome.vue";
@@ -75,6 +76,14 @@ const routes = [
           breadcrumb: ["班级课堂", "考试中心"]
          }
       },
+       {
+      path: "exammanagement/assessexam",
+      name: "assess-exam",
+      component: AssessExam,
+      meta: { requiresAuth: true,
+           breadcrumb: ["班级课堂", "考试中心", "批改考试"]
+        }
+    },
       {
         path: "upload",
         name: "question-bank",

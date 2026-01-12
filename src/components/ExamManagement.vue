@@ -182,6 +182,15 @@
                       >
                         详情
                       </button>
+
+                      <!-- 批改按钮 -->
+                      <button
+      v-if="shouldShowGradeButton(exam)"
+      class="btn-warning btn-sm"
+      @click="gradeExam(exam)"
+    >
+      批改
+    </button>
                     </div>
                   </td>
                 </tr>
@@ -872,6 +881,24 @@ const goToPage = (page) => {
 };
 
 /* ==================== 考试操作 ==================== */
+// 判断是否显示批改按钮
+const shouldShowGradeButton = (exam) => {
+  // 获取考试显示状态
+  const status = getExamDisplayStatus(exam);
+  
+  // 只有考试开始或考试已结束的状态才显示批改按钮
+  return status === 'ONGOING' || status === 'FINISHED';
+};
+
+// 批改考试
+const gradeExam = (exam) => {
+  // 跳转到批改考试页面，传递考试ID
+  router.push({
+    path: '/teacher/exammanagement/assessexam',
+    query: { examId: exam.id }
+  });
+};
+
 // 查看考试详情
 const viewExamDetails = (exam) => {
   detailExamData.value = exam;

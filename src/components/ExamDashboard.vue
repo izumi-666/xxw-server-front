@@ -45,11 +45,15 @@
                     <div class="exam-time-range">
                       <div class="time-item">
                         <span class="time-label">开始时间：</span>
-                        <span class="time-value">{{ formatDateTime(exam.start_time) }}</span>
+                        <span class="time-value">{{
+                          formatDateTime(exam.start_time)
+                        }}</span>
                       </div>
                       <div class="time-item">
                         <span class="time-label">结束时间：</span>
-                        <span class="time-value">{{ formatDateTime(calculateEndTime(exam)) }}</span>
+                        <span class="time-value">{{
+                          formatDateTime(calculateEndTime(exam))
+                        }}</span>
                       </div>
                       <div class="time-item">
                         <span class="time-label">考试时长：</span>
@@ -59,14 +63,17 @@
                   </td>
                   <td>
                     <div class="action-buttons-cell">
+                      <!-- 已完成的印章 -->
+                      <div v-if="exam.hasParticipated" class="exam-seal">
+                        <div class="seal-text">已完成</div>
+                        <div class="seal-border"></div>
+                      </div>
+                      
                       <!-- 查看详情按钮 -->
-                      <button
-                        class="btn-info btn-sm"
-                        @click="viewExamDetails(exam)"
-                      >
+                      <button class="btn-info btn-sm" @click="viewExamDetails(exam)">
                         详情
                       </button>
-                      
+
                       <!-- 参加考试按钮（仅限已发布且未开始的考试） -->
                       <button
                         v-if="canTakeExam(exam)"
@@ -75,16 +82,16 @@
                       >
                         参加考试
                       </button>
-                      
+
                       <!-- 继续考试按钮（如果已经开始） -->
                       <button
-                        v-else-if="exam.status === 'ONGOING'"
+                        v-else-if="exam.status === 'ONGOING' && !exam.hasParticipated"
                         class="btn-success btn-sm"
                         @click="takeExam(exam)"
                       >
                         继续考试
                       </button>
-                      
+
                       <!-- 查看成绩按钮（已完成考试） -->
                       <button
                         v-else-if="exam.status === 'FINISHED'"
@@ -93,7 +100,7 @@
                       >
                         查看成绩
                       </button>
-                      
+
                       <!-- 未发布状态提示 -->
                       <span v-else-if="exam.status === 'DRAFT'" class="exam-status-text">
                         考试未发布
@@ -171,9 +178,20 @@
                 </div>
                 <div class="info-item">
                   <label>考试状态：</label>
-                  <span class="status-badge" :class="getStatusClass(detailExamData?.status)">
+                  <span
+                    class="status-badge"
+                    :class="getStatusClass(detailExamData?.status)"
+                  >
                     {{ getStatusText(detailExamData?.status) }}
                   </span>
+                </div>
+                <!-- 添加已完成印章 -->
+                <div class="info-item" v-if="detailExamData?.hasParticipated">
+                  <label>完成状态：</label>
+                  <div class="exam-seal small-seal">
+                    <div class="seal-text">已完成</div>
+                    <div class="seal-border"></div>
+                  </div>
                 </div>
                 <div class="info-item" v-if="detailExamData?.subject">
                   <label>科目：</label>
@@ -212,21 +230,30 @@
                 <div class="paper-info-details">
                   <div>总分：{{ detailExamData.paper_info.total_score }} 分</div>
                   <div>题量：{{ detailExamData.paper_info.question_count }} 题</div>
-                  <div v-if="detailExamData.paper_info.difficulty">难度：{{ detailExamData.paper_info.difficulty }}</div>
+                  <div v-if="detailExamData.paper_info.difficulty">
+                    难度：{{ detailExamData.paper_info.difficulty }}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        
+
         <div class="modal-footer">
           <button class="btn-secondary" @click="detailVisible = false">关闭</button>
-          <button 
+          <button
             v-if="canTakeExam(detailExamData)"
             class="btn-primary"
             @click="takeExam(detailExamData)"
           >
             参加考试
+          </button>
+          <button
+            v-else-if="detailExamData?.status === 'FINISHED'"
+            class="btn-primary"
+            @click="viewScore(detailExamData)"
+          >
+            查看答卷
           </button>
         </div>
       </div>
@@ -236,7 +263,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import axios from "axios";
 import { useRouter } from "vue-router";
 
@@ -270,9 +297,9 @@ const detailExamData = ref(null);
 const getStatusText = (status) => {
   const statusMap = {
     DRAFT: "未发布",
-    PUBLISHED: "已发布",
+    PUBLISHED: "未开始",
     ONGOING: "考试中",
-    FINISHED: "已完成"
+    FINISHED: "已完成",
   };
   return statusMap[status] || status;
 };
@@ -283,7 +310,7 @@ const getStatusClass = (status) => {
     DRAFT: "status-draft",
     PUBLISHED: "status-published",
     ONGOING: "status-ongoing",
-    FINISHED: "status-finished"
+    FINISHED: "status-finished",
   };
   return classMap[status] || "";
 };
@@ -291,16 +318,29 @@ const getStatusClass = (status) => {
 // 检查是否可以参加考试
 const canTakeExam = (exam) => {
   if (!exam) return false;
-  
+
+  // 如果已经参加过考试，则不能再次参加
+  if (exam.hasParticipated) {
+    return false;
+  }
+
   // 已发布的考试且未过期
-  if (exam.status === 'PUBLISHED') {
+  if (exam.status === "PUBLISHED") {
     const now = new Date();
     const startTime = new Date(exam.start_time);
     const endTime = new Date(calculateEndTime(exam));
-    
+
     return now >= startTime && now <= endTime;
   }
   
+  // 考试正在进行中且未参加过
+  if (exam.status === "ONGOING" && !exam.hasParticipated) {
+    const now = new Date();
+    const endTime = new Date(calculateEndTime(exam));
+    
+    return now <= endTime;
+  }
+
   return false;
 };
 
@@ -324,7 +364,7 @@ const getUserInfo = () => {
 
     const userInfo = JSON.parse(userInfoStr);
     let permissions = [];
-    
+
     try {
       permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
     } catch (e) {
@@ -353,14 +393,37 @@ const loadExams = async () => {
   }
 
   try {
-    const res = await axios.get(
+    // 1. 获取考试列表
+    const examsRes = await axios.get(
       `${API_BASE}/exam/getExamList/student/${userInfo.account}`
     );
 
-    fullExamList.value = Array.isArray(res.data.data)
-      ? res.data.data
+    const exams = Array.isArray(examsRes.data.data)
+      ? examsRes.data.data
       : [];
 
+    // 2. 获取已参加的考试ID数组
+    const participationRes = await axios.get(
+      `${API_BASE}/exam/hasParticipatedExam/${userInfo.account}`
+    );
+    
+    // 获取已参加的考试ID数组
+    const participatedExamIds = participationRes.data.code === 200 
+      ? (Array.isArray(participationRes.data.data) ? participationRes.data.data : [])
+      : [];
+    
+    // 3. 为每个考试标记是否已参加
+    const examsWithParticipation = exams.map(exam => {
+      // 检查当前考试ID是否在已参加数组中
+      const hasParticipated = participatedExamIds.includes(exam.id);
+      
+      return {
+        ...exam,
+        hasParticipated  // 添加是否已参加的标记
+      };
+    });
+
+    fullExamList.value = examsWithParticipation;
     currentPage.value = 1;
     updatePagedExams();
   } catch (error) {
@@ -403,35 +466,120 @@ const viewExamDetails = (exam) => {
   detailVisible.value = true;
 };
 
+// 格式化日期时间为 "YYYY-MM-DD HH:MM:SS"
+const formatDateTimeToYMDHMS = (date = new Date()) => {
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  const h = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const s = pad(date.getSeconds());
+
+  return `${y}-${m}-${d} ${h}:${min}:${s}`;
+};
+
 // 参加考试
-const takeExam = (exam) => {
-  // 检查考试是否已经开始
+const takeExam = async (exam) => {
+  try {
+    // 显示确认对话框
+    await ElMessageBox.confirm(
+      `
+      <div style="margin-bottom: 15px;">
+        <strong>考试确认</strong>
+      </div>
+      <div style="color: #606266; margin-bottom: 10px;">
+        一旦进入考试，将无法中途退出。
+      </div>
+      <div style="color: #606266; margin-bottom: 10px;">
+        请确保已经准备好开始考试，并在规定时间内完成答题。
+      </div>
+      <div style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; border-left: 3px solid #409eff;">
+        <div><strong>考试名称：</strong>${exam.name}</div>
+        <div><strong>考试时长：</strong>${calculateDuration(exam)}</div>
+      </div>
+      `,
+      "重要提示",
+      {
+        confirmButtonText: "确定参加",
+        cancelButtonText: "取消",
+        type: "warning",
+        dangerouslyUseHTMLString: true,
+        customClass: "exam-confirm-dialog",
+        beforeClose: (action, instance, done) => {
+          if (action === "confirm") {
+            instance.confirmButtonLoading = true;
+            instance.confirmButtonText = "进入中...";
+            // 异步验证通过后关闭
+            validateAndProceed(exam)
+              .then(() => {
+                done();
+              })
+              .catch(() => {
+                instance.confirmButtonLoading = false;
+                instance.confirmButtonText = "确定参加";
+              });
+          } else {
+            done();
+          }
+        },
+      }
+    );
+  } catch (error) {
+    // 用户点击取消
+    console.log("用户取消了考试");
+  }
+};
+
+// 验证并进入考试
+const validateAndProceed = async (exam) => {
   const now = new Date();
   const startTime = new Date(exam.start_time);
-  
+
   if (now < startTime) {
     ElMessage.warning("考试尚未开始，请在规定时间内参加考试");
-    return;
+    throw new Error("考试未开始");
   }
-  
-  // 检查考试是否已结束
+
   const endTime = new Date(calculateEndTime(exam));
   if (now > endTime) {
     ElMessage.warning("考试已结束");
-    return;
+    throw new Error("考试已结束");
   }
-  
-  // 跳转到考试页面
-  router.push({
-    path: '/student/exam/take',
-    query: {
-      examId: exam.id,
+
+  try {
+    const clickStartTime = formatDateTimeToYMDHMS(new Date());
+
+    const res = await axios.post(`${API_BASE}/exam/startExam`, {
+      exam_id: exam.id,
       paper_id: exam.paper_id,
-      exam_name: encodeURIComponent(exam.name),
-      start_time: exam.start_time,
-      duration: exam.duration
+      student: localStorage.getItem("userName"),
+      start_time: clickStartTime,
+    });
+
+    if (res.data.code !== 200) {
+      ElMessage.error(res.data.message || "开始考试失败");
+      throw new Error("开始考试失败");
     }
-  });
+
+    const examHistoryId = res.data.data;
+
+    router.push({
+      path: "/student/exam/take",
+      query: {
+        examHistoryId: examHistoryId,
+        paper_id: exam.paper_id,
+        examId: exam.id,
+        start_time: clickStartTime,
+        exam_name: exam.name,
+        duration: exam.duration,
+      },
+    });
+  } catch (err) {
+    ElMessage.error(err.response?.data?.message || "开始考试失败");
+    throw err;
+  }
 };
 
 // 查看成绩
@@ -461,13 +609,13 @@ const calculateEndTime = (exam) => {
   if (exam?.end_time) {
     return exam.end_time;
   }
-  
+
   if (exam?.start_time && exam?.duration) {
     const startTime = new Date(exam.start_time);
     const endTime = new Date(startTime.getTime() + exam.duration * 60000);
     return endTime;
   }
-  
+
   return "";
 };
 
@@ -476,7 +624,7 @@ const calculateDuration = (exam) => {
   if (exam?.duration) {
     const hours = Math.floor(exam.duration / 60);
     const minutes = exam.duration % 60;
-    
+
     if (hours === 0) {
       return `${minutes}分钟`;
     } else if (minutes === 0) {
@@ -508,7 +656,6 @@ watch(currentPage, updatePagedExams);
 </script>
 
 <style scoped>
-/* 保留原有样式，但移除不需要的样式 */
 .container {
   max-width: 2000px;
   margin: 0 auto;
@@ -731,7 +878,7 @@ watch(currentPage, updatePagedExams);
 .table td {
   padding: 16px 12px;
   border-bottom: 1px solid #e6e9f0;
-   text-align: center;
+  text-align: center;
 }
 
 .table tr:hover {
@@ -755,7 +902,7 @@ watch(currentPage, updatePagedExams);
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  margin: 0 auto;  
+  margin: 0 auto;
   width: fit-content;
 }
 
@@ -777,8 +924,9 @@ watch(currentPage, updatePagedExams);
 }
 
 .exam-status-text {
-  font-size: 12px;
-  color: #909399;
+  font-size: 15px;
+  color: #ff5100;
+  background-color: #d8e2fc;
   font-style: italic;
 }
 
@@ -1033,6 +1181,146 @@ watch(currentPage, updatePagedExams);
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid #e6e9f0;
+}
+
+/* ==================== 已完成印章样式 ==================== */
+.exam-seal {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ff6b6b 0%, #ff5252 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 
+    0 4px 8px rgba(255, 107, 107, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  margin-right: 8px;
+  z-index: 1;
+  overflow: hidden;
+  transform: perspective(100px) translateZ(2px);
+}
+
+.exam-seal .seal-text {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 -1px 0 rgba(255, 255, 255, 0.1);
+  font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+  letter-spacing: 1px;
+  transform: rotate(-15deg);
+}
+
+.exam-seal .seal-border {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  z-index: 1;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 印章内部纹理效果 */
+.exam-seal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 10px 10px;
+  z-index: 1;
+}
+
+/* 小尺寸印章（用于详情弹窗） */
+.exam-seal.small-seal {
+  width: 50px;
+  height: 50px;
+  font-size: 10px;
+  transform: perspective(50px) translateZ(1px);
+}
+
+.exam-seal.small-seal .seal-border {
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+}
+
+/* 操作按钮单元格样式调整 */
+.action-buttons-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 70px;
+  position: relative;
+}
+
+.action-buttons-cell .exam-seal {
+  margin-right: 8px;
+  flex-shrink: 0; /* 防止印章被压缩 */
+}
+
+/* 响应式设计调整 */
+@media (max-width: 768px) {
+  .action-buttons-cell {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    min-height: 50px;
+  }
+  
+  .action-buttons-cell .exam-seal {
+    width: 50px;
+    height: 50px;
+    font-size: 12px;
+    margin-right: 4px;
+  }
+  
+  .action-buttons-cell button {
+    width: auto;
+    min-width: 70px;
+  }
+}
+
+/* 响应式设计调整 */
+@media (max-width: 768px) {
+  .action-buttons-cell {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .action-buttons-cell .exam-seal {
+    width: 50px;
+    height: 50px;
+    font-size: 12px;
+    margin-right: 4px;
+  }
+  
+  .action-buttons-cell button {
+    width: auto;
+    min-width: 70px;
+  }
 }
 
 /* ==================== 响应式设计 ==================== */

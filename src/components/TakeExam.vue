@@ -1,17 +1,17 @@
 <template>
   <div class="exam-container">
-    <!-- 考试头部信息 -->
+    <!-- 考试头部信息（非查看答案模式时显示） -->
     <div class="exam-header card">
       <div class="exam-header-content">
         <h1 class="exam-title">{{ examInfo.examName || "在线考试" }}</h1>
         <div class="exam-meta">
           <div class="meta-item">
             <span class="meta-label">试卷：</span>
-            <span class="meta-value">{{ examInfo.paperName || "未命名试卷" }}</span>
+            <span class="meta-value">{{ examInfo.paperName || "-" }}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">总分：</span>
-            <span class="meta-value">{{ totalScore }}分</span>
+            <span class="meta-value">{{ examInfo.paperScore }}分</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">题量：</span>
@@ -63,7 +63,7 @@
             class="nav-item"
             :class="{
               current: currentQuestionIndex === index,
-              answered: userAnswers[question.id],
+              answered: isQuestionAnswered(question.id),
               marked: markedQuestions.includes(question.id),
             }"
             @click="goToQuestion(index)"
@@ -116,7 +116,7 @@
               >
             </div>
             <div class="question-type">
-              {{ getQuestionTypeText(currentQuestion.marking_type) }}
+              {{ getQuestionTypeText(currentQuestion.question_category_id) }}
             </div>
           </div>
 
@@ -127,11 +127,10 @@
             ></div>
 
             <!-- 题目图片（如果有） -->
-            <div class="question-image" v-if="currentQuestion.img_url">
-              <img :src="currentQuestion.img_url" alt="题目图片" />
+            <div class="question-image" v-if="currentQuestion.image_url">
+              <img :src="currentQuestion.image_url" alt="题目图片" />
             </div>
 
-            <!-- 选项区域 -->
             <!-- 选项区域 -->
             <div
               class="options-area"
@@ -145,10 +144,6 @@
                 class="option-item"
                 :class="{
                   selected: isOptionSelected(key),
-                  correct:
-                    showAnswer &&
-                    currentQuestion.answer &&
-                    currentQuestion.answer.includes(key),
                 }"
                 @click="selectOption(key)"
               >
@@ -159,49 +154,97 @@
               </div>
             </div>
 
-            <!-- 简答题输入 + Markdown 预览 -->
-<div class="short-answer-area" v-if="currentQuestion.marking_type === 1">
-  <!-- 公式工具栏 -->
-  <div class="formula-toolbar">
-    <button
-      v-for="formula in commonFormulas"
-      :key="formula.label"
-      class="formula-btn"
-      @click="insertFormula(formula.value)"
-      type="button"
-    >
-      {{ formula.label }}
-    </button>
-  </div>
+            <!-- 简答题区域 -->
+            <div
+              class="short-answer-area"
+              v-if="
+                currentQuestion.question_category_id === 3 ||
+                currentQuestion.question_category_id === 4 ||
+                currentQuestion.question_category_id === 5 ||
+                currentQuestion.question_category_id === 6
+              "
+            >
+              <!-- Markdown答案输入区 -->
+              <div class="markdown-section">
+                <div class="section-title">
+                  <span>文字答案</span>
+                  <span class="formula-tip">（支持Markdown与LaTeX公式）</span>
+                </div>
 
-  <div class="markdown-answer">
-    <!-- 输入区 -->
-    <textarea
-      ref="answerTextarea"
-      v-model="userAnswers[currentQuestion.id]"
-      placeholder="支持 Markdown 与 LaTeX 数学公式，例如 $x^2 + y^2 = 1$"
-      rows="8"
-      class="short-answer-input"
-    ></textarea>
+                <!-- 公式按钮工具栏 -->
+                <div class="formula-toolbar">
+                  <div class="formula-buttons">
+                    <button
+                      v-for="(formula, index) in commonFormulas"
+                      :key="index"
+                      class="formula-btn"
+                      @click="insertFormula(formula)"
+                      :title="formula.label"
+                    >
+                      {{ formula.label }}
+                    </button>
+                  </div>
+                </div>
 
-    <!-- 预览区 -->
-    <div class="markdown-preview">
-      <div class="preview-title">预览</div>
-      <div
-        class="preview-content"
-        v-html="markdownToHtml(userAnswers[currentQuestion.id])"
-      ></div>
-    </div>
-  </div>
-</div>
+                <textarea
+                  ref="answerTextarea"
+                  v-model="userAnswers[currentQuestion.id]"
+                  placeholder="请输入您的答案，支持Markdown与LaTeX数学公式，例如 $x^2 + y^2 = 1$"
+                  rows="8"
+                  class="short-answer-input"
+                ></textarea>
 
-            <!-- 答案解析（仅当showAnswer为true时显示） -->
-            <div class="answer-analysis" v-if="showAnswer && currentQuestion.notes">
-              <div class="analysis-title">答案解析</div>
-              <div
-                class="analysis-content"
-                v-html="markdownToHtml(currentQuestion.notes)"
-              ></div>
+                <!-- Markdown预览 -->
+                <div class="markdown-preview">
+                  <div class="preview-title">答案预览</div>
+                  <div
+                    class="preview-content"
+                    v-html="markdownToHtml(userAnswers[currentQuestion.id])"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- 图片上传区 -->
+              <div class="image-upload-section">
+                <div class="section-title">
+                  <span>图片答案</span>
+                  <span class="upload-tip">（仅支持上传一张图片）</span>
+                </div>
+
+                <div class="upload-area">
+                  <!-- 上传按钮 -->
+                  <div
+                    class="upload-btn"
+                    @click="triggerImageUpload"
+                    :class="{ 'has-image': hasImageForCurrentQuestion }"
+                  >
+                    <div v-if="!hasImageForCurrentQuestion" class="upload-placeholder">
+                      <i class="el-icon-picture"></i>
+                      <div class="upload-text">点击上传图片</div>
+                      <div class="upload-hint">支持 JPG、PNG 格式，最大5MB</div>
+                    </div>
+                    <div v-else class="image-preview">
+                      <img :src="getCurrentQuestionImage()" alt="上传的图片" />
+                      <div class="image-overlay">
+                        <button class="btn-change" @click.stop="triggerImageUpload">
+                          更换图片
+                        </button>
+                        <button class="btn-remove" @click.stop="removeCurrentImage">
+                          删除
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <input
+                    type="file"
+                    ref="imageInput"
+                    @change="handleImageUpload"
+                    accept="image/*"
+                    style="display: none"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -292,6 +335,9 @@
                 <div>
                   标记题数：<span class="stat-value">{{ markedQuestions.length }}</span>
                 </div>
+                <div>
+                  上传图片：<span class="stat-value">{{ totalUploadedImages }}张</span>
+                </div>
               </div>
             </div>
           </div>
@@ -332,10 +378,13 @@
                 <div class="stat-label">标记题目</div>
                 <div class="stat-value">{{ markedQuestions.length }}</div>
               </div>
+              <div class="stat-item">
+                <div class="stat-label">上传图片</div>
+                <div class="stat-value">{{ totalUploadedImages }}张</div>
+              </div>
             </div>
 
             <div class="result-actions">
-              <button class="btn-review" @click="reviewAnswers">查看答案</button>
               <button class="btn-return" @click="returnToExamList">返回考试列表</button>
             </div>
           </div>
@@ -353,28 +402,101 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { marked } from "marked";
 import katex from "katex";
 import "katex/dist/katex.min.css";
+import { onBeforeRouteLeave } from "vue-router";
 
 const route = useRoute();
 const router = useRouter();
+const examHistoryId = ref(route.query.examHistoryId);
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+/* ==================== 常用公式配置 ==================== */
+const commonFormulas = ref([
+  { label: "分数", value: "\\frac{x}{y}" },
+  { label: "幂", value: "x^{i}" },
+  { label: "下标", value: "x_{i}" },
+  { label: "根号", value: "\\sqrt[n]{x}" },
+  { label: "求和", value: "\\sum_{i=1}^{n}" },
+  { label: "积分", value: "\\int_{a}^{b}" },
+  { label: "极限", value: "\\lim_{x \\to \\infty}" },
+  { label: "对数", value: "\\log_bx" },
+  { label: "lg", value: "\\lg x" },
+  { label: "ln", value: "\\ln x" },
+  {
+    label: "条件表达式",
+    value: "\\begin{cases} x, & x > a \\\\ y, & x \\le a \\end{cases}",
+  },
+  { label: "指数", value: "e^{x}" },
+]);
+
+/* ==================== 公式输入相关方法 ==================== */
+// 答案输入框引用
+const answerTextarea = ref(null);
+// 插入公式到当前光标位置
+const insertFormula = (formula) => {
+  if (!currentQuestion.value) return;
+
+  const questionId = currentQuestion.value.id;
+  const textarea = answerTextarea.value;
+
+  if (!textarea) {
+    console.error("找不到textarea元素");
+    return;
+  }
+
+  const currentValue = userAnswers.value[questionId] || "";
+
+  // 获取光标位置
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  // 插入公式
+  const newValue =
+    currentValue.substring(0, start) + `$${formula.value}$` + currentValue.substring(end);
+
+  // 更新答案
+  userAnswers.value[questionId] = newValue;
+
+  // 保存答案
+  saveAnswer(questionId);
+
+  // 更新光标位置到插入的内容之后
+  nextTick(() => {
+    const newPosition = start + formula.value.length + 2; // +2 是因为 $ 符号
+    textarea.focus();
+    textarea.setSelectionRange(newPosition, newPosition);
+  });
+
+  ElMessage.info(`已插入公式: ${formula.label}`);
+};
+
+/* ==================== 图床配置 ==================== */
+const IMAGE_BED_CONFIG = {
+  apiUrl: "https://xxwpic.flito.art/api/index.php", // 图床API地址
+  token: "1c17b11693cb5ec63859b091c5b9c1b2", // 图床API令牌
+};
+
 /* ==================== 数据状态 ==================== */
-const questions = ref([]); // 题目列表
-const currentQuestionIndex = ref(0); // 当前题目索引
+const questions = ref([]);
+const currentQuestionIndex = ref(0);
 const userAnswers = ref({}); // 用户答案 {题目id: 答案}
-const markedQuestions = ref([]); // 标记的题目id列表
-const loading = ref(true); // 加载状态
-const showSubmitConfirm = ref(false); // 显示提交确认
-const showExamResult = ref(false); // 显示考试结果
-const showAnswer = ref(false); // 是否显示答案（用于查看答案模式）
+const markedQuestions = ref([]);
+const loading = ref(true);
+const showSubmitConfirm = ref(false);
+const showExamResult = ref(false);
 const examInfo = ref({
   examName: "",
   paperName: "",
+  paperScore: 0,
   examId: "",
   paper_id: "",
   start_time: "",
   duration: 0,
 });
+
+// 图片上传相关状态
+const userImages = ref({}); // 存储图片的映射 {题目id: 图片url}
+const isUploading = ref(false); // 上传状态
+const imageInput = ref(null); // 图片输入框引用
 
 // 考试时间相关
 const examDurationSeconds = ref(0);
@@ -384,26 +506,49 @@ const timeProgress = computed(() => {
     ((examDurationSeconds.value - remainingTime.value) / examDurationSeconds.value) * 100
   );
 });
-let timer = null; // 计时器
+let timer = null;
+let autoSaveTimer = null; // 自动保存计时器
+const examSubmitted = ref(false); // 防止重复提交
 
 /* ==================== 计算属性 ==================== */
-// 当前题目
 const currentQuestion = computed(() => {
   return questions.value[currentQuestionIndex.value] || null;
 });
 
-// 已答题数
-const answeredCount = computed(() => {
-  return Object.keys(userAnswers.value).length;
+// 当前题目是否有图片
+const hasImageForCurrentQuestion = computed(() => {
+  if (!currentQuestion.value) return false;
+  return !!userImages.value[currentQuestion.value.id];
 });
 
-// 当前题目是否被标记
+// 总上传图片数
+const totalUploadedImages = computed(() => {
+  return Object.keys(userImages.value).length;
+});
+
+// 判断题目是否已回答
+const isQuestionAnswered = (questionId) => {
+  const hasAnswer =
+    userAnswers.value[questionId] && userAnswers.value[questionId].trim() !== "";
+  const hasImage = !!userImages.value[questionId];
+  return hasAnswer || hasImage;
+};
+
+const answeredCount = computed(() => {
+  let count = 0;
+  questions.value.forEach((question) => {
+    if (isQuestionAnswered(question.id)) {
+      count++;
+    }
+  });
+  return count;
+});
+
 const isCurrentQuestionMarked = computed(() => {
   if (!currentQuestion.value) return false;
   return markedQuestions.value.includes(currentQuestion.value.id);
 });
 
-// 考试时长文本
 const examDuration = computed(() => {
   const hours = Math.floor(examDurationSeconds.value / 3600);
   const minutes = Math.floor((examDurationSeconds.value % 3600) / 60);
@@ -417,16 +562,14 @@ const examDuration = computed(() => {
   }
 });
 
-// 总分
-const totalScore = computed(() => {
-  return questions.value.reduce((sum, question) => sum + (question.score || 0), 0);
-});
-
 /* ==================== 生命周期 ==================== */
 onMounted(() => {
   // 从路由参数获取考试信息
   examInfo.value.examId = route.query.examId;
   examInfo.value.paper_id = route.query.paper_id;
+  examInfo.value.start_time = route.query.start_time;
+  examInfo.value.duration = parseInt(route.query.duration) || 120;
+
   if (route.query.exam_name) {
     examInfo.value.examName = decodeURIComponent(route.query.exam_name);
   }
@@ -439,45 +582,13 @@ onMounted(() => {
 
   loadQuestions();
 
-  // 从本地存储恢复考试开始时间（如果不存在则记录新开始时间）
-  const examKey = `exam_${examInfo.value.examId}_start_time`;
-  const savedStartTime = localStorage.getItem(examKey);
-  
-  if (savedStartTime) {
-    // 恢复已存在的考试时间
-    const startTime = parseInt(savedStartTime);
-    const now = Date.now();
-    const elapsedSeconds = Math.floor((now - startTime) / 1000);
-    
-    // 从路由参数或examInfo获取考试总时长
-    const totalDurationMinutes = route.query.duration ? 
-      parseInt(route.query.duration) : examInfo.value.duration || 120;
-    examDurationSeconds.value = totalDurationMinutes * 60;
-    
-    remainingTime.value = Math.max(examDurationSeconds.value - elapsedSeconds, 0);
-    
-    // 如果考试时间已用完，自动提交
-    if (remainingTime.value <= 0) {
-      autoSubmitExam();
-      return;
-    }
-  } else {
-    // 第一次进入，记录开始时间
-    localStorage.setItem(examKey, Date.now().toString());
-    
-    // 设置总时长
-    const totalDurationMinutes = route.query.duration ? 
-      parseInt(route.query.duration) : examInfo.value.duration || 120;
-    examDurationSeconds.value = totalDurationMinutes * 60;
-    remainingTime.value = examDurationSeconds.value;
-  }
+  initExamTimer();
+  startAutoSaveTimer(); // 启动自动保存定时器
 
-  // 开始计时器（只调用一次）
-  startTimer();
-
-  // 监听浏览器标签页切换和关闭
-  window.addEventListener("beforeunload", handleBeforeUnload);
+  // 监听页面可见性变化
   window.addEventListener("visibilitychange", handleVisibilityChange);
+  // 监听页面关闭
+  window.addEventListener("beforeunload", handleBeforeUnload);
 });
 
 onUnmounted(() => {
@@ -485,17 +596,256 @@ onUnmounted(() => {
   if (timer) {
     clearInterval(timer);
   }
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer);
+  }
 
   // 移除事件监听
   window.removeEventListener("beforeunload", handleBeforeUnload);
   window.removeEventListener("visibilitychange", handleVisibilityChange);
 });
 
+/* ==================== 自动保存功能 ==================== */
+// 启动自动保存定时器
+const startAutoSaveTimer = () => {
+  // 每5分钟自动保存一次（300000毫秒）
+  autoSaveTimer = setInterval(async () => {
+    try {
+      await autoSaveAnswers();
+    } catch (error) {
+      console.error("自动保存失败:", error);
+    }
+  }, 5 * 60 * 1000); // 5分钟
+};
+
+// 自动保存答案到后端
+const autoSaveAnswers = async () => {
+  try {
+    // 获取学生信息
+    const student = getCurrentStudent();
+    
+    // 构建保存数据 - 包含所有题目
+    const saveData = [];
+
+    // 遍历所有题目
+    questions.value.forEach((question) => {
+      const questionId = question.id;
+      const answer = userAnswers.value[questionId] || "";
+      const imageUrl = userImages.value[questionId] || null;
+
+      // 如果学生有回答（有文字答案或图片），则使用学生的答案
+      // 如果学生没有回答，则标记为"未作答"
+      const studentAnswer = (answer.trim() !== "" || imageUrl) ? answer : "未作答";
+
+      saveData.push({
+        exam_history_id: examHistoryId.value,
+        question_id: questionId,
+        student: student,
+        student_answer: studentAnswer,
+        image_url: imageUrl,
+      });
+    });
+
+    try {
+      await axios.post(`${API_BASE}/exam/autosaveAnswer`, saveData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (error) {
+      console.error("自动保存请求失败:", error);
+      
+      // 将数据保存到本地作为备份
+      saveAnswersToLocalStorage(saveData);
+    }
+  } catch (error) {
+    console.error("自动保存处理失败:", error);
+  }
+};
+
+// 获取当前学生信息
+const getCurrentStudent = () => {
+  // 从本地存储获取学生信息
+  return localStorage.getItem("userName") || "unknown_student";
+};
+
+/* ==================== 图片上传功能 ==================== */
+/**
+ * 上传图片到图床
+ * @param {File} file - 图片文件
+ * @returns {Promise<string>} 图片URL
+ */
+const uploadToImageBed = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("token", IMAGE_BED_CONFIG.token);
+
+    const response = await fetch(IMAGE_BED_CONFIG.apiUrl, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`上传失败: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.code === 200 && result.result === "success") {
+      return result.url; // 返回图片URL
+    } else {
+      throw new Error("图床返回错误");
+    }
+  } catch (error) {
+    console.error("图片上传失败:", error);
+    throw new Error("图片上传失败，请重试");
+  }
+};
+
+// 触发图片上传
+const triggerImageUpload = () => {
+  if (!currentQuestion.value) return;
+
+  if (isUploading.value) {
+    ElMessage.warning("正在上传图片，请稍候");
+    return;
+  }
+
+  imageInput.value.click();
+};
+
+/**
+ * 处理图片上传
+ * @param {Event} event - 文件输入事件
+ */
+const handleImageUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // 验证文件类型
+  if (!file.type.startsWith("image/")) {
+    ElMessage.error("请选择图片文件");
+    event.target.value = "";
+    return;
+  }
+
+  // 验证文件大小（5MB限制）
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error("图片大小不能超过5MB");
+    event.target.value = "";
+    return;
+  }
+
+  isUploading.value = true;
+
+  try {
+    ElMessage.info("图片正在上传...");
+
+    // 上传图片到图床
+    const imageUrl = await uploadToImageBed(file);
+
+    // 将图片URL保存到当前题目
+    userImages.value[currentQuestion.value.id] = imageUrl;
+
+    // 保存到本地存储
+    saveImageToLocalStorage();
+
+    ElMessage.success("图片上传成功");
+  } catch (error) {
+    console.error("图片上传失败:", error);
+    ElMessage.error(error.message || "图片上传失败，请重试");
+  } finally {
+    isUploading.value = false;
+    event.target.value = ""; // 重置文件输入
+  }
+};
+
+// 获取当前题目的图片
+const getCurrentQuestionImage = () => {
+  if (!currentQuestion.value) return "";
+  return userImages.value[currentQuestion.value.id] || "";
+};
+
+// 移除当前题目的图片
+const removeCurrentImage = () => {
+  if (!currentQuestion.value) return;
+
+  const questionId = currentQuestion.value.id;
+  if (userImages.value[questionId]) {
+    delete userImages.value[questionId];
+
+    // 保存到本地存储
+    saveImageToLocalStorage();
+    saveAnswer(questionId);
+
+    ElMessage.success("图片已移除");
+  }
+};
+
+// 保存图片到本地存储
+const saveImageToLocalStorage = () => {
+  localStorage.setItem(
+    `exam_${examInfo.value.examId}_images`,
+    JSON.stringify(userImages.value)
+  );
+};
+
+// 从本地存储加载图片
+const loadImagesFromLocalStorage = () => {
+  const savedImages = localStorage.getItem(`exam_${examInfo.value.examId}_images`);
+  if (savedImages) {
+    try {
+      userImages.value = JSON.parse(savedImages);
+    } catch (e) {
+      console.error("加载图片数据失败:", e);
+      userImages.value = {};
+    }
+  }
+};
+
 /* ==================== 数据加载 ==================== */
+// 获取试卷信息（从试卷列表中查找当前试卷）
+const loadPaperInfo = async () => {
+  try {
+    // 调用获取试卷列表的接口
+    const response = await axios.get(`${API_BASE}/paper/getPaperList`);
+
+    if (response.data.code === 200) {
+      const paperList = response.data.data || [];
+
+      // 在当前试卷列表中查找匹配的试卷
+      // 将 paper_id 转换为数字进行比较，因为接口返回的 id 是数字
+      const paperId = parseInt(examInfo.value.paper_id);
+      const currentPaper = paperList.find((paper) => paper.id === paperId);
+
+      if (currentPaper) {
+        // 找到试卷，设置试卷信息
+        examInfo.value.paperName = currentPaper.name;
+        examInfo.value.paperScore = currentPaper.total_score;
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      console.error("获取试卷列表失败:", response.data.message);
+      return false;
+    }
+  } catch (error) {
+    console.error("获取试卷信息失败:", error);
+    return false;
+  }
+};
+
 // 加载题目
 const loadQuestions = async () => {
   try {
     loading.value = true;
+
+    // 1. 首先加载试卷信息（名称和总分）
+    await loadPaperInfo();
+
+    // 2. 然后加载题目
     const res = await axios.get(
       `${API_BASE}/paper/getQuestionsByPaperId/${examInfo.value.paper_id}`
     );
@@ -554,6 +904,10 @@ const loadQuestions = async () => {
         markedQuestions.value = JSON.parse(savedMarks);
       }
 
+      // 初始化图片数据
+      loadImagesFromLocalStorage();
+
+      // 如果从路由参数获取到了试卷名称，使用路由参数的（这通常是在创建考试时传递的）
       if (route.query.paperName) {
         examInfo.value.paperName = decodeURIComponent(route.query.paperName);
       }
@@ -567,6 +921,7 @@ const loadQuestions = async () => {
     loading.value = false;
   }
 };
+
 /* ==================== Markdown渲染函数 ==================== */
 // 配置marked
 marked.setOptions({
@@ -581,7 +936,7 @@ const markdownToHtml = (text) => {
   try {
     let content = text;
 
-    // 先处理 $$...$$（显示公式，允许多行）
+    // 块级公式 $$...$$
     content = content.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) => {
       return katex.renderToString(formula.trim(), {
         displayMode: true,
@@ -589,7 +944,7 @@ const markdownToHtml = (text) => {
       });
     });
 
-    // 再处理 $...$（允许多行，用 [\s\S]）
+    // 行内公式 $...$
     content = content.replace(/\$([\s\S]+?)\$/g, (_, formula) => {
       return katex.renderToString(formula.trim(), {
         displayMode: false,
@@ -597,70 +952,48 @@ const markdownToHtml = (text) => {
       });
     });
 
-    // 最后再交给 marked
+    // 直接返回 marked 结果
     return marked(content);
   } catch (err) {
-    console.error("Markdown + KaTeX 渲染失败:", err);
+    console.error("Markdown 渲染失败:", err);
     return text;
   }
 };
 
-const answerTextarea = ref(null);
+/* ==================== 计时器相关 ==================== */
+// 初始化考试计时器
+const initExamTimer = () => {
+  // 计算考试总时长（秒）
+  examDurationSeconds.value = examInfo.value.duration * 60;
 
-// 常用数学公式（LaTeX）
-const commonFormulas = [
-  { label: "分数", value: "\\frac{a}{b}" },
-  { label: "幂", value: "x^i" },
-  { label: "下标", value: "x_i" },
-  { label: "根号", value: "\\sqrt[x]{y}" },
-  { label: "大括号", value: "\\begin{cases} a \\\\ c \\end{cases}" },
-  { label: "求和", value: "\\sum_{i=1}^n" },
-  { label: "极限", value: "\\lim_{x \\to 0}" },
-  { label: "绝对值", value: "\\left| x \\right|" },
-  { label: "排列", value: "\{A}_x^y" },
-  { label: "组合", value: "\{C}_x^y" },
-  { label: "角度", value: "\\angle ABC" },
-  { label: "向量", value: "\\vec{v}" },
-  { label: "积分", value: "\\int_a^b f(x) dx" },
-];
+  if (examInfo.value.start_time) {
+    // 计算已用时间
+    const startTime = new Date(examInfo.value.start_time);
+    const now = new Date();
+    const elapsedSeconds = Math.floor((now - startTime) / 1000);
 
-/* 插入公式到当前答案文本框(随光标变化) */
-const insertFormula = async (formula) => {
-  const textarea = answerTextarea.value;
-  if (!textarea || !currentQuestion.value) return;
+    remainingTime.value = Math.max(examDurationSeconds.value - elapsedSeconds, 0);
 
-  const questionId = currentQuestion.value.id;
-  const text = userAnswers.value[questionId] || "";
+    // 如果考试时间已用完，自动提交
+    if (remainingTime.value <= 0) {
+      autoSubmitExam();
+      return;
+    }
+  } else {
+    // 如果没有开始时间，使用当前时间
+    examInfo.value.start_time = new Date().toISOString();
+    remainingTime.value = examDurationSeconds.value;
+  }
 
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-
-  // 插入为行内公式 $...$
-  const insertText = `$${formula}$`;
-
-  userAnswers.value[questionId] =
-    text.slice(0, start) + insertText + text.slice(end);
-
-  await nextTick();
-
-  // 重新聚焦并移动光标
-  textarea.focus();
-  textarea.selectionStart = textarea.selectionEnd =
-    start + insertText.length;
+  // 开始计时器
+  startTimer();
 };
 
-
-/* ==================== 计时器相关 ==================== */
 // 开始计时
 const startTimer = () => {
   timer = setInterval(() => {
     if (remainingTime.value > 0) {
       remainingTime.value--;
-
-      // 每30秒保存一次答案
-      if (remainingTime.value % 30 === 0) {
-        saveAnswers();
-      }
 
       // 最后5分钟提示
       if (remainingTime.value === 300) {
@@ -687,6 +1020,20 @@ const formatTime = (seconds) => {
     .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 };
 
+// 格式化日期时间为 "YYYY-MM-DD HH:MM:SS"
+const formatDateTimeToYMDHMS = (date = new Date()) => {
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const y = date.getFullYear();
+  const m = pad(date.getMonth() + 1);
+  const d = pad(date.getDate());
+  const h = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const s = pad(date.getSeconds());
+
+  return `${y}-${m}-${d} ${h}:${min}:${s}`;
+};
+
 /* ==================== 题目操作 ==================== */
 // 跳转到指定题目
 const goToQuestion = (index) => {
@@ -703,11 +1050,11 @@ const selectOption = (optionKey) => {
   const optionValue = optionKey.replace("option_", "");
 
   // 如果是单选题
-  if (currentQuestion.value.marking_type === 0) {
+  if (currentQuestion.value.question_category_id === 1) {
     userAnswers.value[questionId] = optionValue;
   }
   // 如果是多选题
-  else if (currentQuestion.value.marking_type === 2) {
+  else if (currentQuestion.value.question_category_id === 2) {
     const currentAnswer = userAnswers.value[questionId] || "";
 
     if (currentAnswer.includes(optionValue)) {
@@ -778,33 +1125,47 @@ const saveAnswers = () => {
       userAnswers.value[questionId]
     );
   });
+
+  // 保存图片数据
+  saveImageToLocalStorage();
 };
 
 // 提交考试
 const submitExam = async () => {
   try {
-    // 这里应该调用提交考试的API
-    // 例如: await axios.post(`${API_BASE}/exam/submit`, {
-    //   examId: examInfo.value.examId,
-    //   paper_id: examInfo.value.paper_id,
-    //   answers: userAnswers.value
-    // });
+    // 首先执行一次自动保存
+    await autoSaveAnswers();
 
-    // 清除本地保存的答案
-    questions.value.forEach((question) => {
-      localStorage.removeItem(`exam_${examInfo.value.examId}_answer_${question.id}`);
+    // 提交到后端
+    const response = await axios.post(`${API_BASE}/exam/submitExam`, {
+      id: examHistoryId.value,
+      submit_time: formatDateTimeToYMDHMS(),
     });
-    localStorage.removeItem(`exam_${examInfo.value.examId}_marks`);
 
-    // 停止计时器
-    if (timer) {
-      clearInterval(timer);
+    if (response.data.code === 200) {
+      // 清除本地保存的数据
+      questions.value.forEach((question) => {
+        localStorage.removeItem(`exam_${examInfo.value.examId}_answer_${question.id}`);
+      });
+      localStorage.removeItem(`exam_${examInfo.value.examId}_marks`);
+      localStorage.removeItem(`exam_${examInfo.value.examId}_images`);
+
+      // 停止计时器
+      if (timer) {
+        clearInterval(timer);
+      }
+      if (autoSaveTimer) {
+        clearInterval(autoSaveTimer);
+      }
+
+      showSubmitConfirm.value = false;
+      showExamResult.value = true;
+      examSubmitted.value = true;
+
+      ElMessage.success("试卷提交成功！");
+    } else {
+      ElMessage.error("提交试卷失败: " + response.data.message);
     }
-
-    showSubmitConfirm.value = false;
-    showExamResult.value = true;
-
-    ElMessage.success("试卷提交成功！");
   } catch (error) {
     console.error("提交试卷失败:", error);
     ElMessage.error("提交试卷失败");
@@ -812,36 +1173,78 @@ const submitExam = async () => {
 };
 
 // 自动提交考试（时间到）
-const autoSubmitExam = () => {
-  ElMessageBox.alert("考试时间到，系统将自动提交试卷", "考试结束", {
-    confirmButtonText: "确定",
-    callback: () => {
-      submitExam();
-    },
-  });
-};
+const autoSubmitExam = async () => {
+  // 防止重复提交
+  if (examSubmitted.value) return;
+  examSubmitted.value = true;
 
-// 查看答案
-const reviewAnswers = () => {
-  showAnswer.value = true;
-  showExamResult.value = false;
+  try {
+    await ElMessageBox.alert("考试时间到，系统将自动提交试卷", "考试结束", {
+      confirmButtonText: "确定",
+    });
+
+    // 清理定时器
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    if (autoSaveTimer) {
+      clearInterval(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+
+    // 执行提交逻辑
+    await submitExam();
+  } catch (error) {
+    // 用户点击确定后也会执行
+    await submitExam();
+  }
 };
 
 // 返回考试列表
 const returnToExamList = () => {
-  router.push("/exam/list");
+  router.push("/student/exammanagement");
 };
 
 /* ==================== 浏览器事件处理 ==================== */
+// 添加路由守卫
+onBeforeRouteLeave(async (to, from, next) => {
+  if (examSubmitted.value) {
+    next();
+    return;
+  }
+
+  try {
+    await autoSaveAnswers();
+
+    await ElMessageBox.confirm(
+      "正在离开考试，离开后将自动提交试卷。确定要离开吗？",
+      "离开考试确认",
+      {
+        confirmButtonText: "确定离开并提交",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+    );
+
+    await submitExam();
+    next();
+  } catch {
+    next(false);
+  }
+});
+
 // 处理页面关闭/刷新
 const handleBeforeUnload = (e) => {
-  // 保存答案
-  saveAnswers();
+  if (examSubmitted.value) return;
 
-  // 显示警告信息
-  e.preventDefault();
-  e.returnValue = "离开页面会导致考试中断，确定要离开吗？";
-  return e.returnValue;
+  if (questions.value.length > 0 && remainingTime.value > 0) {
+    // 同步保存
+    saveAnswers();
+
+    e.preventDefault();
+    e.returnValue = "";
+  }
 };
 
 // 处理标签页切换
@@ -849,6 +1252,8 @@ const handleVisibilityChange = () => {
   if (document.hidden) {
     // 页面被隐藏，可能是切换到了其他标签页
     ElMessage.warning("检测到您切换了标签页，请专注考试！");
+    // 保存当前答案
+    saveAnswers();
   }
 };
 
@@ -856,9 +1261,14 @@ const handleVisibilityChange = () => {
 // 获取题目类型文本
 const getQuestionTypeText = (markingType) => {
   const typeMap = {
-    0: "单选题",
-    1: "简答题",
+    1: "单选题",
     2: "多选题",
+    3: "证明题",
+    4: "解答题",
+    5: "填空题",
+    6: "计算题",
+    7: "判断题",
+    8: "作图题"
   };
   return typeMap[markingType] || "未知题型";
 };
@@ -1200,7 +1610,7 @@ const getQuestionTypeText = (markingType) => {
   font-size: 14px;
   color: #909399;
   background-color: #f5f7fa;
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 4px;
 }
 
@@ -1296,11 +1706,41 @@ const getQuestionTypeText = (markingType) => {
   color: #303133;
 }
 
-/* 简答题输入框 */
+/* 简答题区域 */
 .short-answer-area {
   margin: 30px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
 }
 
+/* Markdown答案部分 */
+.markdown-section,
+.image-upload-section {
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 20px;
+  background-color: #fafafa;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formula-tip,
+.upload-tip {
+  font-size: 13px;
+  font-weight: normal;
+  color: #909399;
+}
+
+/* 简答题输入框 */
 .short-answer-input {
   width: 97%;
   padding: 16px;
@@ -1311,6 +1751,8 @@ const getQuestionTypeText = (markingType) => {
   color: #303133;
   resize: vertical;
   transition: all 0.2s;
+  margin-top: 10px;
+  margin-bottom: 15px;
 }
 
 .short-answer-input:focus {
@@ -1319,28 +1761,210 @@ const getQuestionTypeText = (markingType) => {
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
 }
 
+/* Markdown预览 */
+.markdown-preview {
+  border: 2px solid #ebeef5;
+  border-radius: 10px;
+  padding: 16px;
+  background-color: white;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #909399;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.preview-content {
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 50px;
+}
+
+/* ==================== 公式工具栏样式 ==================== */
 .formula-toolbar {
+  margin-bottom: 15px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.toolbar-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.formula-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
 }
 
 .formula-btn {
-  padding: 6px 10px;
-  font-size: 13px;
-  background-color: #f5f7fa;
-  border: 1px solid #dcdfe6;
-  border-radius: 6px;
+  padding: 6px 12px;
+  background-color: #e9ecef;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #495057;
   cursor: pointer;
-  color: #303133;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .formula-btn:hover {
-  background-color: #ecf5ff;
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+  transform: translateY(-1px);
+}
+
+.formula-btn:active {
+  transform: translateY(0);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .formula-buttons {
+    gap: 4px;
+  }
+
+  .formula-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .formula-buttons {
+    justify-content: space-between;
+  }
+
+  .formula-btn {
+    flex: 0 0 calc(50% - 2px);
+    text-align: center;
+    padding: 6px 4px;
+    margin-bottom: 4px;
+  }
+}
+
+/* 图片上传区域 */
+.upload-area {
+  margin-top: 10px;
+}
+
+.upload-btn {
+  border: 2px dashed #dcdfe6;
+  border-radius: 10px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background-color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-btn:hover:not(.has-image) {
   border-color: #409eff;
-  color: #409eff;
+  background-color: #f5faff;
+}
+
+.upload-btn.has-image {
+  border-style: solid;
+  border-color: #67c23a;
+  padding: 0;
+}
+
+.upload-placeholder {
+  color: #909399;
+}
+
+.upload-placeholder .el-icon-picture {
+  font-size: 48px;
+  margin-bottom: 10px;
+  color: #c0c4cc;
+}
+
+.upload-text {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #606266;
+}
+
+.upload-hint {
+  font-size: 13px;
+  color: #909399;
+}
+
+.image-preview {
+  width: 100%;
+  height: 300px;
+  position: relative;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: #f5f7fa;
+}
+
+.image-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.upload-btn.has-image:hover .image-overlay {
+  opacity: 1;
+}
+
+.btn-change,
+.btn-remove {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-change {
+  background-color: #409eff;
+  color: white;
+}
+
+.btn-change:hover {
+  background-color: #3375e0;
+}
+
+.btn-remove {
+  background-color: #f56c6c;
+  color: white;
+}
+
+.btn-remove:hover {
+  background-color: #d62e2e;
 }
 
 /* 答案解析 */
@@ -1463,11 +2087,6 @@ const getQuestionTypeText = (markingType) => {
   font-size: 16px;
 }
 
-.empty-icon {
-  font-size: 60px;
-  margin-bottom: 20px;
-}
-
 .empty-text {
   font-size: 18px;
 }
@@ -1569,7 +2188,7 @@ const getQuestionTypeText = (markingType) => {
 .answered-stats {
   margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 15px;
 }
 
@@ -1643,9 +2262,9 @@ const getQuestionTypeText = (markingType) => {
 }
 
 .result-stats {
-  display: flex;
-  justify-content: center;
-  gap: 40px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
   margin-bottom: 40px;
 }
 
@@ -1653,6 +2272,9 @@ const getQuestionTypeText = (markingType) => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 10px;
 }
 
 .stat-label {
@@ -1673,7 +2295,6 @@ const getQuestionTypeText = (markingType) => {
   gap: 20px;
 }
 
-.btn-review,
 .btn-return {
   padding: 12px 30px;
   border-radius: 8px;
@@ -1681,18 +2302,6 @@ const getQuestionTypeText = (markingType) => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
-}
-
-.btn-review {
-  background-color: #409eff;
-  color: white;
-  border: none;
-}
-
-.btn-review:hover {
-  background-color: #3375e0;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
 }
 
 .btn-return {
@@ -1705,133 +2314,6 @@ const getQuestionTypeText = (markingType) => {
   background-color: #e4e8f0;
   transform: translateY(-2px);
 }
-/* 数学公式样式 */
-.math-formula {
-  font-family: "Cambria Math", "Times New Roman", serif;
-  text-align: center;
-  margin: 10px 0;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  overflow-x: auto;
-}
-
-.inline-math {
-  font-family: "Cambria Math", "Times New Roman", serif;
-  font-style: italic;
-}
-
-/* 题目内容的样式增强 */
-.question-text :deep(p) {
-  margin-bottom: 10px;
-  line-height: 1.6;
-}
-
-.question-text :deep(h1),
-.question-text :deep(h2),
-.question-text :deep(h3) {
-  margin: 15px 0 10px 0;
-  color: #303133;
-}
-
-.question-text :deep(ul),
-.question-text :deep(ol) {
-  margin: 10px 0;
-  padding-left: 20px;
-}
-
-.question-text :deep(li) {
-  margin-bottom: 5px;
-}
-
-.question-text :deep(code) {
-  background-color: #f3f4f6;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: "Courier New", monospace;
-}
-
-.question-text :deep(blockquote) {
-  border-left: 4px solid #409eff;
-  margin: 10px 0;
-  padding-left: 15px;
-  color: #606266;
-  font-style: italic;
-}
-
-/* 答案显示样式增强 */
-.answer-analysis :deep(pre) {
-  background-color: #f6f8fa;
-  padding: 12px;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: 10px 0;
-}
-
-.answer-analysis :deep(table) {
-  border-collapse: collapse;
-  margin: 10px 0;
-  width: 100%;
-}
-
-.answer-analysis :deep(th),
-.answer-analysis :deep(td) {
-  border: 1px solid #dcdfe6;
-  padding: 8px;
-  text-align: left;
-}
-
-.answer-analysis :deep(th) {
-  background-color: #f5f7fa;
-  font-weight: 600;
-}
-
-/* 多选题答案显示样式 */
-.option-item.multi-selected {
-  background-color: #f0f7ff;
-}
-
-/* 正确答案高亮 */
-.option-item.correct {
-  position: relative;
-}
-
-.option-item.correct::after {
-  content: "✓";
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #67c23a;
-  font-weight: bold;
-  font-size: 16px;
-}
-.markdown-answer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.markdown-preview {
-  border: 2px solid #ebeef5;
-  border-radius: 10px;
-  padding: 16px;
-  background-color: #fafafa;
-  overflow-y: auto;
-}
-
-.preview-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #909399;
-  margin-bottom: 10px;
-}
-
-.preview-content {
-  font-size: 15px;
-  line-height: 1.6;
-}
-
 
 /* ==================== 响应式设计 ==================== */
 @media (max-width: 1200px) {
@@ -1846,6 +2328,20 @@ const getQuestionTypeText = (markingType) => {
 
   .exam-content {
     order: 1;
+  }
+
+  .review-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .review-meta {
+    width: 100%;
+  }
+
+  .btn-return-list {
+    align-self: flex-end;
   }
 }
 
@@ -1883,8 +2379,8 @@ const getQuestionTypeText = (markingType) => {
   }
 
   .result-stats {
-    flex-direction: column;
-    gap: 20px;
+    grid-template-columns: 1fr;
+    gap: 15px;
   }
 
   .result-actions {
@@ -1894,6 +2390,30 @@ const getQuestionTypeText = (markingType) => {
 
   .answered-stats {
     grid-template-columns: 1fr;
+  }
+
+  .image-preview {
+    height: 200px;
+  }
+
+  .upload-btn {
+    padding: 30px 15px;
+  }
+
+  .upload-placeholder .el-icon-picture {
+    font-size: 36px;
+  }
+
+  .review-question {
+    padding: 20px;
+  }
+
+  .review-header {
+    padding: 20px;
+  }
+
+  .btn-return-list {
+    align-self: stretch;
   }
 }
 
@@ -1913,12 +2433,22 @@ const getQuestionTypeText = (markingType) => {
   .modal-content {
     padding: 20px;
   }
-}
 
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .markdown-answer {
-    grid-template-columns: 1fr;
+  .review-question .question-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .review-question .question-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .question-section,
+  .answer-section,
+  .standard-answer-section {
+    padding: 15px;
   }
 }
 </style>
