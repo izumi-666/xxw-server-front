@@ -811,9 +811,17 @@ const loadExams = async () => {
     `${API_BASE}/exam/getExamList/staff/${userId}`
   );
 
-  fullExamList.value = Array.isArray(res.data.data)
-    ? res.data.data
-    : [];
+  // 获取数据并按照开始时间降序排列（最新的在前面）
+  let exams = Array.isArray(res.data.data) ? res.data.data : [];
+  
+  // 按开始时间排序：最新的考试排在最前面
+  exams.sort((a, b) => {
+    const timeA = new Date(a.start_time).getTime();
+    const timeB = new Date(b.start_time).getTime();
+    return timeB - timeA; // 降序排列
+  });
+  
+  fullExamList.value = exams;
 
   currentPage.value = 1;
   updatePagedExams();
@@ -827,9 +835,17 @@ const searchExam = async () => {
     staffs: searchForm.value.created_by
   });
 
-  fullExamList.value = Array.isArray(res.data.data)
-    ? res.data.data
-    : [];
+  // 获取数据并按照开始时间降序排列
+  let exams = Array.isArray(res.data.data) ? res.data.data : [];
+  
+  // 按开始时间排序：最新的考试排在最前面
+  exams.sort((a, b) => {
+    const timeA = new Date(a.start_time).getTime();
+    const timeB = new Date(b.start_time).getTime();
+    return timeB - timeA; // 降序排列
+  });
+  
+  fullExamList.value = exams;
 
   currentPage.value = 1;
   updatePagedExams();

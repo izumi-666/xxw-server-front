@@ -27,42 +27,68 @@
 
     <!-- 主要内容区 -->
     <div class="grading-content" v-if="gradingData.length > 0">
-        <div class="student-switcher">
-  <div
-    v-for="(studentData, sIndex) in gradingData"
-    :key="sIndex"
-    class="student-item"
-    :class="{ active: currentStudentIndex === sIndex }"
-    @click="selectStudent(sIndex)"
-  >
-    学生 {{ sIndex + 1 }}：
-    {{ studentData.answer_records?.[0]?.student || '未知' }}
-  </div>
-</div>
-
-      <!-- 左侧：题目列表 -->
+      <!-- 左侧：学生列表 -->
       <div class="left-panel">
-        <div class="questions-sidebar">
+        <div class="students-sidebar">
           <div class="sidebar-header">
-            <h3>题目列表</h3>
-            <div class="student-info">
-              <span class="student-label">学生：</span>
-              <span class="student-name">{{ currentStudent }}</span>
+            <h3>学生列表</h3>
+            <div class="exam-info">
+            </div>
+          </div>
+          
+          <div class="student-list">
+            <div class="student-item" 
+                 v-for="(studentData, sIndex) in gradingData" 
+                 :key="sIndex"
+                 :class="{ 
+                   'active': currentStudentIndex === sIndex,
+                   'all-graded': isStudentAllGraded(sIndex),
+                   'partial-graded': !isStudentAllGraded(sIndex)
+                 }"
+                 @click="selectStudent(sIndex)">
+              <div class="student-header">
+                <span class="student-name">{{ getStudentName(sIndex) }}</span>
+              </div>
+              <div class="student-status">
+                <span class="status-badge" :class="getStudentStatusClass(sIndex)">
+                  {{ getStudentStatusText(sIndex) }}
+                </span>
+                <div class="score-display">
+                  <span class="total-score">总分：{{ getStudentTotalScore(sIndex) }}</span>
+                  <span class="progress-score">({{ getStudentGradedCount(sIndex) }}/{{ totalQuestions }})</span>
+                </div>
+              </div>
+              <div class="student-progress">
+                <div class="progress-bar small">
+                  <div class="progress-fill" :style="{ width: getStudentProgressPercentage(sIndex) + '%' }"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 中间：题目列表 -->
+      <div class="middle-panel">
+        <div class="questions-panel">
+          <div class="panel-header">
+            <h3>题目列表 - {{ currentStudent }}</h3>
+            <div class="summary-info">
+              <span class="summary-item">总分：{{ getStudentTotalScore(currentStudentIndex) }}</span>
+              <span class="summary-item">批改进度：{{ getStudentGradedCount(currentStudentIndex) }}/{{ totalQuestions }}</span>
             </div>
           </div>
           
           <div class="question-list">
-            <div 
-              v-for="(item, index) in currentQuestions" 
-              :key="index"
-              class="question-item"
-              :class="{ 
-                'active': currentQuestionIndex === index,
-                'graded': isQuestionGraded(index),
-                'ungraded': !isQuestionGraded(index)
-              }"
-              @click="selectQuestion(index)"
-            >
+            <div class="question-item" 
+                 v-for="(item, index) in currentQuestions" 
+                 :key="index"
+                 :class="{ 
+                   'active': currentQuestionIndex === index,
+                   'graded': isQuestionGraded(index),
+                   'ungraded': !isQuestionGraded(index)
+                 }"
+                 @click="selectQuestion(index)">
               <div class="question-header">
                 <span class="question-number">第{{ index + 1 }}题</span>
                 <span class="question-type">{{ getQuestionType(item.question_category_id) }}</span>
@@ -72,18 +98,24 @@
                 <span class="status-badge" :class="getQuestionStatusClass(index)">
                   {{ getQuestionStatusText(index) }}
                 </span>
-                <span v-if="getAutoScore(index) >= 0" class="auto-score">
-                  自动评分：{{ getAutoScore(index) }}分
-                </span>
+                <div class="score-display" v-if="getFinalScore(index) >= 0">
+                  <span class="final-score">得分：{{ getFinalScore(index) }}分</span>
+                  <span v-if="getAutoScore(index) >= 0 && !isManuallyGraded(index)" class="auto-score-tag">
+                    (自动)
+                  </span>
+                </div>
+                <div v-else class="no-score-display">
+                  <span class="no-score">待评分</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 中间：题目详情和批改区 -->
-      <div class="main-panel">
-        <div class="question-detail">
+      <!-- 右侧：题目详情和批改区 -->
+      <div class="right-panel">
+        <div class="grading-detail">
           <!-- 题目内容 -->
           <div class="question-content">
             <div class="section-header">
@@ -91,18 +123,18 @@
               <div class="question-meta">
                 <span class="meta-item">题型：{{ getQuestionType(currentQuestion.question_category_id) }}</span>
                 <span class="meta-item difficulty">
-  难度：
-  <span class="stars">
-    <span
-      v-for="i in maxDifficulty"
-      :key="i"
-      class="star"
-      :class="{ active: i <= currentQuestion.difficulty_level }"
-    >
-      ★
-    </span>
-  </span>
-</span>
+                  难度：
+                  <span class="stars">
+                    <span
+                      v-for="i in maxDifficulty"
+                      :key="i"
+                      class="star"
+                      :class="{ active: i <= currentQuestion.difficulty_level }"
+                    >
+                      ★
+                    </span>
+                  </span>
+                </span>
               </div>
             </div>
             
@@ -176,13 +208,13 @@
                   <label class="score-label">评分：</label>
                   <div class="score-controls">
                     <input
-  type="number"
-  v-model="currentGrading.score"
-  :max="getQuestionScore(currentQuestionIndex)"
-  min="0"
-  step="0.5"
-  class="score-input-field"
-/>
+                      type="number"
+                      v-model="currentGrading.score"
+                      :max="getQuestionScore(currentQuestionIndex)"
+                      min="0"
+                      step="0.5"
+                      class="score-input-field"
+                    />
                     <span class="score-unit">分</span>
                   </div>
                   <div class="score-slider" v-if="canGradeManually(currentQuestionIndex)">
@@ -210,7 +242,7 @@
                 <div class="grading-actions">
                   <button 
                     class="btn-success btn-sm" 
-                     @click="saveAndNext"
+                    @click="saveAndNext"
                     :disabled="!canSaveGrading"
                   >
                     保存本题评分
@@ -228,8 +260,8 @@
         </div>
       </div>
 
-      <!-- 右侧：参考答案和解析 -->
-      <div class="right-panel">
+      <!-- 最右侧：参考答案和解析 -->
+      <div class="far-right-panel">
         <div class="reference-panel">
           <!-- 参考答案 -->
           <div class="reference-answer">
@@ -331,8 +363,7 @@ const currentStudentData = computed(() => {
 
 // 当前学生名称
 const currentStudent = computed(() => {
-  const student = currentStudentData.value.answer_records?.[0]?.student
-  return student || '未知学生'
+  return getStudentName(currentStudentIndex.value)
 })
 
 // 当前题目列表
@@ -386,6 +417,99 @@ const canSaveGrading = computed(() => {
   const maxScore = getQuestionScore(currentQuestionIndex.value)
   return currentGrading.value.score >= 0 && currentGrading.value.score <= maxScore
 })
+
+// ==================== 学生相关函数 ====================
+// 获取学生姓名
+const getStudentName = (studentIndex) => {
+  const student = gradingData.value[studentIndex]?.answer_records?.[0]?.student
+  return student || `学生${studentIndex + 1}`
+}
+
+// 获取学生ID
+const getStudentId = (studentIndex) => {
+  const student = gradingData.value[studentIndex]?.answer_records?.[0]
+  return student?.student_id || `ID${studentIndex + 1}`
+}
+
+// 获取学生总分
+const getStudentTotalScore = (studentIndex) => {
+  const studentData = gradingData.value[studentIndex]
+  if (!studentData) return 0
+  
+  let total = 0
+  const questions = studentData.questions || []
+  const answerRecords = studentData.answer_records || []
+  const autoMarkings = studentData.auto_markings || []
+  
+  questions.forEach((_, index) => {
+    const answer = answerRecords[index]
+    let score = 0
+    
+    if (answer && answer.score !== null && answer.score !== undefined) {
+      score = answer.score
+    } else {
+      const autoScore = autoMarkings[index]
+      if (autoScore !== undefined && autoScore !== null && autoScore >= 0) {
+        score = autoScore
+      }
+    }
+    
+    total += parseFloat(score) || 0
+  })
+  
+  return total.toFixed(1)
+}
+
+// 获取学生已批改题目数
+const getStudentGradedCount = (studentIndex) => {
+  const studentData = gradingData.value[studentIndex]
+  if (!studentData) return 0
+  
+  const answerRecords = studentData.answer_records || []
+  const autoMarkings = studentData.auto_markings || []
+  
+  return answerRecords.filter((answer, index) => {
+    const autoScore = autoMarkings[index]
+    return answer?.manual_override === true || 
+           (autoScore !== undefined && autoScore !== null && autoScore >= 0)
+  }).length
+}
+
+// 获取学生批改进度百分比
+const getStudentProgressPercentage = (studentIndex) => {
+  if (totalQuestions.value === 0) return 0
+  const graded = getStudentGradedCount(studentIndex)
+  return Math.round((graded / totalQuestions.value) * 100)
+}
+
+// 学生是否全部批改完成
+const isStudentAllGraded = (studentIndex) => {
+  return getStudentGradedCount(studentIndex) === totalQuestions.value
+}
+
+// 获取学生状态类名
+const getStudentStatusClass = (studentIndex) => {
+  const gradedCount = getStudentGradedCount(studentIndex)
+  if (gradedCount === totalQuestions.value) {
+    return 'status-graded'
+  } else if (gradedCount > 0) {
+    return 'status-partial'
+  } else {
+    return 'status-ungraded'
+  }
+}
+
+// 获取学生状态文本
+const getStudentStatusText = (studentIndex) => {
+  const gradedCount = getStudentGradedCount(studentIndex)
+  if (gradedCount === totalQuestions.value) {
+    return '已完成'
+  } else if (gradedCount > 0) {
+    return '部分完成'
+  } else {
+    return '未开始'
+  }
+}
 
 // ==================== 数据加载 ====================
 // 加载考试名称
@@ -507,11 +631,13 @@ const getKnowledgePointName = (pointId) => {
   return knowledgePoints.value[pointId] || `知识点${pointId}`
 }
 
-// 获取题目分值
+// 获取题目分值 - 从学生数据的scores数组中获取
 const getQuestionScore = (questionIndex) => {
-  // 这里需要根据实际情况调整，可能需要从其他接口获取
-  // 暂时返回默认值
-  return 5
+  const studentData = currentStudentData.value
+  if (studentData.scores && studentData.scores[questionIndex] !== undefined) {
+    return studentData.scores[questionIndex]
+  }
+  return 5 // 默认值
 }
 
 // 获取自动评分
@@ -546,12 +672,36 @@ const getQuestionStatusClass = (questionIndex) => {
   return 'status-ungraded'
 }
 
+// 获取最终得分
+const getFinalScore = (questionIndex) => {
+  const answer = currentAnswerRecords.value[questionIndex]
+  
+  // 优先级：老师手动评分 > 自动评分 > 未评分
+  if (answer && answer.score !== null && answer.score !== undefined) {
+    return parseFloat(answer.score)
+  }
+  
+  const autoScore = getAutoScore(questionIndex)
+  if (autoScore >= 0) {
+    return autoScore
+  }
+  
+  return -1 // 表示未评分
+}
+
+// 是否是手动评分
+const isManuallyGraded = (questionIndex) => {
+  const answer = currentAnswerRecords.value[questionIndex]
+  return answer?.manual_override === true
+}
+
+// 获取题目状态文本（更新版）
 const getQuestionStatusText = (questionIndex) => {
   const answer = currentAnswerRecords.value[questionIndex]
   const autoScore = getAutoScore(questionIndex)
 
   if (answer?.manual_override) return '已批改'
-  if (autoScore >= 0) return '系统已评分'
+  if (autoScore >= 0) return '系统评分'
   return '待批改'
 }
 
@@ -667,9 +817,16 @@ const handleGlobalEnter = (e) => {
   const tagName = e.target.tagName.toLowerCase()
 
   // 输入框里不触发
-  if (tagName === 'input' || tagName === 'textarea') return
+  if (tagName === 'textarea') return
 
   e.preventDefault()
+
+   // 添加分值验证
+  if (!canSaveGrading.value) {
+    alert(`请输入有效的分数（0-${getQuestionScore(currentQuestionIndex.value)}分）`)
+    return
+  }
+  
   saveAndNext()
 }
 
@@ -718,7 +875,6 @@ const selectStudent = (index) => {
   initializeCurrentGrading()
 }
 
-
 // ==================== 页面导航 ====================
 const goBack = () => {
   router.back()
@@ -728,44 +884,44 @@ const goBack = () => {
 onMounted(() => {
   loadExamName()
   const loadGradingData = async () => {
-  if (!examId.value) return
+    if (!examId.value) return
 
-  loading.value = true
-  try {
-    const res = await axios.get(`${API_BASE}/exam/getAnswerRecord/${examId.value}`)
+    loading.value = true
+    try {
+      const res = await axios.get(`${API_BASE}/exam/getAnswerRecord/${examId.value}`)
 
-    if (res.data.code === 200 && res.data.data) {
-      gradingData.value = res.data.data
+      if (res.data.code === 200 && res.data.data) {
+        gradingData.value = res.data.data
         // 重新格式化选择题选项
-      gradingData.value.forEach(student => {
-        student.questions.forEach(question => {
-          if (
-            question.options &&
-            Object.keys(question.options).some(k => k.startsWith('option_'))
-          ) {
-            const formattedOptions = {}
-            Object.keys(question.options).forEach(key => {
-              const letter = key.replace(/^option_/, '')
-              formattedOptions[letter] = question.options[key]
-            })
-            question.options = formattedOptions
-          }
+        gradingData.value.forEach(student => {
+          student.questions.forEach(question => {
+            if (
+              question.options &&
+              Object.keys(question.options).some(k => k.startsWith('option_'))
+            ) {
+              const formattedOptions = {}
+              Object.keys(question.options).forEach(key => {
+                const letter = key.replace(/^option_/, '')
+                formattedOptions[letter] = question.options[key]
+              })
+              question.options = formattedOptions
+            }
+          })
         })
-      })
 
-      await loadKnowledgePoints()
+        await loadKnowledgePoints()
 
-      if (gradingData.value.length > 0) {
-        initializeCurrentGrading()
+        if (gradingData.value.length > 0) {
+          initializeCurrentGrading()
+        }
       }
+    } catch (error) {
+      console.error('加载批改数据失败:', error)
+    } finally {
+      loading.value = false
     }
-  } catch (error) {
-    console.error('加载批改数据失败:', error)
-  } finally {
-    loading.value = false
   }
-}
-    loadGradingData()
+  loadGradingData()
 })
 </script>
 
@@ -847,18 +1003,23 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.main-panel {
-  flex: 1;
-  min-width: 0;
-}
-
-.right-panel {
+.middle-panel {
   width: 320px;
   flex-shrink: 0;
 }
 
-/* ==================== 左侧题目列表 ==================== */
-.questions-sidebar {
+.right-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.far-right-panel {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+/* ==================== 左侧学生列表 ==================== */
+.students-sidebar {
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
@@ -880,25 +1041,140 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.student-info {
-  display: flex;
-  align-items: center;
+.exam-info {
   font-size: 14px;
 }
 
-.student-label {
-  color: #909399;
+.student-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.student-list::-webkit-scrollbar {
+  display: none;
+}
+
+.student-item {
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #e6e9f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.student-item:hover {
+  border-color: #409eff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.student-item.active {
+  border-color: #409eff;
+  background: #ecf5ff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+}
+
+.student-item.all-graded {
+  border-left: 3px solid #67c23a;
+}
+
+.student-item.partial-graded {
+  border-left: 3px solid #e6a23c;
+}
+
+.student-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .student-name {
+  font-weight: 600;
   color: #303133;
-  font-weight: 500;
+  font-size: 15px;
+}
+
+.student-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.total-score {
+  font-weight: 600;
+  color: #303133;
+}
+
+.progress-score {
+  color: #909399;
+  font-size: 12px;
+}
+
+.student-progress {
+  margin-top: 8px;
+}
+
+.progress-bar.small {
+  height: 4px;
+  margin-top: 4px;
+}
+
+/* ==================== 中间题目列表 ==================== */
+.questions-panel {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 20px;
+  border-bottom: 1px solid #e6e9f0;
+}
+
+.panel-header h3 {
+  margin: 0 0 12px 0;
+  color: #303133;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.summary-info {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.summary-item {
+  color: #606266;
+  background: #f5f7fa;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .question-list {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+.question-list::-webkit-scrollbar {
+  display: none;
 }
 
 .question-item {
@@ -956,45 +1232,57 @@ onMounted(() => {
   color: #909399;
 }
 
+/* ==================== 题目项样式更新 ==================== */
 .question-status {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
 }
 
-.auto-score {
-  font-size: 12px;
-  color: #67c23a;
-  font-weight: 500;
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.student-switcher {
-  padding: 12px;
-  border-bottom: 1px solid #e6e9f0;
-}
-
-.student-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 6px;
-  margin-bottom: 6px;
+.final-score {
   font-size: 14px;
-  background: #f5f7fa;
+  font-weight: 600;
+  color: #67c23a;
+  background: #f0f9eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e1f3d8;
 }
 
-.student-item.active {
-  background: #409eff;
-  color: #fff;
+.auto-score-tag {
+  font-size: 10px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
-/* ==================== 中间题目详情 ==================== */
-.question-detail {
+.no-score-display .no-score {
+  font-size: 12px;
+  color: #909399;
+  font-style: italic;
+}
+
+/* ==================== 右侧题目详情 ==================== */
+.grading-detail {
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
   height: 100%;
   overflow-y: auto;
   padding: 24px;
+}
+.grading-detail::-webkit-scrollbar {
+  display: none;
 }
 
 .section-header {
@@ -1251,8 +1539,7 @@ onMounted(() => {
   color: #f7ba2a; /* Element 风格金色 */
 }
 
-
-/* ==================== 右侧参考面板 ==================== */
+/* ==================== 最右侧参考面板 ==================== */
 .reference-panel {
   background: white;
   border-radius: 12px;
@@ -1303,6 +1590,26 @@ onMounted(() => {
   text-align: center;
 }
 
+/* 学生状态 */
+.status-graded {
+  background-color: #f0f9eb;
+  color: #67c23a;
+  border: 1px solid #e1f3d8;
+}
+
+.status-partial {
+  background-color: #fdf6ec;
+  color: #e6a23c;
+  border: 1px solid #faecd8;
+}
+
+.status-ungraded {
+  background-color: #f4f4f5;
+  color: #909399;
+  border: 1px solid #e4e7ed;
+}
+
+/* 题目状态 */
 .status-no-answer {
   background-color: #f4f4f5;
   color: #909399;
@@ -1322,18 +1629,6 @@ onMounted(() => {
 }
 
 .status-unknown {
-  background-color: #fdf6ec;
-  color: #e6a23c;
-  border: 1px solid #faecd8;
-}
-
-.status-graded {
-  background-color: #f0f9eb;
-  color: #67c23a;
-  border: 1px solid #e1f3d8;
-}
-
-.status-ungraded {
   background-color: #fdf6ec;
   color: #e6a23c;
   border: 1px solid #faecd8;
@@ -1470,26 +1765,26 @@ onMounted(() => {
 }
 
 /* ==================== 响应式设计 ==================== */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .grading-content {
-    flex-direction: column;
+    flex-wrap: wrap;
     height: auto;
   }
   
   .left-panel,
-  .right-panel {
+  .middle-panel,
+  .right-panel,
+  .far-right-panel {
     width: 100%;
+    height: 400px;
+    margin-bottom: 20px;
   }
   
-  .main-panel {
+  .right-panel {
     order: 2;
   }
   
-  .left-panel {
-    order: 1;
-  }
-  
-  .right-panel {
+  .far-right-panel {
     order: 3;
   }
 }
@@ -1514,7 +1809,7 @@ onMounted(() => {
     padding: 16px;
   }
   
-  .question-detail,
+  .grading-detail,
   .reference-panel {
     padding: 16px;
   }
@@ -1535,12 +1830,19 @@ onMounted(() => {
     font-size: 20px;
   }
   
+  .student-item,
   .question-item {
     padding: 12px;
   }
   
   .grading-form {
     padding: 16px;
+  }
+  
+  .student-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }
 </style>
