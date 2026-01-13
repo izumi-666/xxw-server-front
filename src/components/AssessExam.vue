@@ -28,45 +28,139 @@
     <!-- 主要内容区 -->
     <div class="grading-content" v-if="gradingData.length > 0">
       <!-- 左侧：学生列表 -->
-      <div class="left-panel">
-        <div class="students-sidebar">
-          <div class="sidebar-header">
-            <h3>学生列表</h3>
-            <div class="exam-info">
-            </div>
+<div class="left-panel">
+  <div class="students-sidebar">
+    <div class="sidebar-header">
+      <h3>学生列表</h3>
+      <div class="exam-info">
+        <!-- 显示总评语统计 -->
+        <div class="total-comment-stats" v-if="hasTotalComments">
+          已添加总评语：{{ totalCommentCount }} / {{ gradingData.length }} 人
+        </div>
+      </div>
+    </div>
+    
+    <div class="student-list">
+      <div class="student-item" 
+           v-for="(studentData, sIndex) in gradingData" 
+           :key="sIndex"
+           :class="{ 
+             'active': currentStudentIndex === sIndex,
+             'all-graded': isStudentAllGraded(sIndex),
+             'partial-graded': !isStudentAllGraded(sIndex),
+             'has-comment': totalComments[sIndex]
+           }"
+           @click="selectStudent(sIndex)">
+        <div class="student-header">
+          <span class="student-name">{{ getStudentName(sIndex) }}</span>
+          <button 
+            class="btn-comment"
+            @click.stop="openTotalCommentModal(sIndex)"
+            :title="totalComments[sIndex] ? '编辑总评语' : '添加总评语'"
+          >
+            <svg v-if="totalComments[sIndex]" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 21L3.52439 17.9024C3.81989 16.0764 5.35368 14.7143 7.19935 14.7143H16.8007C18.6463 14.7143 20.1801 16.0764 20.4756 17.9024L21 21" stroke="#409eff" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="#409eff" stroke-width="2"/>
+            </svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 21L3.52439 17.9024C3.81989 16.0764 5.35368 14.7143 7.19935 14.7143H16.8007C18.6463 14.7143 20.1801 16.0764 20.4756 17.9024L21 21" stroke="#909399" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="#909399" stroke-width="2"/>
+            </svg>
+          </button>
+        </div>
+        <div class="student-status">
+          <span class="status-badge" :class="getStudentStatusClass(sIndex)">
+            {{ getStudentStatusText(sIndex) }}
+          </span>
+          <div class="score-display">
+            <span class="total-score">总分：{{ getStudentTotalScore(sIndex) }}</span>
+            <span class="progress-score">({{ getStudentGradedCount(sIndex) }}/{{ totalQuestions }})</span>
           </div>
-          
-          <div class="student-list">
-            <div class="student-item" 
-                 v-for="(studentData, sIndex) in gradingData" 
-                 :key="sIndex"
-                 :class="{ 
-                   'active': currentStudentIndex === sIndex,
-                   'all-graded': isStudentAllGraded(sIndex),
-                   'partial-graded': !isStudentAllGraded(sIndex)
-                 }"
-                 @click="selectStudent(sIndex)">
-              <div class="student-header">
-                <span class="student-name">{{ getStudentName(sIndex) }}</span>
-              </div>
-              <div class="student-status">
-                <span class="status-badge" :class="getStudentStatusClass(sIndex)">
-                  {{ getStudentStatusText(sIndex) }}
-                </span>
-                <div class="score-display">
-                  <span class="total-score">总分：{{ getStudentTotalScore(sIndex) }}</span>
-                  <span class="progress-score">({{ getStudentGradedCount(sIndex) }}/{{ totalQuestions }})</span>
-                </div>
-              </div>
-              <div class="student-progress">
-                <div class="progress-bar small">
-                  <div class="progress-fill" :style="{ width: getStudentProgressPercentage(sIndex) + '%' }"></div>
-                </div>
-              </div>
-            </div>
+        </div>
+        
+        <!-- 显示总评语预览（如果有） -->
+        <div v-if="totalComments[sIndex]" class="comment-preview">
+          <div class="comment-preview-text">
+            {{ previewTotalComment(sIndex) }}
+          </div>
+          <span class="comment-indicator">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#409eff" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/>
+            </svg>
+            已添加评语
+          </span>
+        </div>
+        
+        <div class="student-progress">
+          <div class="progress-bar small">
+            <div class="progress-fill" :style="{ width: getStudentProgressPercentage(sIndex) + '%' }"></div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 总评语模态框 -->
+<div v-if="showCommentModal" class="modal-overlay" @click.self="closeTotalCommentModal">
+  <div class="comment-modal">
+    <div class="modal-header">
+      <h3>为 {{ getStudentName(selectedStudentForComment) }} 添加总评语</h3>
+      <button class="btn-close" @click="closeTotalCommentModal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 6L6 18" stroke="#606266" stroke-width="2" stroke-linecap="round"/>
+          <path d="M6 6L18 18" stroke="#606266" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="modal-content">
+      <div class="student-info">
+        <div class="info-item">
+          <span class="info-label">学生姓名：</span>
+          <span class="info-value">{{ getStudentName(selectedStudentForComment) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前总分：</span>
+          <span class="info-value">{{ getStudentTotalScore(selectedStudentForComment) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">批改进度：</span>
+          <span class="info-value">{{ getStudentGradedCount(selectedStudentForComment) }}/{{ totalQuestions }}</span>
+        </div>
+      </div>
+      
+      <div class="comment-input-area">
+        <label class="comment-label">总评语：</label>
+        <textarea 
+          v-model="tempTotalComment"
+          class="comment-textarea"
+          placeholder="请输入对该学生的总评语，可以从学习态度、知识掌握、答题情况等方面综合评价..."
+          rows="8"
+          maxlength="500"
+          ref="commentTextarea"
+        ></textarea>
+        <div class="comment-footer">
+          <div class="word-count">
+            已输入 {{ tempTotalComment?.length || 0 }}/500 字
+          </div>
+          <div class="comment-tips">
+            提示：总评语将随批改结果一起保存
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-actions">
+      <button class="btn-secondary" @click="closeTotalCommentModal">
+        取消
+      </button>
+      <button class="btn-primary" @click="saveTotalComment" :disabled="!tempTotalComment?.trim()">
+        保存总评语
+      </button>
+    </div>
+  </div>
+</div>
 
       <!-- 中间：题目列表 -->
       <div class="middle-panel">
@@ -230,7 +324,7 @@
                 </div>
                 
                 <div class="feedback-input">
-                  <label class="feedback-label">评语：</label>
+                  <label class="feedback-label">本题评语：</label>
                   <textarea 
                     v-model="currentGrading.feedback"
                     class="feedback-textarea"
@@ -326,12 +420,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue' // 添加 nextTick
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { marked } from "marked";
 import katex from "katex";
 import "katex/dist/katex.min.css";
+import { ElMessage } from 'element-plus';
 
 const route = useRoute()
 const router = useRouter()
@@ -344,6 +439,11 @@ const loading = ref(false)
 const saving = ref(false)
 const gradingData = ref([]) // 批改数据
 const knowledgePoints = ref({}) // 知识点映射
+const totalComments = ref({}) // 总评语
+const showCommentModal = ref(false)
+const selectedStudentForComment = ref(-1)
+const tempTotalComment = ref('')
+const commentTextarea = ref(null)
 
 // 当前显示的学生和题目索引
 const currentStudentIndex = ref(0)
@@ -417,6 +517,61 @@ const canSaveGrading = computed(() => {
   const maxScore = getQuestionScore(currentQuestionIndex.value)
   return currentGrading.value.score >= 0 && currentGrading.value.score <= maxScore
 })
+
+// 是否有总评语
+const hasTotalComments = computed(() => {
+  return Object.keys(totalComments.value).some(key => totalComments.value[key] && totalComments.value[key].trim())
+})
+
+// 总评语数量统计
+const totalCommentCount = computed(() => {
+  return Object.values(totalComments.value).filter(comment => comment && comment.trim()).length
+})
+
+// 打开总评语模态框
+const openTotalCommentModal = (studentIndex) => {
+  selectedStudentForComment.value = studentIndex
+  tempTotalComment.value = totalComments.value[studentIndex] || ''
+  showCommentModal.value = true
+  
+  // 模态框打开后聚焦到文本框
+  nextTick(() => {
+    if (commentTextarea.value) {
+      commentTextarea.value.focus()
+    }
+  })
+}
+
+// 关闭总评语模态框
+const closeTotalCommentModal = () => {
+  showCommentModal.value = false
+  selectedStudentForComment.value = -1
+  tempTotalComment.value = ''
+}
+
+// 保存总评语
+const saveTotalComment = () => {
+  if (selectedStudentForComment.value >= 0 && tempTotalComment.value?.trim()) {
+    // 更新总评语
+    totalComments.value = {
+      ...totalComments.value,
+      [selectedStudentForComment.value]: tempTotalComment.value.trim()
+    }
+    ElMessage.success(`学生  ${getStudentName(selectedStudentForComment.value)}  的总评语书写完成`)
+    closeTotalCommentModal()
+  }
+}
+
+// 预览总评语（截断显示）
+const previewTotalComment = (studentIndex) => {
+  const comment = totalComments.value[studentIndex]
+  if (!comment) return ''
+  
+  if (comment.length > 60) {
+    return comment.substring(0, 60) + '...'
+  }
+  return comment
+}
 
 // ==================== 学生相关函数 ====================
 // 获取学生姓名
@@ -516,14 +671,17 @@ const getStudentStatusText = (studentIndex) => {
 const loadExamName = async () => {
   try {
     const userInfo = getUserInfo()
-    if (!userInfo) return
+    if (!userInfo || !examId.value) return
 
-    const res = await axios.get(`${API_BASE}/exam/getExamList/staff/${userInfo.account}`)
-    const exams = res.data.data || []
-    const exam = exams.find(e => e.id == examId.value)
-    if (exam) {
-      examName.value = exam.name
-    }
+    const res = await axios.get(
+      `${API_BASE}/exam/getExamList/staff/${userInfo.account}`
+    )
+
+    const exam = res.data.data.find(
+      e => String(e.id) === String(examId.value)
+    )
+
+    examName.value = exam ? exam.name : ''
   } catch (error) {
     console.error('加载考试名称失败:', error)
   }
@@ -543,8 +701,32 @@ const loadGradingData = async () => {
     if (res.data.code === 200 && res.data.data) {
       gradingData.value = res.data.data
       
+      // 重新格式化选择题选项
+      gradingData.value.forEach(student => {
+        student.questions?.forEach(question => {
+          if (
+            question.options &&
+            Object.keys(question.options).some(k => k.startsWith('option_'))
+          ) {
+            const formattedOptions = {}
+            Object.keys(question.options).forEach(key => {
+              const letter = key.replace(/^option_/, '')
+              formattedOptions[letter] = question.options[key]
+            })
+            question.options = formattedOptions
+          }
+        })
+      })
+      
       // 加载知识点
       await loadKnowledgePoints()
+      
+      // 初始化总评语对象
+      const initialComments = {}
+      gradingData.value.forEach((_, index) => {
+        initialComments[index] = '' // 初始化为空
+      })
+      totalComments.value = initialComments
       
       // 初始化当前批改数据
       if (gradingData.value.length > 0) {
@@ -600,8 +782,8 @@ const initializeCurrentGrading = () => {
 // 获取用户信息
 const getUserInfo = () => {
   try {
-    const userInfoStr = localStorage.getItem('userInfo')
-    return userInfoStr ? JSON.parse(userInfoStr) : null
+    const userName = localStorage.getItem('userName')
+    return userName ? { account: userName } : null
   } catch (error) {
     console.error('获取用户信息失败:', error)
     return null
@@ -708,7 +890,7 @@ const getQuestionStatusText = (questionIndex) => {
 // 获取答案状态
 const getAnswerStatusClass = (answer) => {
   if (!answer.student_answer || answer.student_answer === '未作答') {
-    return 'status-no-answer'
+    return 'status-incorrect'
   } else if (answer.is_correct === 1) {
     return 'status-correct'
   } else if (answer.is_correct === 0) {
@@ -720,7 +902,7 @@ const getAnswerStatusClass = (answer) => {
 
 const getAnswerStatusText = (answer) => {
   if (!answer.student_answer || answer.student_answer === '未作答') {
-    return '未作答'
+    return '错误(未作答)'
   } else if (answer.is_correct === 1) {
     return '正确'
   } else if (answer.is_correct === 0) {
@@ -830,39 +1012,119 @@ const handleGlobalEnter = (e) => {
   saveAndNext()
 }
 
-// 保存所有批改
+// 保存所有批改（一次性提交）
 const saveAllGrading = async () => {
   saving.value = true
   try {
-    // 收集所有批改数据
-    const gradingResults = []
+    // 构建所有学生的批改数据
+    const allStudentGradingData = []
     
-    gradingData.value.forEach((studentData, studentIndex) => {
-      studentData.answer_records.forEach((record, questionIndex) => {
+    for (let studentIndex = 0; studentIndex < gradingData.value.length; studentIndex++) {
+      const studentData = gradingData.value[studentIndex]
+      
+      if (!studentData || !studentData.answer_records || studentData.answer_records.length === 0) {
+        console.warn(`学生${studentIndex + 1}没有有效的答案记录，跳过`)
+        continue
+      }
+
+      // 获取考试历史ID（从第一个答案记录中获取）
+      const firstRecord = studentData.answer_records[0]
+      if (!firstRecord || !firstRecord.exam_history_id) {
+        console.warn(`学生${studentIndex + 1}没有有效的考试历史ID，跳过`)
+        continue
+      }
+
+      // 计算该学生的总分
+      let totalScore = 0
+      const answerRecords = []
+      
+      studentData.answer_records.forEach((record, recordIndex) => {
+        // 确定最终得分
+        let finalScore = 0
+        
+        // 优先级：手动评分 > 自动评分
         if (record.score !== null && record.score !== undefined) {
-          gradingResults.push({
-            answer_record_id: record.id,
-            score: record.score,
-            feedback: record.feedback || ''
-          })
+          finalScore = parseFloat(record.score)
+        } else {
+          // 如果没有手动评分，尝试从auto_markings中获取
+          if (studentData.auto_markings && studentData.auto_markings[recordIndex] !== undefined) {
+            const autoScore = studentData.auto_markings[recordIndex]
+            if (autoScore !== null && autoScore !== undefined && autoScore >= 0) {
+              finalScore = parseFloat(autoScore)
+            }
+          }
         }
+        
+        totalScore += finalScore
+        
+        // 构建答案记录 - 确保score是数值类型
+        answerRecords.push({
+          id: record.question_id,
+          exam_history_id: record.exam_history_id,
+          question_id: record.question_id,
+          student: record.student,
+          student_answer: record.student_answer || '未作答',
+          is_correct: record.is_correct || 0,
+          score: finalScore,
+          feedback: record.feedback || null,
+          image_url: record.image_url || null
+        })
       })
-    })
+
+      // 获取该学生的总评语 - 直接作为report_json字段
+      const report_json = totalComments.value[studentIndex] || ''
+
+      // 获取批改人信息
+      const examiner = getUserInfo()?.account || 'unknown'
+
+      // 构建该学生的请求数据
+      const studentGradingData = {
+        exam_history_id: firstRecord.exam_history_id,
+        total_score: totalScore, // 可以保持为整数或小数
+        examiner: examiner,
+        report_json: report_json.trim(), // 直接使用总评语字符串
+        answer_record: answerRecords
+      }
+
+      allStudentGradingData.push(studentGradingData)
+    }
     
-    // 发送到后端
-    const res = await axios.post(`${API_BASE}/exam/saveGradingResults`, {
-      exam_id: examId.value,
-      grading_results: gradingResults
-    })
+    // 检查是否有有效数据
+    if (allStudentGradingData.length === 0) {
+      alert('没有有效的批改数据需要保存')
+      saving.value = false
+      return
+    }
+    
+    // 一次性提交所有学生的批改数据
+    console.log('提交的批改数据:', JSON.stringify(allStudentGradingData, null, 2))
+    
+    const res = await axios.post(
+      `${API_BASE}/exam/submitAssessmentResult`,
+      allStudentGradingData // 直接传递数组
+    )
     
     if (res.data.code === 200) {
-      alert('批改结果保存成功！')
+      // 保存成功后显示统计信息
+      const fullyGradedCount = gradingData.value.reduce((total, student, index) => {
+        return total + (getStudentGradedCount(index) === totalQuestions.value ? 1 : 0)
+      }, 0)
+      
+      const commentCount = Object.values(totalComments.value).filter(
+        comment => comment && comment.trim()
+      ).length
+      
+      ElMessage.success(`批改结果保存成功！\n已批改学生：${fullyGradedCount}/${gradingData.value.length}\n已添加总评语：${commentCount}/${gradingData.value.length}`)
+      
+      // 保存成功后返回上一页
+      router.push('/teacher/exammanagement/')
     } else {
-      alert('保存失败：' + res.data.message)
+      console.error('批量保存失败:', res.data.message)
+      alert(`批量保存失败: ${res.data.message}`)
     }
   } catch (error) {
     console.error('保存批改结果失败:', error)
-    alert('保存批改结果失败，请重试')
+    alert(`保存批改结果失败: ${error.message}`)
   } finally {
     saving.value = false
   }
@@ -883,44 +1145,6 @@ const goBack = () => {
 // ==================== 生命周期 ====================
 onMounted(() => {
   loadExamName()
-  const loadGradingData = async () => {
-    if (!examId.value) return
-
-    loading.value = true
-    try {
-      const res = await axios.get(`${API_BASE}/exam/getAnswerRecord/${examId.value}`)
-
-      if (res.data.code === 200 && res.data.data) {
-        gradingData.value = res.data.data
-        // 重新格式化选择题选项
-        gradingData.value.forEach(student => {
-          student.questions.forEach(question => {
-            if (
-              question.options &&
-              Object.keys(question.options).some(k => k.startsWith('option_'))
-            ) {
-              const formattedOptions = {}
-              Object.keys(question.options).forEach(key => {
-                const letter = key.replace(/^option_/, '')
-                formattedOptions[letter] = question.options[key]
-              })
-              question.options = formattedOptions
-            }
-          })
-        })
-
-        await loadKnowledgePoints()
-
-        if (gradingData.value.length > 0) {
-          initializeCurrentGrading()
-        }
-      }
-    } catch (error) {
-      console.error('加载批改数据失败:', error)
-    } finally {
-      loading.value = false
-    }
-  }
   loadGradingData()
 })
 </script>
@@ -1084,11 +1308,274 @@ onMounted(() => {
   border-left: 3px solid #e6a23c;
 }
 
+/* ==================== 总评语相关样式 ==================== */
+/* 学生头部按钮 */
 .student-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+}
+
+.btn-comment {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-comment:hover {
+  background-color: #f5f7fa;
+  transform: scale(1.1);
+}
+
+.btn-comment:active {
+  transform: scale(0.95);
+}
+
+/* 总评语预览 */
+.comment-preview {
+  margin: 8px 0;
+  padding: 8px;
+  background: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #d9ecff;
+}
+
+.comment-preview-text {
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.comment-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #d9ecff;
+}
+
+/* 有评语的学生项样式 */
+.student-item.has-comment {
+  border-right: 3px solid #409eff;
+}
+
+/* 总评语统计 */
+.total-comment-stats {
+  font-size: 12px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #d9ecff;
+  margin-top: 4px;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.comment-modal {
+  background: white;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e6e9f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #303133;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-close:hover {
+  background-color: #f5f7fa;
+}
+
+.modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.student-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e6e9f0;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.comment-input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comment-label {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+}
+
+.comment-textarea {
+  width: 95%;
+  padding: 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 150px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.comment-textarea:focus {
+  outline: none;
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+}
+
+.comment-textarea::placeholder {
+  color: #c0c4cc;
+}
+
+.comment-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.word-count {
+  font-size: 12px;
+  color: #909399;
+}
+
+.comment-tips {
+  font-size: 12px;
+  color: #e6a23c;
+  font-style: italic;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e6e9f0;
+  background: #fafafa;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .comment-modal {
+    width: 90vw;
+    max-height: 90vh;
+  }
+  
+  .student-info {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-header {
+    padding: 16px;
+  }
+  
+  .modal-content {
+    padding: 16px;
+  }
+  
+  .modal-actions {
+    padding: 16px;
+    flex-direction: column-reverse;
+  }
+  
+  .modal-actions button {
+    width: 100%;
+  }
 }
 
 .student-name {
