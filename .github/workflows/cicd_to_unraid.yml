@@ -39,6 +39,17 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -p "${{ secrets.UNRAID_PORT || '22' }}" "${{ secrets.UNRAID_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Clean dist on Unraid before upload
+        env:
+          HOST: ${{ secrets.UNRAID_HOST }}
+          USER: ${{ secrets.UNRAID_USER }}
+          PORT: ${{ secrets.UNRAID_PORT }}
+          DEST: ${{ secrets.UNRAID_PATH }}
+        run: |
+          DEST_PATH="${DEST:-/mnt/user/appdata/xxw-frontend}"
+          SSH_PORT="${PORT:-22}"
+          ssh -p "$SSH_PORT" "$USER@$HOST" "mkdir -p '$DEST_PATH/dist' && rm -rf '$DEST_PATH/dist'/*"
+
       - name: Rsync dist to Unraid
         env:
           HOST: ${{ secrets.UNRAID_HOST }}
