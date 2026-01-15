@@ -1,6 +1,6 @@
 <template>
   <div class="exam-container">
-    <!-- 考试头部信息（非查看答案模式时显示） -->
+    <!-- 考试头部信息-->
     <div class="exam-header card">
       <div class="exam-header-content">
         <h1 class="exam-title">{{ examInfo.examName || "在线考试" }}</h1>
@@ -623,7 +623,7 @@ const autoSaveAnswers = async () => {
   try {
     // 获取学生信息
     const student = getCurrentStudent();
-    
+
     // 构建保存数据 - 包含所有题目
     const saveData = [];
 
@@ -635,7 +635,7 @@ const autoSaveAnswers = async () => {
 
       // 如果学生有回答（有文字答案或图片），则使用学生的答案
       // 如果学生没有回答，则标记为"未作答"
-      const studentAnswer = (answer.trim() !== "" || imageUrl) ? answer : "未作答";
+      const studentAnswer = answer.trim() !== "" || imageUrl ? answer : "未作答";
 
       saveData.push({
         exam_history_id: examHistoryId.value,
@@ -654,7 +654,7 @@ const autoSaveAnswers = async () => {
       });
     } catch (error) {
       console.error("自动保存请求失败:", error);
-      
+
       // 将数据保存到本地作为备份
       saveAnswersToLocalStorage(saveData);
     }
@@ -1268,7 +1268,7 @@ const getQuestionTypeText = (markingType) => {
     5: "填空题",
     6: "计算题",
     7: "判断题",
-    8: "作图题"
+    8: "作图题",
   };
   return typeMap[markingType] || "未知题型";
 };

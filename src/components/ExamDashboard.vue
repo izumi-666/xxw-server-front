@@ -292,6 +292,24 @@ const updatePagedExams = () => {
 const detailVisible = ref(false);
 const detailExamData = ref(null);
 
+/* ==================== 排序函数 ==================== */
+// 按开始时间排序（最新的在前面）
+const sortExamsByStartTime = (exams) => {
+  return [...exams].sort((a, b) => {
+    // 如果开始时间不存在，放到最后
+    if (!a.start_time && !b.start_time) return 0;
+    if (!a.start_time) return 1;
+    if (!b.start_time) return -1;
+    
+    // 将时间字符串转换为Date对象进行比较
+    const timeA = new Date(a.start_time).getTime();
+    const timeB = new Date(b.start_time).getTime();
+    
+    // 降序排列：最新的在前面
+    return timeB - timeA;
+  });
+};
+
 /* ==================== 状态相关函数 ==================== */
 // 获取状态文本
 const getStatusText = (status) => {
@@ -413,7 +431,7 @@ const loadExams = async () => {
       : [];
     
     // 3. 为每个考试标记是否已参加
-    const examsWithParticipation = exams.map(exam => {
+    let examsWithParticipation = exams.map(exam => {
       // 检查当前考试ID是否在已参加数组中
       const hasParticipated = participatedExamIds.includes(exam.id);
       
@@ -422,6 +440,9 @@ const loadExams = async () => {
         hasParticipated  // 添加是否已参加的标记
       };
     });
+
+    // 4. 按开始时间排序（最新的在前面）
+    examsWithParticipation = sortExamsByStartTime(examsWithParticipation);
 
     fullExamList.value = examsWithParticipation;
     currentPage.value = 1;
@@ -584,9 +605,15 @@ const validateAndProceed = async (exam) => {
 
 // 查看成绩
 const viewScore = (exam) => {
-  ElMessage.info(`查看考试《${exam.name}》的成绩`);
-  // 这里可以跳转到成绩查看页面
-  // router.push(`/exam/score/${exam.id}`);
+  const userInfo = getUserInfo();
+  router.push({
+  path: "/student/exam/studentviewresults",
+  query: {
+    examId: exam.id,
+    exam_name: exam.name,
+    student: userInfo.account,
+  },
+});
 };
 
 /* ==================== 工具函数 ==================== */

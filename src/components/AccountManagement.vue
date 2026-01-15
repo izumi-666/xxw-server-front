@@ -151,6 +151,20 @@
           </div>
         </div>
 
+        <!-- 权限选择下拉框 -->
+        <div class="criteria-item">
+          <label class="criteria-label">权限</label>
+          <div class="select-wrapper">
+            <select v-model="form.role" class="form-select" required>
+              <option value="">请选择权限</option>
+              <option v-for="role in filteredRoles" :key="role.id" :value="role.id">
+                {{ getRoleDisplayName(role.role_name) }}
+              </option>
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+
         <div class="criteria-item">
           <label class="criteria-label">账号</label>
           <input
@@ -212,7 +226,7 @@
 
         <div class="criteria-item full-width form-actions">
           <button type="button" class="btn-cancel" @click="closeForm">取消</button>
-          <button class="btn-primary" :disabled="loading || loadingSchoolList">
+          <button class="btn-primary" :disabled="loading || loadingSchoolList || loadingRoles">
             {{ loading ? "提交中..." : submitButtonText }}
           </button>
         </div>
@@ -222,9 +236,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 
 const router = useRouter();
 
@@ -256,16 +271,6 @@ const hasCreatePermission = computed(() => {
   return hasPermission("user:create");
 });
 
-// 计算属性：是否有更新权限
-const hasUpdatePermission = computed(() => {
-  return hasPermission("user:update");
-});
-
-// 计算属性：是否有删除权限
-const hasDeletePermission = computed(() => {
-  return hasPermission("user:delete");
-});
-
 // 计算属性：是否有任何用户管理权限
 const hasAnyPermission = computed(() => {
   return hasPermission("user:*");
@@ -275,9 +280,11 @@ const hasAnyPermission = computed(() => {
 const loading = ref(false);
 const showPassword = ref(false);
 const showForm = ref(false);
-const accountType = ref(""); // 'student' 或 'teacher'
+const accountType = ref(""); // 'student' 或 'staff'
 const schoolList = ref([]); // 学校列表
 const loadingSchoolList = ref(false); // 加载学校列表状态
+const roleList = ref([]); // 权限列表
+const loadingRoles = ref(false); // 加载权限列表状态
 
 /* ==================== 学生列表 ==================== */
 const studentList = ref([]);
@@ -307,6 +314,7 @@ const form = reactive({
   phone: "",
   email: "",
   emergency_call: "", // 仅学生用
+  role: "", // 权限ID
 });
 
 /* ==================== 计算属性 ==================== */
@@ -325,6 +333,20 @@ const teacherTotalPages = computed(() =>
   Math.ceil(teacherTotal.value / teacherPageSize.value)
 );
 
+// 根据账户类型过滤可选的权限
+const filteredRoles = computed(() => {
+  if (!roleList.value.length) return [];
+  
+  // 定义可选的权限名称映射
+  const allowedRoles = {
+    student: ["ROLE_STUDENT"],
+    staff: ["ROLE_TEACHER", "ROLE_ADMINISTRATOR", "ROLE_ROOT"]
+  };
+  
+  const rolesForType = allowedRoles[accountType.value] || [];
+  return roleList.value.filter(role => rolesForType.includes(role.role_name));
+});
+
 //时间格式化
 const formatDateToDateTime = (dateStr) => {
   if (!dateStr) return null;
@@ -334,6 +356,21 @@ const formatDateToDateTime = (dateStr) => {
 /* ==================== API ==================== */
 // 从环境变量获取API基础URL
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+// 获取权限列表
+const fetchRoleList = async () => {
+  loadingRoles.value = true;
+  try {
+    const res = await axios.get(`${API_BASE}/user/getRoleList`);
+    roleList.value = res.data.data || [];
+  } catch (error) {
+    console.error("获取权限列表失败:", error);
+    roleList.value = [];
+    ElMessage.error("获取权限列表失败，请稍后重试");
+  } finally {
+    loadingRoles.value = false;
+  }
+};
 
 // 获取学校列表
 const fetchSchoolList = async () => {
@@ -348,7 +385,7 @@ const fetchSchoolList = async () => {
   } catch (error) {
     console.error("获取学校列表失败:", error);
     schoolList.value = [];
-    alert("获取学校列表失败，请稍后重试");
+    ElMessage.error("获取学校列表失败，请稍后重试");
   } finally {
     loadingSchoolList.value = false;
   }
@@ -413,15 +450,15 @@ const fetchTeacherList = async () => {
 };
 
 const submitForm = async () => {
-  // 再次检查创建权限（安全起见）
-  if (!hasCreatePermission.value) {
-    alert("您没有创建账户的权限");
+  // 验证学校是否已选择
+  if (!form.school_id) {
+    ElMessage.warning("请选择学校");
     return;
   }
 
-  // 验证学校是否已选择
-  if (!form.school_id) {
-    alert("请选择学校");
+  // 验证权限是否已选择
+  if (!form.role) {
+    ElMessage.warning("请选择权限");
     return;
   }
 
@@ -429,7 +466,8 @@ const submitForm = async () => {
   try {
     let url = "";
     let requestData = { ...form };
-    //时间格式化处理
+    
+    // 时间格式化处理
     if (requestData.date_of_birth) {
       requestData.date_of_birth = formatDateToDateTime(requestData.date_of_birth);
     } else {
@@ -437,14 +475,14 @@ const submitForm = async () => {
     }
 
     if (accountType.value === "student") {
-      url = `${API_BASE}/user/SignupForStudent`;
+      url = `${API_BASE}/user/signUpForStudent`;
     } else {
-      url = `${API_BASE}/user/SignupForStaff`;
+      url = `${API_BASE}/user/signUpForStaff`;
       delete requestData.emergency_call;
     }
 
     await axios.post(url, requestData);
-    alert(`${accountType.value === "student" ? "学生" : "教师"}账户创建成功`);
+    ElMessage.success(`${accountType.value === "student" ? "学生" : "教师"}账户创建成功`);
 
     // 重置表单
     resetForm();
@@ -459,7 +497,7 @@ const submitForm = async () => {
       fetchTeacherList();
     }
   } catch (e) {
-    alert("创建失败");
+    ElMessage.error("创建失败");
     console.error("创建失败:", e);
   } finally {
     loading.value = false;
@@ -469,15 +507,21 @@ const submitForm = async () => {
 const showCreateForm = (type) => {
   // 检查是否有创建权限
   if (!hasCreatePermission.value) {
-    alert("您没有创建账户的权限");
+    ElMessage.warning("您没有创建账户的权限");
     return;
   }
 
   accountType.value = type;
   showForm.value = true;
   resetForm();
+  
   // 每次显示表单时获取学校列表（确保数据最新）
   fetchSchoolList();
+  
+  // 如果权限列表为空，则获取权限列表
+  if (!roleList.value.length) {
+    fetchRoleList();
+  }
 };
 
 const closeForm = () => {
@@ -493,6 +537,7 @@ const resetForm = () => {
     }
   });
   form.school_id = "";
+  form.gender = 0;
 };
 
 const changeStudentPage = (p) => {
@@ -521,13 +566,28 @@ const formatDate = (dateString) => {
   }
 };
 
+// 获取权限显示名称
+const getRoleDisplayName = (roleName) => {
+  const roleMap = {
+    "ROLE_ROOT": "根用户",
+    "ROLE_ADMINISTRATOR": "管理员",
+    "ROLE_TEACHER": "教师",
+    "ROLE_STUDENT": "学生",
+    "ROLE_VISITOR": "访客"
+  };
+  return roleMap[roleName] || roleName;
+};
+
 onMounted(() => {
   // 直接根据权限获取数据
   if (hasReadPermission.value) {
     fetchStudentList();
     fetchTeacherList();
   }
+  
+  // 预加载权限列表（如果有创建权限）
   if (hasCreatePermission.value) {
+    fetchRoleList();
     fetchSchoolList();
   }
 });

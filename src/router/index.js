@@ -6,6 +6,7 @@ import ExamManagement from "../components/ExamManagement.vue"; //教师用
 import AssessExam from "../components/AssessExam.vue"; //批改考试
 import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
 import TakeExam from "../components/TakeExam.vue"; //学生参加考试
+import StudentViewResults from "../components/StudentViewResults.vue"; //学生查看考试结果
 import TeacherHome from "../components/TeacherHome.vue";
 import StudentHome from "../components/StudentHome.vue";
 import VisitorHome from "../components/VisitorHome.vue";
@@ -37,6 +38,14 @@ const routes = [
           breadcrumb: ["考试中心"]
          }
       },
+        {
+      path: "exam/studentviewresults",
+      name: "student-view-results",
+      component: StudentViewResults,
+      meta: { requiresAuth: true,
+           breadcrumb: ["考试中心", "成绩预览"]
+        }
+    },
       {
   path: "exam/take",
   name: "take-exam",

@@ -623,27 +623,8 @@ const getStatusClass = (status) => {
 };
 
 const getExamDisplayStatus = (exam) => {
-  // 1. 未发布，直接返回
-  if (exam.status === "DRAFT") {
-    return "DRAFT";
-  }
-
-  // 2. 已发布，按时间判断
-  const now = new Date();
-  const start = new Date(exam.start_time);
-  const end = exam.end_time
-    ? new Date(exam.end_time)
-    : new Date(start.getTime() + exam.duration * 60000);
-
-  if (now < start) {
-    return "PUBLISHED";
-  }
-
-  if (now >= start && now <= end) {
-    return "ONGOING";
-  }
-
-  return "FINISHED";
+  // 直接使用后端返回的状态
+  return exam.status;
 };
 
 /* ==================== 考试发起人多选下拉框相关 ==================== */
@@ -897,13 +878,11 @@ const goToPage = (page) => {
 };
 
 /* ==================== 考试操作 ==================== */
-// 判断是否显示批改按钮
+// 判断是否显示批改按钮 - 直接根据后端状态
 const shouldShowGradeButton = (exam) => {
-  // 获取考试显示状态
-  const status = getExamDisplayStatus(exam);
-  
-  // 只有考试开始或考试已结束的状态才显示批改按钮
-  return status === 'ONGOING' || status === 'FINISHED';
+  // 直接使用后端状态判断
+  // ONGOING 或 FINISHED 状态的考试都可以批改
+  return exam.status === 'ONGOING' || exam.status === 'FINISHED';
 };
 
 // 批改考试
