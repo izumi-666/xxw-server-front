@@ -1,0 +1,89 @@
+name: Frontend CI/CD to Unraid
+
+on:
+  push:
+    branches: [ "main" ]   # 你要部署的分支，改成 develop 也行
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-xxw-frontend
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Build (Vue3)
+        run: npm run build
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.UNRAID_SSH_KEY }}
+
+      - name: Add Unraid host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.UNRAID_PORT || '22' }}" "${{ secrets.UNRAID_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Clean dist on Unraid before upload
+        env:
+          HOST: ${{ secrets.UNRAID_HOST }}
+          USER: ${{ secrets.UNRAID_USER }}
+          PORT: ${{ secrets.UNRAID_PORT }}
+          DEST: ${{ secrets.UNRAID_PATH }}
+        run: |
+          DEST_PATH="${DEST:-/mnt/user/appdata/xxw-frontend}"
+          SSH_PORT="${PORT:-22}"
+          ssh -p "$SSH_PORT" "$USER@$HOST" "mkdir -p '$DEST_PATH/dist' && rm -rf '$DEST_PATH/dist'/*"
+
+      - name: Rsync dist to Unraid
+        env:
+          HOST: ${{ secrets.UNRAID_HOST }}
+          USER: ${{ secrets.UNRAID_USER }}
+          PORT: ${{ secrets.UNRAID_PORT }}
+          DEST: ${{ secrets.UNRAID_PATH }}
+        run: |
+          DEST_PATH="${DEST:-/mnt/user/appdata/xxw-frontend}"
+          SSH_PORT="${PORT:-22}"
+
+          # 1) 确保目标 dist 目录存在
+          ssh -p "$SSH_PORT" "$USER@$HOST" "mkdir -p '$DEST_PATH/dist'"
+
+          # 2) 同步 dist（--delete 确保删除旧文件）
+          rsync -az --delete -e "ssh -p $SSH_PORT" \
+            ./dist/ "$USER@$HOST:$DEST_PATH/dist/"
+
+      - name: Restart docker-compose on Unraid
+        env:
+          HOST: ${{ secrets.UNRAID_HOST }}
+          USER: ${{ secrets.UNRAID_USER }}
+          PORT: ${{ secrets.UNRAID_PORT }}
+          DEST: ${{ secrets.UNRAID_PATH }}
+        run: |
+          DEST_PATH="${DEST:-/mnt/user/appdata/xxw-frontend}"
+          SSH_PORT="${PORT:-22}"
+
+          ssh -p "$SSH_PORT" "$USER@$HOST" "set -e
+            cd '$DEST_PATH'
+            if command -v docker-compose >/dev/null 2>&1; then
+              docker-compose up -d
+              docker-compose restart
+            else
+              docker compose up -d
+              docker compose restart
+            fi
+          "
