@@ -46,14 +46,58 @@
         <div class="criteria-grid">
           <!-- 年级筛选 -->
           <div class="criteria-item">
-            <label class="criteria-label">年级</label>
-            <select v-model="searchCriteria.grade_id" class="form-select">
-              <option :value="null">全部</option>
-              <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
-                {{ grade.name }}
-              </option>
-            </select>
-          </div>
+  <label class="criteria-label">年级</label>
+  <div class="multi-select-wrapper">
+    <div class="multi-select-trigger" @click="toggleGradeDropdown">
+      <span class="placeholder" v-if="selectedGrades.length === 0">
+        选择年级
+      </span>
+      <span class="selected-tags" v-else>
+        <span
+          v-for="grade in selectedGrades"
+          :key="grade.id"
+          class="selected-tag"
+          @click.stop="removeGrade(grade.id)"
+        >
+          {{ grade.name }}
+          <span class="remove-icon">×</span>
+        </span>
+      </span>
+      <span class="dropdown-arrow">▼</span>
+    </div>
+
+    <div class="multi-select-dropdown" v-if="showGradeDropdown">
+      <div class="search-input-container">
+        <input
+          type="text"
+          v-model="gradeSearch"
+          placeholder="搜索年级..."
+          class="search-input"
+          @input="filterGrades"
+        />
+      </div>
+      <div class="dropdown-options">
+        <div
+          v-for="grade in filteredGrades"
+          :key="grade.id"
+          class="dropdown-option"
+          @click="toggleGrade(grade)"
+        >
+          <span
+            class="checkbox"
+            :class="{ checked: isGradeSelected(grade.id) }"
+          >
+            {{ isGradeSelected(grade.id) ? "✓" : "" }}
+          </span>
+          <span class="option-text">{{ grade.name }}</span>
+        </div>
+        <div v-if="filteredGrades.length === 0" class="no-options">
+          无匹配选项
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
           <!-- 科目筛选 -->
           <div class="criteria-item">
@@ -68,14 +112,58 @@
 
           <!-- 难度筛选 -->
           <div class="criteria-item">
-            <label class="criteria-label">难度</label>
-            <select v-model="searchCriteria.difficulty_level" class="form-select">
-              <option :value="null">全部</option>
-              <option v-for="n in 5" :key="n" :value="n">
-                <span v-for="i in n" :key="i">⭐</span>
-              </option>
-            </select>
-          </div>
+  <label class="criteria-label">难度</label>
+  <div class="multi-select-wrapper">
+    <div class="multi-select-trigger" @click="toggleDifficultyDropdown">
+      <span class="placeholder" v-if="selectedDifficulties.length === 0">
+        选择难度
+      </span>
+      <span class="selected-tags" v-else>
+        <span
+          v-for="diff in selectedDifficulties"
+          :key="diff.value"
+          class="selected-tag"
+          @click.stop="removeDifficulty(diff.value)"
+        >
+          {{ diff.name }}
+          <span class="remove-icon">×</span>
+        </span>
+      </span>
+      <span class="dropdown-arrow">▼</span>
+    </div>
+
+    <div class="multi-select-dropdown" v-if="showDifficultyDropdown">
+      <div class="search-input-container">
+        <input
+          type="text"
+          v-model="difficultySearch"
+          placeholder="搜索难度..."
+          class="search-input"
+          @input="filterDifficulties"
+        />
+      </div>
+      <div class="dropdown-options">
+        <div
+          v-for="diff in filteredDifficulties"
+          :key="diff.value"
+          class="dropdown-option"
+          @click="toggleDifficulty(diff)"
+        >
+          <span
+            class="checkbox"
+            :class="{ checked: isDifficultySelected(diff.value) }"
+          >
+            {{ isDifficultySelected(diff.value) ? "✓" : "" }}
+          </span>
+          <span class="option-text">{{ diff.name }}</span>
+        </div>
+        <div v-if="filteredDifficulties.length === 0" class="no-options">
+          无匹配选项
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
           <!-- 题目内容关键词搜索 -->
           <div class="criteria-item full-width">
@@ -914,94 +1002,151 @@
   </div>
 </template>
 
-<script>
-import { reactive, ref, onMounted, computed, nextTick, watch } from "vue";
-import axios from "axios";
+<script setup>
+import { ref, reactive, computed, onMounted, nextTick, watch } from "vue";
 import { useRouter } from "vue-router";
+import axios from "axios";
 import * as echarts from "echarts";
 import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
-import { ElMessage, ElMessageBox } from "element-plus"; // 导入 ElMessage
+import { ElMessage, ElMessageBox } from "element-plus";
 
+const router = useRouter();
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
-export default {
-  setup() {
-    const router = useRouter();
+// ==================== 状态管理 ====================
+const showPaperPreview = ref(false);
+const selectedQuestions = ref([]);
+const showUploadModal = ref(false);
+const showBatchScoreModal = ref(false);
+const paperTitle = ref("");
+const isUploading = ref(false);
 
-    // ==================== 状态管理 ====================
-    const showPaperPreview = ref(false);
-    const selectedQuestions = ref([]);
-    const showUploadModal = ref(false);
-    const showBatchScoreModal = ref(false);
-    const paperTitle = ref("");
-    const isUploading = ref(false);
+// 试卷基本信息
+const paperSubjectId = ref(null);
+const paperGradeId = ref(null);
 
-    // 批量分值设置
-    const batchScoreMode = ref("type"); // single, type, all
-    const typeScores = reactive({});
-    const singleQuestionIndex = ref("");
-    const singleQuestionScore = ref(5);
-    const allQuestionsScore = ref(5);
+// 批量分值设置
+const batchScoreMode = ref("type");
+const typeScores = reactive({});
+const singleQuestionIndex = ref("");
+const singleQuestionScore = ref(5);
+const allQuestionsScore = ref(5);
 
-    // 数据列表状态
-    const schoolList = ref([]);
-    const gradeList = ref([]);
-    const subjectList = ref([]);
-    const knowledgePointList = ref([]);
-    const solutionIdeaList = ref([]);
-    const questionCategoryList = ref([]);
+// 数据列表状态
+const schoolList = ref([]);
+const gradeList = ref([]);
+const subjectList = ref([]);
+const knowledgePointList = ref([]);
+const solutionIdeaList = ref([]);
+const questionCategoryList = ref([]);
 
-    // 检索条件
-    const searchCriteria = reactive({
-      grade_id: null,
-      subject_id: null,
-      question_category_ids: [],
-      knowledge_point_ids: [],
-      sub_knowledge_point_ids: [],
-      solution_idea_ids: [],
-      difficulty_level: null,
-      title: "",
-      page_num: 1,
-      page_size: 12,
-    });
+// 难度等级列表
+const difficultyList = ref([
+  { value: 1, name: '⭐' },
+  { value: 2, name: '⭐⭐' },
+  { value: 3, name: '⭐⭐⭐' },
+  { value: 4, name: '⭐⭐⭐⭐' },
+  { value: 5, name: '⭐⭐⭐⭐⭐' }
+]);
 
-    // 搜索结果
-    const questionList = ref([]);
-    const totalPages = ref(1);
-    const totalItems = ref(0);
-    const pageInput = ref(1);
-    const hasSearched = ref(false);
+// 检索条件
+const searchCriteria = reactive({
+  grade_ids: [],
+  subject_id: null,
+  question_category_ids: [],
+  knowledge_point_ids: [],
+  sub_knowledge_point_ids: [],
+  solution_idea_ids: [],
+  difficulty_levels: [],
+  title: "",
+  page_num: 1,
+  page_size: 12,
+});
 
-    // 搜索关键词状态
-    const knowledgeSearch = ref("");
-    const subKnowledgeSearch = ref("");
-    const solutionIdeaSearch = ref("");
-    const questionCategorySearch = ref("");
+// 搜索结果
+const questionList = ref([]);
+const totalPages = ref(1);
+const totalItems = ref(0);
+const pageInput = ref(1);
+const hasSearched = ref(false);
 
-    // 下拉框显示状态
-    const showKnowledgeDropdown = ref(false);
-    const showSubKnowledgeDropdown = ref(false);
-    const showSolutionIdeaDropdown = ref(false);
-    const showQuestionCategoryDropdown = ref(false);
+// 搜索关键词状态
+const knowledgeSearch = ref("");
+const subKnowledgeSearch = ref("");
+const solutionIdeaSearch = ref("");
+const questionCategorySearch = ref("");
+const gradeSearch = ref("");
+const difficultySearch = ref("");
 
-    // 过滤后的列表状态
-    const filteredKnowledgePoints = ref([]);
-    const filteredSubKnowledgePoints = ref([]);
-    const filteredSolutionIdeas = ref([]);
-    const filteredQuestionCategories = ref([]);
+// 下拉框显示状态
+const showGradeDropdown = ref(false);
+const showDifficultyDropdown = ref(false);
+const showKnowledgeDropdown = ref(false);
+const showSubKnowledgeDropdown = ref(false);
+const showSolutionIdeaDropdown = ref(false);
+const showQuestionCategoryDropdown = ref(false);
 
-    // 弹窗状态
-    const showImagePreview = ref(false);
-    const previewImageUrl = ref("");
+// 过滤后的列表状态
+const filteredGrades = ref([]);
+const filteredDifficulties = ref([]);
+const filteredKnowledgePoints = ref([]);
+const filteredSubKnowledgePoints = ref([]);
+const filteredSolutionIdeas = ref([]);
+const filteredQuestionCategories = ref([]);
 
-    // ==================== 多选和展开功能 ====================
-    const selectedQuestionIds = ref([]);
-    const expandedQuestions = ref({});
-    const contentOverflowing = ref({});
+// 弹窗状态
+const showImagePreview = ref(false);
+const previewImageUrl = ref("");
 
-    // ==================== 计算属性 ====================
-    const questionTypeStatistics = computed(() => {
+// 多选和展开功能
+const selectedQuestionIds = ref([]);
+const selectedQuestionMap = ref(new Map());
+const expandedQuestions = ref({});
+const contentOverflowing = ref({});
+
+// 图表引用
+const typeScoreChartRef = ref(null);
+let typeScoreChart = null;
+
+// ==================== 计算属性 ====================
+const selectedGrades = computed(() => {
+  return searchCriteria.grade_ids
+    .map((id) => gradeList.value.find((g) => g.id === id))
+    .filter(Boolean);
+});
+
+const selectedDifficulties = computed(() => {
+  return searchCriteria.difficulty_levels
+    .map(value => difficultyList.value.find(diff => diff.value === value))
+    .filter(Boolean);
+});
+
+const selectedKnowledgePoints = computed(() => {
+  return searchCriteria.knowledge_point_ids
+    .map((id) => knowledgePointList.value.find((k) => k.id === id))
+    .filter(Boolean);
+});
+
+const selectedSubKnowledgePoints = computed(() => {
+  return searchCriteria.sub_knowledge_point_ids
+    .map((id) => knowledgePointList.value.find((k) => k.id === id))
+    .filter(Boolean);
+});
+
+const selectedSolutionIdeas = computed(() => {
+  return searchCriteria.solution_idea_ids
+    .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+    .filter(Boolean);
+});
+
+const selectedQuestionCategories = computed(() => {
+  return searchCriteria.question_category_ids
+    .map((id) => questionCategoryList.value.find((c) => c.id === id))
+    .filter(Boolean);
+});
+
+const questionTypeStatistics = computed(() => {
   const typeOrder = [
     "单选题",
     "多选题",
@@ -1021,1156 +1166,1035 @@ export default {
     .filter((item) => item.count > 0);
 });
 
-    const selectedKnowledgePoints = computed(() => {
-      return searchCriteria.knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
+const getAverageDifficulty = computed(() => {
+  if (selectedQuestions.value.length === 0) return 0;
+  const sum = selectedQuestions.value.reduce(
+    (total, q) => total + (q.difficulty_level || 0),
+    0
+  );
+  return sum / selectedQuestions.value.length;
+});
 
-    const selectedSubKnowledgePoints = computed(() => {
-      return searchCriteria.sub_knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
+const totalScore = computed(() => {
+  return selectedQuestions.value.reduce((sum, q) => {
+    const score = Number(q.score) || 0;
+    return sum + (isNaN(score) ? 0 : score);
+  }, 0);
+});
 
-    const selectedSolutionIdeas = computed(() => {
-      return searchCriteria.solution_idea_ids
-        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
-        .filter(Boolean);
-    });
+const typeScoreDistribution = computed(() => {
+  const distribution = {};
 
-    const selectedQuestionCategories = computed(() => {
-      return searchCriteria.question_category_ids
-        .map((id) => questionCategoryList.value.find((c) => c.id === id))
-        .filter(Boolean);
-    });
+  selectedQuestions.value.forEach((q) => {
+    const type = getQuestionCategoryText(q.question_category_id);
+    const score = Number(q.score) || 0;
 
-    const getAverageDifficulty = computed(() => {
-      if (selectedQuestions.value.length === 0) return 0;
-      const sum = selectedQuestions.value.reduce(
-        (total, q) => total + (q.difficulty_level || 0),
-        0
-      );
-      return sum / selectedQuestions.value.length;
-    });
+    if (!distribution[type]) {
+      distribution[type] = {
+        type: type,
+        count: 0,
+        totalScore: 0,
+      };
+    }
 
-    // 试卷总分计算
-    const totalScore = computed(() => {
-      return selectedQuestions.value.reduce((sum, q) => {
-        const score = Number(q.score) || 0;
-        return sum + (isNaN(score) ? 0 : score);
-      }, 0);
-    });
+    distribution[type].count++;
+    distribution[type].totalScore += score;
+  });
 
-    // 题型分值分布
-    const typeScoreDistribution = computed(() => {
-      const distribution = {};
+  return Object.values(distribution)
+    .map((dist) => ({
+      ...dist,
+      percentage:
+        totalScore.value > 0
+          ? Math.round((dist.totalScore / totalScore.value) * 100)
+          : 0,
+    }))
+    .sort((a, b) => b.totalScore - a.totalScore);
+});
 
-      selectedQuestions.value.forEach((q) => {
-        const type = getQuestionCategoryText(q.question_category_id);
-        const score = Number(q.score) || 0;
+const availableQuestionTypes = computed(() => {
+  const types = new Set();
+  selectedQuestions.value.forEach((q) => {
+    const type = getQuestionCategoryText(q.question_category_id);
+    types.add(type);
+  });
+  return Array.from(types);
+});
 
-        if (!distribution[type]) {
-          distribution[type] = {
-            type: type,
-            count: 0,
-            totalScore: 0,
-          };
-        }
+const canUpload = computed(() => {
+  return (
+    paperTitle.value.trim() &&
+    paperSubjectId.value !== null &&
+    paperGradeId.value !== null &&
+    !isUploading.value
+  );
+});
 
-        distribution[type].count++;
-        distribution[type].totalScore += score;
-      });
+const getAffectedQuestionCount = computed(() => {
+  if (batchScoreMode.value === "all") {
+    return selectedQuestions.value.length;
+  } else if (batchScoreMode.value === "type") {
+    return selectedQuestions.value.length;
+  } else if (batchScoreMode.value === "single") {
+    if (!singleQuestionIndex.value.trim()) return 0;
+    return getQuestionIndicesFromString(singleQuestionIndex.value).length;
+  }
+  return 0;
+});
 
-      // 转换为数组并计算百分比
-      return Object.values(distribution)
-        .map((dist) => ({
-          ...dist,
-          percentage:
-            totalScore.value > 0
-              ? Math.round((dist.totalScore / totalScore.value) * 100)
-              : 0,
-        }))
-        .sort((a, b) => b.totalScore - a.totalScore);
-    });
+const getTypeScoreTotal = computed(() => {
+  if (batchScoreMode.value !== "type") return 0;
 
-    // 可用的题型列表
-    const availableQuestionTypes = computed(() => {
-      const types = new Set();
-      selectedQuestions.value.forEach((q) => {
-        const type = getQuestionCategoryText(q.question_category_id);
-        types.add(type);
-      });
-      return Array.from(types);
-    });
+  let total = 0;
+  selectedQuestions.value.forEach((q) => {
+    const type = getQuestionCategoryText(q.question_category_id);
+    const score = typeScores[type] || 0;
+    total += score;
+  });
+  return total;
+});
 
-    const canUpload = computed(() => {
-      return (
-        paperTitle.value.trim() &&
-        paperSubjectId.value !== null &&
-        paperGradeId.value !== null &&
-        !isUploading.value
-      );
-    });
+// ==================== 方法 ====================
+const getQuestionIndicesFromString = (str) => {
+  if (!str.trim()) return [];
 
-    // 批量设置相关的计算属性
-    const getAffectedQuestionCount = computed(() => {
-      if (batchScoreMode.value === "all") {
-        return selectedQuestions.value.length;
-      } else if (batchScoreMode.value === "type") {
-        return selectedQuestions.value.length;
-      } else if (batchScoreMode.value === "single") {
-        if (!singleQuestionIndex.value.trim()) return 0;
-        return getQuestionIndicesFromString(singleQuestionIndex.value).length;
-      }
-      return 0;
-    });
+  const indices = new Set();
+  const parts = str.split(",");
 
-    const getTypeScoreTotal = computed(() => {
-      if (batchScoreMode.value !== "type") return 0;
-
-      let total = 0;
-      selectedQuestions.value.forEach((q) => {
-        const type = getQuestionCategoryText(q.question_category_id);
-        const score = typeScores[type] || 0;
-        total += score;
-      });
-      return total;
-    });
-
-    //试卷学科&年级
-    const paperSubjectId = ref(null);
-    const paperGradeId = ref(null);
-
-    // ==================== 方法 ====================
-    // 根据字符串获取题目索引数组
-    const getQuestionIndicesFromString = (str) => {
-      if (!str.trim()) return [];
-
-      const indices = new Set();
-      const parts = str.split(",");
-
-      parts.forEach((part) => {
-        const trimmed = part.trim();
-        if (trimmed.includes("-")) {
-          // 处理范围
-          const [start, end] = trimmed.split("-").map(Number);
-          if (!isNaN(start) && !isNaN(end)) {
-            for (let i = start; i <= end; i++) {
-              indices.add(i - 1); // 转换为0-based索引
-            }
-          }
-        } else {
-          // 处理单个数字
-          const num = Number(trimmed);
-          if (!isNaN(num)) {
-            indices.add(num - 1); // 转换为0-based索引
-          }
-        }
-      });
-
-      // 过滤有效的索引
-      return Array.from(indices).filter(
-        (index) => index >= 0 && index < selectedQuestions.value.length
-      );
-    };
-
-    // 获取题型题目数量
-    const getTypeCount = (type) => {
-      return selectedQuestions.value.filter(
-        (q) => getQuestionCategoryText(q.question_category_id) === type
-      ).length;
-    };
-
-    // 应用批量分值设置
-    const applyBatchScores = () => {
-      if (batchScoreMode.value === "all") {
-        selectedQuestions.value.forEach((q) => {
-          q.score = allQuestionsScore.value;
-          q.scoreError = "";
-        });
-        ElMessage.success("批量设置成功");
-      } else if (batchScoreMode.value === "type") {
-        selectedQuestions.value.forEach((q) => {
-          const type = getQuestionCategoryText(q.question_category_id);
-          if (typeScores[type] !== undefined) {
-            q.score = typeScores[type];
-            q.scoreError = "";
-          }
-        });
-        ElMessage.success("按题型设置成功");
-      } else if (batchScoreMode.value === "single") {
-        const indices = getQuestionIndicesFromString(singleQuestionIndex.value);
-        indices.forEach((index) => {
-          if (index >= 0 && index < selectedQuestions.value.length) {
-            selectedQuestions.value[index].score = singleQuestionScore.value;
-            selectedQuestions.value[index].scoreError = "";
-          }
-        });
-        ElMessage.success(`已设置 ${indices.length} 个题目的分值`);
-      }
-
-      closeBatchScoreModal();
-    };
-
-    // 关闭批量设置模态框
-    const closeBatchScoreModal = () => {
-      showBatchScoreModal.value = false;
-      // 重置设置
-      batchScoreMode.value = "type";
-      singleQuestionIndex.value = "";
-      singleQuestionScore.value = 5;
-      allQuestionsScore.value = 5;
-    };
-
-    // 验证分数输入
-    const validateScore = (question, event) => {
-      const value = event.target.value;
-      const numValue = Number(value);
-
-      if (value === "") {
-        question.scoreError = "分数不能为空";
-      } else if (isNaN(numValue)) {
-        question.scoreError = "请输入有效的数字";
-      } else if (numValue < 0) {
-        question.scoreError = "分数不能为负数";
-      } else if (numValue > 100) {
-        question.scoreError = "单题分数不能超过100分";
-      } else if (!Number.isInteger(numValue) && numValue % 0.5 !== 0) {
-        question.scoreError = "分数应为整数或0.5的倍数";
-      } else {
-        question.scoreError = "";
-      }
-    };
-
-    // 格式化分数
-    const formatScore = (question) => {
-      if (
-        question.score === undefined ||
-        question.score === null ||
-        question.score === ""
-      ) {
-        question.score = 0;
-      } else {
-        const numValue = Number(question.score);
-        // 保留一位小数
-        question.score = Math.round(numValue * 2) / 2;
-        if (question.score < 0) question.score = 0;
-        if (question.score > 100) question.score = 100;
-      }
-      question.scoreError = "";
-    };
-
-    // ==================== 试卷上传相关方法 ====================
-    const uploadPaper = () => {
-      if (selectedQuestions.value.length === 0) {
-        ElMessage.error("试卷为空，无法上传");
-        return;
-      }
-
-      // 检查是否有分数未设置
-      const hasInvalidScores = selectedQuestions.value.some(
-        (q) => q.score === undefined || q.score === null || q.score === "" || q.scoreError
-      );
-
-      if (hasInvalidScores) {
-        ElMessage.warning("请先设置所有题目的分数");
-        return;
-      }
-
-      showUploadModal.value = true;
-    };
-
-    const closeUploadModal = () => {
-      showUploadModal.value = false;
-      paperTitle.value = "";
-    };
-
-    const confirmUpload = async () => {
-      if (!canUpload.value) return;
-
-      isUploading.value = true;
-
-      try {
-        const question_ids = selectedQuestions.value.map((q) => q.id);
-        const scores = selectedQuestions.value.map((q) => Number(q.score) || 0);
-
-        const payload = {
-          name: paperTitle.value.trim(),
-          subject_id: paperSubjectId.value,
-          grade_id: paperGradeId.value,
-          question_count: selectedQuestions.value.length,
-          total_score: totalScore.value,
-          question_ids,
-          scores,
-        };
-
-        await axios.post(`${API_BASE}/paper/uploadPaper`, payload);
-
-        ElMessage.success("试卷上传成功");
-        closeUploadModal();
-        resetAfterUpload();
-      } catch (err) {
-        console.error(err);
-        ElMessage.error(err.response?.data?.message || "试卷上传失败");
-      } finally {
-        isUploading.value = false;
-      }
-    };
-
-    const resetAfterUpload = () => {
-      // 清空试卷
-      selectedQuestions.value = [];
-
-      // 清空试卷基本信息
-      paperTitle.value = "";
-      paperSubjectId.value = null;
-      paperGradeId.value = null;
-
-      // 清空批量选择状态
-      selectedQuestionIds.value = [];
-      selectedQuestionMap.value.clear();
-
-      // 清空分值设置状态
-      batchScoreMode.value = "type";
-      singleQuestionIndex.value = "";
-      singleQuestionScore.value = 5;
-      allQuestionsScore.value = 5;
-
-      // 关闭所有弹窗
-      showUploadModal.value = false;
-      showBatchScoreModal.value = false;
-
-      // 切回题目检索页（重要）
-      showPaperPreview.value = false;
-
-      // 清空检索结果
-      questionList.value = [];
-      hasSearched.value = false;
-
-      // 重置检索条件
-      clearSearchCriteria();
-    };
-
-    // ==================== 其他方法 ====================
-    const previewImage = (url) => {
-      previewImageUrl.value = url;
-      showImagePreview.value = true;
-    };
-
-    const closeImagePreview = () => {
-      showImagePreview.value = false;
-      previewImageUrl.value = "";
-    };
-
-    const getOptionLabel = (index) => {
-      let label = "";
-      let n = index;
-      while (n >= 0) {
-        label = String.fromCharCode((n % 26) + 65) + label;
-        n = Math.floor(n / 26) - 1;
-      }
-      return label;
-    };
-
-    const getOptionsArray = (options) => {
-      if (!options || typeof options !== "object") return [];
-      return Object.values(options);
-    };
-
-    const isOptionCorrect = (question, index) => {
-      const optionLabel = getOptionLabel(index);
-      const questionCategoryName = getQuestionCategoryText(question.question_category_id);
-
-      if (questionCategoryName === "单选题" || questionCategoryName.includes("单选")) {
-        return question.answer === optionLabel;
-      } else if (
-        questionCategoryName === "多选题" ||
-        questionCategoryName.includes("多选")
-      ) {
-        if (question.answer) {
-          const answers = question.answer.split(",").map((a) => a.trim());
-          return answers.includes(optionLabel);
+  parts.forEach((part) => {
+    const trimmed = part.trim();
+    if (trimmed.includes("-")) {
+      const [start, end] = trimmed.split("-").map(Number);
+      if (!isNaN(start) && !isNaN(end)) {
+        for (let i = start; i <= end; i++) {
+          indices.add(i - 1);
         }
       }
-      return false;
-    };
-
-    const isQuestionSelected = (questionId) => {
-      return selectedQuestions.value.some((q) => q.id === questionId);
-    };
-
-    const addToPaper = (question) => {
-      if (!isQuestionSelected(question.id)) {
-        // 添加默认分数
-        const questionWithScore = {
-          ...question,
-          score: 5, // 默认5分
-          scoreError: "",
-        };
-        selectedQuestions.value.push(questionWithScore);
-        ElMessage.success("题目已添加到试卷");
+    } else {
+      const num = Number(trimmed);
+      if (!isNaN(num)) {
+        indices.add(num - 1);
       }
-    };
-
-    const removeFromPaper = (questionId) => {
-      selectedQuestions.value = selectedQuestions.value.filter(
-        (q) => q.id !== questionId
-      );
-      ElMessage.success("题目已从试卷移除");
-    };
-
-    const moveQuestionUp = (index) => {
-      if (index <= 0) return;
-      const temp = selectedQuestions.value[index];
-      selectedQuestions.value[index] = selectedQuestions.value[index - 1];
-      selectedQuestions.value[index - 1] = temp;
-      ElMessage.success("题目顺序已调整");
-    };
-
-    const moveQuestionDown = (index) => {
-      if (index >= selectedQuestions.value.length - 1) return;
-      const temp = selectedQuestions.value[index];
-      selectedQuestions.value[index] = selectedQuestions.value[index + 1];
-      selectedQuestions.value[index + 1] = temp;
-      ElMessage.success("题目顺序已调整");
-    };
-
-    const clearPaper = () => {
-      ElMessageBox.confirm("确定要清空试卷吗？", "确认清空", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      }).then(() => {
-        selectedQuestions.value = [];
-        ElMessage.success("试卷已清空");
-      });
-    };
-
-    const exportPaper = () => {
-      if (selectedQuestions.value.length === 0) {
-        ElMessage.warning("试卷为空，无法导出");
-        return;
-      }
-      ElMessage.success("试卷导出功能待实现");
-    };
-
-    const getQuestionTypeCount = (type) => {
-      if (type === "选择题") {
-        return selectedQuestions.value.filter((q) => {
-          const categoryName = getQuestionCategoryText(q.question_category_id);
-          return (
-            categoryName === "单选题" ||
-            categoryName.includes("单选") ||
-            categoryName === "多选题" ||
-            categoryName.includes("多选")
-          );
-        }).length;
-      } else if (type === "主观题") {
-        return selectedQuestions.value.filter((q) => {
-          const categoryName = getQuestionCategoryText(q.question_category_id);
-          return !(
-            categoryName === "单选题" ||
-            categoryName.includes("单选") ||
-            categoryName === "多选题" ||
-            categoryName.includes("多选")
-          );
-        }).length;
-      }
-      return 0;
-    };
-
-    const isBatchSelected = (questionId) => {
-      return selectedQuestionIds.value.includes(questionId);
-    };
-
-    const selectedQuestionMap = ref(new Map());
-
-    const toggleBatchSelection = (questionId) => {
-      const index = selectedQuestionIds.value.indexOf(questionId);
-
-      if (index > -1) {
-        // 取消选中
-        selectedQuestionIds.value.splice(index, 1);
-        selectedQuestionMap.value.delete(questionId);
-      } else {
-        selectedQuestionIds.value.push(questionId);
-
-        // 把完整题目存起来
-        const q = questionList.value.find((item) => item.id === questionId);
-        if (q) {
-          selectedQuestionMap.value.set(questionId, q);
-        }
-      }
-    };
-
-    const batchAddToPaper = () => {
-      const questionsToAdd = Array.from(selectedQuestionMap.value.values()).filter(
-        (q) => !isQuestionSelected(q.id)
-      );
-
-      if (questionsToAdd.length === 0) {
-        ElMessage.info("没有可以添加的新题目");
-        return;
-      }
-
-      const questionsWithScores = questionsToAdd.map((q) => ({
-        ...q,
-        score: 5,
-        scoreError: "",
-      }));
-
-      selectedQuestions.value.push(...questionsWithScores);
-
-      ElMessage.success(`已添加 ${questionsToAdd.length} 个题目`);
-      clearSelection();
-    };
-
-    const clearSelection = () => {
-      selectedQuestionIds.value = [];
-      selectedQuestionMap.value.clear();
-    };
-
-    const toggleExpand = (questionId) => {
-      expandedQuestions.value[questionId] = !expandedQuestions.value[questionId];
-    };
-
-    const isContentOverflowing = (questionId) => {
-      return contentOverflowing.value[questionId] || false;
-    };
-
-    const checkContentOverflow = () => {
-      nextTick(() => {
-        const questionElements = document.querySelectorAll(".question-text-container");
-        questionElements.forEach((el) => {
-          const questionId = el
-            .closest(".question-card")
-            .querySelector(".question-id")
-            .textContent.split(": ")[1];
-          contentOverflowing.value[questionId] = el.scrollHeight > el.clientHeight;
-        });
-      });
-    };
-
-    const handleQuestionCardClick = (questionId, event) => {
-      const ignoreElements = [
-        ".batch-select-checkbox",
-        ".btn-add",
-        ".btn-remove",
-        ".expand-btn",
-        ".thumbnail-image",
-        ".question-actions button",
-      ];
-
-      const isIgnoredElement = ignoreElements.some((selector) =>
-        event.target.closest(selector)
-      );
-
-      if (isIgnoredElement) {
-        return;
-      }
-
-      toggleBatchSelection(questionId);
-    };
-
-    const clearSearchCriteria = () => {
-      Object.assign(searchCriteria, {
-        grade_id: null,
-        subject_id: null,
-        question_category_ids: [],
-        knowledge_point_ids: [],
-        sub_knowledge_point_ids: [],
-        solution_idea_ids: [],
-        difficulty_level: null,
-        title: "",
-        page_num: 1,
-      });
-
-      knowledgeSearch.value = "";
-      subKnowledgeSearch.value = "";
-      solutionIdeaSearch.value = "";
-      questionCategorySearch.value = "";
-
-      questionList.value = [];
-      hasSearched.value = false;
-      clearSelection();
-      ElMessage.success("检索条件已重置");
-    };
-
-    const toggleQuestionCategoryDropdown = () => {
-      showQuestionCategoryDropdown.value = !showQuestionCategoryDropdown.value;
-      if (showQuestionCategoryDropdown.value) {
-        filterQuestionCategories();
-      }
-    };
-
-    const toggleKnowledgeDropdown = () => {
-      showKnowledgeDropdown.value = !showKnowledgeDropdown.value;
-      if (showKnowledgeDropdown.value) {
-        filterKnowledgePoints();
-      }
-    };
-
-    const toggleSubKnowledgeDropdown = () => {
-      showSubKnowledgeDropdown.value = !showSubKnowledgeDropdown.value;
-      if (showSubKnowledgeDropdown.value) {
-        filterSubKnowledgePoints();
-      }
-    };
-
-    const toggleSolutionIdeaDropdown = () => {
-      showSolutionIdeaDropdown.value = !showSolutionIdeaDropdown.value;
-      if (showSolutionIdeaDropdown.value) {
-        filterSolutionIdeas();
-      }
-    };
-
-    const toggleQuestionCategory = (item) => {
-      const index = searchCriteria.question_category_ids.indexOf(item.id);
-      if (index > -1) {
-        searchCriteria.question_category_ids.splice(index, 1);
-      } else {
-        searchCriteria.question_category_ids.push(item.id);
-      }
-    };
-
-    const toggleKnowledgePoint = (kp) => {
-      const index = searchCriteria.knowledge_point_ids.indexOf(kp.id);
-      if (index > -1) {
-        searchCriteria.knowledge_point_ids.splice(index, 1);
-      } else {
-        searchCriteria.knowledge_point_ids.push(kp.id);
-      }
-    };
-
-    const toggleSubKnowledgePoint = (kp) => {
-      const index = searchCriteria.sub_knowledge_point_ids.indexOf(kp.id);
-      if (index > -1) {
-        searchCriteria.sub_knowledge_point_ids.splice(index, 1);
-      } else {
-        searchCriteria.sub_knowledge_point_ids.push(kp.id);
-      }
-    };
-
-    const toggleSolutionIdea = (item) => {
-      const index = searchCriteria.solution_idea_ids.indexOf(item.id);
-      if (index > -1) {
-        searchCriteria.solution_idea_ids.splice(index, 1);
-      } else {
-        searchCriteria.solution_idea_ids.push(item.id);
-      }
-    };
-
-    const removeQuestionCategory = (id) => {
-      searchCriteria.question_category_ids = searchCriteria.question_category_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
-    const removeKnowledgePoint = (id) => {
-      searchCriteria.knowledge_point_ids = searchCriteria.knowledge_point_ids.filter(
-        (kp) => kp !== id
-      );
-    };
-
-    const removeSubKnowledgePoint = (id) => {
-      searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
-        (kp) => kp !== id
-      );
-    };
-
-    const removeSolutionIdea = (id) => {
-      searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
-    const isKnowledgeSelected = (id) => {
-      return searchCriteria.knowledge_point_ids.includes(id);
-    };
-
-    const isSubKnowledgeSelected = (id) => {
-      return searchCriteria.sub_knowledge_point_ids.includes(id);
-    };
-
-    const isSolutionIdeaSelected = (id) => {
-      return searchCriteria.solution_idea_ids.includes(id);
-    };
-
-    const isQuestionCategorySelected = (id) => {
-      return searchCriteria.question_category_ids.includes(id);
-    };
-
-    const filterKnowledgePoints = () => {
-      if (!knowledgeSearch.value) {
-        filteredKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(knowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    const filterSubKnowledgePoints = () => {
-      if (!subKnowledgeSearch.value) {
-        filteredSubKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(subKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    const filterSolutionIdeas = () => {
-      if (!solutionIdeaSearch.value) {
-        filteredSolutionIdeas.value = solutionIdeaList.value;
-      } else {
-        filteredSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
-          item.name.toLowerCase().includes(solutionIdeaSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    const filterQuestionCategories = () => {
-      if (!questionCategorySearch.value) {
-        filteredQuestionCategories.value = questionCategoryList.value;
-      } else {
-        filteredQuestionCategories.value = questionCategoryList.value.filter((item) =>
-          item.name.toLowerCase().includes(questionCategorySearch.value.toLowerCase())
-        );
-      }
-    };
-
-    const handleClickOutside = (event) => {
-      if (!event.target.closest(".multi-select-wrapper")) {
-        showKnowledgeDropdown.value = false;
-        showSubKnowledgeDropdown.value = false;
-        showSolutionIdeaDropdown.value = false;
-        showQuestionCategoryDropdown.value = false;
-      }
-    };
-
-    onMounted(() => {
-      loadLists();
-
-      document.addEventListener("click", handleClickOutside);
-    });
-
-    const loadLists = async () => {
-      try {
-        const [s, g, sub, kp, si, qc] = await Promise.all([
-          axios.get(`${API_BASE}/questions/getSchoolList`),
-          axios.get(`${API_BASE}/questions/getGradeList`),
-          axios.get(`${API_BASE}/questions/getSubjectList`),
-          axios.get(`${API_BASE}/questions/getKnowledgePointList`),
-          axios.get(`${API_BASE}/questions/getSolutionIdeaList`),
-          axios.get(`${API_BASE}/questions/getQuestionCategoryList`),
-        ]);
-
-        schoolList.value = Object.entries(s.data.data || {}).map(([id, name]) => ({
-          id: Number(id),
-          name,
-        }));
-
-        gradeList.value = Object.entries(g.data.data || {}).map(([id, name]) => ({
-          id: Number(id),
-          name,
-        }));
-
-        subjectList.value = Object.entries(sub.data.data || {}).map(([id, name]) => ({
-          id: Number(id),
-          name,
-        }));
-
-        knowledgePointList.value = Object.entries(
-          kp.data.data || {}
-        ).map(([id, name]) => ({ id: parseInt(id), name }));
-
-        solutionIdeaList.value = Object.entries(si.data.data || {}).map(([id, name]) => ({
-          id: parseInt(id),
-          name,
-        }));
-
-        questionCategoryList.value = Object.entries(
-          qc.data.data || {}
-        ).map(([id, name]) => ({ id: parseInt(id), name }));
-
-        filteredKnowledgePoints.value = knowledgePointList.value;
-        filteredSubKnowledgePoints.value = knowledgePointList.value;
-        filteredSolutionIdeas.value = solutionIdeaList.value;
-        filteredQuestionCategories.value = questionCategoryList.value;
-      } catch (err) {
-        console.error("获取列表失败:", err);
-        ElMessage.error("获取列表失败");
-      }
-    };
-
-    const findQuestions = async () => {
-      try {
-        searchCriteria.page_num = 1;
-        pageInput.value = 1;
-        const payload = { ...searchCriteria };
-
-        if (searchCriteria.grade_id !== null)
-          payload.grade_id = Number(searchCriteria.grade_id);
-        if (searchCriteria.subject_id !== null)
-          payload.subject_id = Number(searchCriteria.subject_id);
-        if (searchCriteria.question_category_ids.length > 0)
-          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.knowledge_point_ids.length > 0)
-          payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.sub_knowledge_point_ids.length > 0)
-          payload.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.map(
-            (id) => Number(id)
-          );
-        if (searchCriteria.solution_idea_ids.length > 0)
-          payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.difficulty_level !== null)
-          payload.difficulty_level = Number(searchCriteria.difficulty_level);
-        if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
-
-        const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-        const responseData = res.data.data;
-
-        questionList.value = responseData?.data_info || [];
-
-        if (responseData) {
-          searchCriteria.page_num = responseData.page_num || 1;
-          searchCriteria.page_size = responseData.page_size || 12;
-          totalPages.value = responseData.total_pages || 1;
-          totalItems.value = responseData.total_items || 0;
-          pageInput.value = responseData.page_num || 1;
-        }
-
-        hasSearched.value = true;
-
-        setTimeout(checkContentOverflow, 100);
-
-        if (!questionList.value.length) {
-          ElMessage.info("未找到符合条件的题目");
-        } else {
-          ElMessage.success(`找到 ${totalItems.value} 条题目`);
-        }
-      } catch (err) {
-        console.error("检索失败:", err);
-        ElMessage.error("检索失败");
-        questionList.value = [];
-        hasSearched.value = true;
-      }
-    };
-
-    const changePage = (newPage) => {
-      if (newPage < 1 || newPage > totalPages.value) {
-        return;
-      }
-      searchCriteria.page_num = newPage;
-      pageInput.value = newPage;
-      silentFindQuestions();
-    };
-
-    const goToFirstPage = () => {
-      changePage(1);
-    };
-
-    const goToLastPage = () => {
-      changePage(totalPages.value);
-    };
-
-    const goToPage = () => {
-      const page = parseInt(pageInput.value);
-      if (page >= 1 && page <= totalPages.value) {
-        changePage(page);
-      } else {
-        ElMessage.warning(`请输入 1 到 ${totalPages.value} 之间的页码`);
-      }
-    };
-
-    const silentFindQuestions = async () => {
-      try {
-        const payload = { ...searchCriteria };
-
-        if (searchCriteria.grade_id !== null)
-          payload.grade_id = Number(searchCriteria.grade_id);
-        if (searchCriteria.subject_id !== null)
-          payload.subject_id = Number(searchCriteria.subject_id);
-        if (searchCriteria.question_category_ids.length > 0)
-          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.knowledge_point_ids.length > 0)
-          payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.solution_idea_ids.length > 0)
-          payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.difficulty_level !== null)
-          payload.difficulty_level = Number(searchCriteria.difficulty_level);
-        if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
-
-        const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-        const responseData = res.data.data;
-
-        questionList.value = responseData?.data_info || [];
-
-        if (responseData) {
-          searchCriteria.page_num = responseData.page_num || 1;
-          searchCriteria.page_size = responseData.page_size || 12;
-          totalPages.value = responseData.total_pages || 1;
-          totalItems.value = responseData.total_items || 0;
-          pageInput.value = responseData.page_num || 1;
-        }
-
-        hasSearched.value = true;
-
-        setTimeout(checkContentOverflow, 100);
-      } catch (err) {
-        console.error("检索失败:", err);
-        ElMessage.error("检索失败");
-        questionList.value = [];
-        hasSearched.value = true;
-      }
-    };
-
-    const getSchoolName = (id) => {
-      if (id === null) return "-";
-      const school = schoolList.value.find((s) => s.id === Number(id));
-      return school ? school.name : "-";
-    };
-
-    const getGradeName = (id) => {
-      if (id === null) return "-";
-      const grade = gradeList.value.find((g) => g.id === Number(id));
-      return grade ? grade.name : "-";
-    };
-
-    const getSubjectName = (id) => {
-      if (id === null) return "-";
-      const subject = subjectList.value.find((s) => s.id === Number(id));
-      return subject ? subject.name : "-";
-    };
-
-    const getKnowledgePointName = (id) => {
-      if (id === null) return "-";
-      const kp = knowledgePointList.value.find((k) => k.id === Number(id));
-      return kp ? kp.name : "-";
-    };
-
-    const getSolutionIdeaName = (id) => {
-      if (id === null) return "-";
-      const item = solutionIdeaList.value.find((s) => s.id === Number(id));
-      return item ? item.name : "-";
-    };
-
-    const goBack = () => {
-      router.go(-1);
-    };
-
-    const typeScoreChartRef = ref(null);
-    let typeScoreChart = null;
-
-    //可视化图
-    const renderTypeScoreChart = () => {
-      if (!typeScoreChartRef.value) return;
-
-      if (!typeScoreChart) {
-        typeScoreChart = echarts.init(typeScoreChartRef.value);
-      }
-
-      typeScoreChart.setOption(
-        {
-          tooltip: {
-            trigger: "item",
-            formatter: "{b}<br/>分值：{c}分<br/>占比：{d}%",
-          },
-          series: [
-            {
-              type: "pie",
-              radius: ["45%", "70%"],
-              data: typeScoreDistribution.value.map((d) => ({
-                name: d.type,
-                value: d.totalScore,
-              })),
-            },
-          ],
-        },
-        true
-      );
-    };
-
-    watch(showPaperPreview, (val) => {
-      if (val) {
-        nextTick(() => {
-          renderTypeScoreChart();
-        });
-      } else {
-        //切走时销毁实例
-        if (typeScoreChart) {
-          typeScoreChart.dispose();
-          typeScoreChart = null;
-        }
-      }
-    });
-    watch(
-      () => typeScoreDistribution.value,
-      () => {
-        if (showPaperPreview.value) {
-          nextTick(() => {
-            renderTypeScoreChart();
-          });
-        }
-      },
-      { deep: true }
-    );
-
-    return {
-      showPaperPreview,
-      selectedQuestions,
-      showUploadModal,
-      showBatchScoreModal,
-      paperTitle,
-      isUploading,
-
-      batchScoreMode,
-      typeScores,
-      singleQuestionIndex,
-      singleQuestionScore,
-      allQuestionsScore,
-
-      schoolList,
-      gradeList,
-      subjectList,
-      knowledgePointList,
-      solutionIdeaList,
-      questionCategoryList,
-
-      searchCriteria,
-      questionList,
-      totalPages,
-      totalItems,
-      pageInput,
-      hasSearched,
-
-      knowledgeSearch,
-      subKnowledgeSearch,
-      solutionIdeaSearch,
-      questionCategorySearch,
-
-      filteredKnowledgePoints,
-      filteredSubKnowledgePoints,
-      filteredSolutionIdeas,
-      filteredQuestionCategories,
-
-      selectedKnowledgePoints,
-      selectedSubKnowledgePoints,
-      selectedSolutionIdeas,
-      selectedQuestionCategories,
-
-      selectedQuestionIds,
-      expandedQuestions,
-      contentOverflowing,
-
-      showKnowledgeDropdown,
-      showSubKnowledgeDropdown,
-      showSolutionIdeaDropdown,
-      showQuestionCategoryDropdown,
-
-      getAverageDifficulty,
-      totalScore,
-      typeScoreDistribution,
-      availableQuestionTypes,
-      canUpload,
-      getAffectedQuestionCount,
-      getTypeScoreTotal,
-
-      previewImage,
-      closeImagePreview,
-      markdownToHtml,
-      getOptionLabel,
-      getOptionsArray,
-      isOptionCorrect,
-      isQuestionSelected,
-      addToPaper,
-      removeFromPaper,
-      moveQuestionUp,
-      moveQuestionDown,
-      clearPaper,
-      exportPaper,
-      uploadPaper,
-      closeUploadModal,
-      confirmUpload,
-      getQuestionTypeCount,
-      clearSearchCriteria,
-
-      toggleQuestionCategoryDropdown,
-      toggleKnowledgeDropdown,
-      toggleSubKnowledgeDropdown,
-      toggleSolutionIdeaDropdown,
-      toggleQuestionCategory,
-      toggleKnowledgePoint,
-      toggleSubKnowledgePoint,
-      toggleSolutionIdea,
-      removeQuestionCategory,
-      removeKnowledgePoint,
-      removeSubKnowledgePoint,
-      removeSolutionIdea,
-      isKnowledgeSelected,
-      isSubKnowledgeSelected,
-      isSolutionIdeaSelected,
-      isQuestionCategorySelected,
-
-      filterKnowledgePoints,
-      filterSubKnowledgePoints,
-      filterSolutionIdeas,
-      filterQuestionCategories,
-      loadLists,
-      findQuestions,
-      changePage,
-      goToFirstPage,
-      goToLastPage,
-      goToPage,
-      silentFindQuestions,
-      getSchoolName,
-      getGradeName,
-      getSubjectName,
-      getKnowledgePointName,
-      getSolutionIdeaName,
-      getQuestionCategoryText,
-
-      isBatchSelected,
-      toggleBatchSelection,
-      batchAddToPaper,
-      clearSelection,
-      toggleExpand,
-      isContentOverflowing,
-      checkContentOverflow,
-      handleQuestionCardClick,
-
-      showImagePreview,
-      previewImageUrl,
-
-      questionTypeStatistics,
-      getTypeCount,
-      applyBatchScores,
-      closeBatchScoreModal,
-      validateScore,
-      formatScore,
-
-      goBack,
-
-      typeScoreChartRef,
-      paperSubjectId, //试卷学科
-      paperGradeId, //试卷年级
-    };
-  },
+    }
+  });
+
+  return Array.from(indices).filter(
+    (index) => index >= 0 && index < selectedQuestions.value.length
+  );
 };
+
+const getTypeCount = (type) => {
+  return selectedQuestions.value.filter(
+    (q) => getQuestionCategoryText(q.question_category_id) === type
+  ).length;
+};
+
+const applyBatchScores = () => {
+  if (batchScoreMode.value === "all") {
+    selectedQuestions.value.forEach((q) => {
+      q.score = allQuestionsScore.value;
+      q.scoreError = "";
+    });
+    ElMessage.success("批量设置成功");
+  } else if (batchScoreMode.value === "type") {
+    selectedQuestions.value.forEach((q) => {
+      const type = getQuestionCategoryText(q.question_category_id);
+      if (typeScores[type] !== undefined) {
+        q.score = typeScores[type];
+        q.scoreError = "";
+      }
+    });
+    ElMessage.success("按题型设置成功");
+  } else if (batchScoreMode.value === "single") {
+    const indices = getQuestionIndicesFromString(singleQuestionIndex.value);
+    indices.forEach((index) => {
+      if (index >= 0 && index < selectedQuestions.value.length) {
+        selectedQuestions.value[index].score = singleQuestionScore.value;
+        selectedQuestions.value[index].scoreError = "";
+      }
+    });
+    ElMessage.success(`已设置 ${indices.length} 个题目的分值`);
+  }
+
+  closeBatchScoreModal();
+};
+
+const closeBatchScoreModal = () => {
+  showBatchScoreModal.value = false;
+  batchScoreMode.value = "type";
+  singleQuestionIndex.value = "";
+  singleQuestionScore.value = 5;
+  allQuestionsScore.value = 5;
+};
+
+const validateScore = (question, event) => {
+  const value = event.target.value;
+  const numValue = Number(value);
+
+  if (value === "") {
+    question.scoreError = "分数不能为空";
+  } else if (isNaN(numValue)) {
+    question.scoreError = "请输入有效的数字";
+  } else if (numValue < 0) {
+    question.scoreError = "分数不能为负数";
+  } else if (numValue > 100) {
+    question.scoreError = "单题分数不能超过100分";
+  } else if (!Number.isInteger(numValue) && numValue % 0.5 !== 0) {
+    question.scoreError = "分数应为整数或0.5的倍数";
+  } else {
+    question.scoreError = "";
+  }
+};
+
+const formatScore = (question) => {
+  if (
+    question.score === undefined ||
+    question.score === null ||
+    question.score === ""
+  ) {
+    question.score = 0;
+  } else {
+    const numValue = Number(question.score);
+    question.score = Math.round(numValue * 2) / 2;
+    if (question.score < 0) question.score = 0;
+    if (question.score > 100) question.score = 100;
+  }
+  question.scoreError = "";
+};
+
+const uploadPaper = () => {
+  if (selectedQuestions.value.length === 0) {
+    ElMessage.error("试卷为空，无法上传");
+    return;
+  }
+
+  const hasInvalidScores = selectedQuestions.value.some(
+    (q) => q.score === undefined || q.score === null || q.score === "" || q.scoreError
+  );
+
+  if (hasInvalidScores) {
+    ElMessage.warning("请先设置所有题目的分数");
+    return;
+  }
+
+  showUploadModal.value = true;
+};
+
+const closeUploadModal = () => {
+  showUploadModal.value = false;
+  paperTitle.value = "";
+};
+
+const confirmUpload = async () => {
+  if (!canUpload.value) return;
+
+  isUploading.value = true;
+
+  try {
+    const question_ids = selectedQuestions.value.map((q) => q.id);
+    const scores = selectedQuestions.value.map((q) => Number(q.score) || 0);
+
+    const payload = {
+      name: paperTitle.value.trim(),
+      subject_id: paperSubjectId.value,
+      grade_id: paperGradeId.value,
+      question_count: selectedQuestions.value.length,
+      total_score: totalScore.value,
+      question_ids,
+      scores,
+    };
+
+    await axios.post(`${API_BASE}/paper/uploadPaper`, payload);
+
+    ElMessage.success("试卷上传成功");
+    closeUploadModal();
+    resetAfterUpload();
+  } catch (err) {
+    console.error(err);
+    ElMessage.error(err.response?.data?.message || "试卷上传失败");
+  } finally {
+    isUploading.value = false;
+  }
+};
+
+const resetAfterUpload = () => {
+  selectedQuestions.value = [];
+  paperTitle.value = "";
+  paperSubjectId.value = null;
+  paperGradeId.value = null;
+  selectedQuestionIds.value = [];
+  selectedQuestionMap.value.clear();
+  batchScoreMode.value = "type";
+  singleQuestionIndex.value = "";
+  singleQuestionScore.value = 5;
+  allQuestionsScore.value = 5;
+  showUploadModal.value = false;
+  showBatchScoreModal.value = false;
+  showPaperPreview.value = false;
+  questionList.value = [];
+  hasSearched.value = false;
+  clearSearchCriteria();
+};
+
+const previewImage = (url) => {
+  previewImageUrl.value = url;
+  showImagePreview.value = true;
+};
+
+const closeImagePreview = () => {
+  showImagePreview.value = false;
+  previewImageUrl.value = "";
+};
+
+const getOptionLabel = (index) => {
+  let label = "";
+  let n = index;
+  while (n >= 0) {
+    label = String.fromCharCode((n % 26) + 65) + label;
+    n = Math.floor(n / 26) - 1;
+  }
+  return label;
+};
+
+const getOptionsArray = (options) => {
+  if (!options || typeof options !== "object") return [];
+  return Object.values(options);
+};
+
+const isOptionCorrect = (question, index) => {
+  const optionLabel = getOptionLabel(index);
+  const questionCategoryName = getQuestionCategoryText(question.question_category_id);
+
+  if (questionCategoryName === "单选题" || questionCategoryName.includes("单选")) {
+    return question.answer === optionLabel;
+  } else if (
+    questionCategoryName === "多选题" ||
+    questionCategoryName.includes("多选")
+  ) {
+    if (question.answer) {
+      const answers = question.answer.split(",").map((a) => a.trim());
+      return answers.includes(optionLabel);
+    }
+  }
+  return false;
+};
+
+const isQuestionSelected = (questionId) => {
+  return selectedQuestions.value.some((q) => q.id === questionId);
+};
+
+const addToPaper = (question) => {
+  if (!isQuestionSelected(question.id)) {
+    const questionWithScore = {
+      ...question,
+      score: 5,
+      scoreError: "",
+    };
+    selectedQuestions.value.push(questionWithScore);
+    ElMessage.success("题目已添加到试卷");
+  }
+};
+
+const removeFromPaper = (questionId) => {
+  selectedQuestions.value = selectedQuestions.value.filter(
+    (q) => q.id !== questionId
+  );
+  ElMessage.success("题目已从试卷移除");
+};
+
+const moveQuestionUp = (index) => {
+  if (index <= 0) return;
+  const temp = selectedQuestions.value[index];
+  selectedQuestions.value[index] = selectedQuestions.value[index - 1];
+  selectedQuestions.value[index - 1] = temp;
+  ElMessage.success("题目顺序已调整");
+};
+
+const moveQuestionDown = (index) => {
+  if (index >= selectedQuestions.value.length - 1) return;
+  const temp = selectedQuestions.value[index];
+  selectedQuestions.value[index] = selectedQuestions.value[index + 1];
+  selectedQuestions.value[index + 1] = temp;
+  ElMessage.success("题目顺序已调整");
+};
+
+const clearPaper = () => {
+  ElMessageBox.confirm("确定要清空试卷吗？", "确认清空", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    selectedQuestions.value = [];
+    ElMessage.success("试卷已清空");
+  });
+};
+
+const exportPaper = () => {
+  if (selectedQuestions.value.length === 0) {
+    ElMessage.warning("试卷为空，无法导出");
+    return;
+  }
+  ElMessage.success("试卷导出功能待实现");
+};
+
+const getQuestionTypeCount = (type) => {
+  if (type === "选择题") {
+    return selectedQuestions.value.filter((q) => {
+      const categoryName = getQuestionCategoryText(q.question_category_id);
+      return (
+        categoryName === "单选题" ||
+        categoryName.includes("单选") ||
+        categoryName === "多选题" ||
+        categoryName.includes("多选")
+      );
+    }).length;
+  } else if (type === "主观题") {
+    return selectedQuestions.value.filter((q) => {
+      const categoryName = getQuestionCategoryText(q.question_category_id);
+      return !(
+        categoryName === "单选题" ||
+        categoryName.includes("单选") ||
+        categoryName === "多选题" ||
+        categoryName.includes("多选")
+      );
+    }).length;
+  }
+  return 0;
+};
+
+const isBatchSelected = (questionId) => {
+  return selectedQuestionIds.value.includes(questionId);
+};
+
+const toggleBatchSelection = (questionId) => {
+  const index = selectedQuestionIds.value.indexOf(questionId);
+
+  if (index > -1) {
+    selectedQuestionIds.value.splice(index, 1);
+    selectedQuestionMap.value.delete(questionId);
+  } else {
+    selectedQuestionIds.value.push(questionId);
+    const q = questionList.value.find((item) => item.id === questionId);
+    if (q) {
+      selectedQuestionMap.value.set(questionId, q);
+    }
+  }
+};
+
+const batchAddToPaper = () => {
+  const questionsToAdd = Array.from(selectedQuestionMap.value.values()).filter(
+    (q) => !isQuestionSelected(q.id)
+  );
+
+  if (questionsToAdd.length === 0) {
+    ElMessage.info("没有可以添加的新题目");
+    return;
+  }
+
+  const questionsWithScores = questionsToAdd.map((q) => ({
+    ...q,
+    score: 5,
+    scoreError: "",
+  }));
+
+  selectedQuestions.value.push(...questionsWithScores);
+
+  ElMessage.success(`已添加 ${questionsToAdd.length} 个题目`);
+  clearSelection();
+};
+
+const clearSelection = () => {
+  selectedQuestionIds.value = [];
+  selectedQuestionMap.value.clear();
+};
+
+const toggleExpand = (questionId) => {
+  expandedQuestions.value[questionId] = !expandedQuestions.value[questionId];
+};
+
+const isContentOverflowing = (questionId) => {
+  return contentOverflowing.value[questionId] || false;
+};
+
+const checkContentOverflow = () => {
+  nextTick(() => {
+    const questionElements = document.querySelectorAll(".question-text-container");
+    questionElements.forEach((el) => {
+      const questionId = el
+        .closest(".question-card")
+        .querySelector(".question-id")
+        .textContent.split(": ")[1];
+      contentOverflowing.value[questionId] = el.scrollHeight > el.clientHeight;
+    });
+  });
+};
+
+const handleQuestionCardClick = (questionId, event) => {
+  const ignoreElements = [
+    ".batch-select-checkbox",
+    ".btn-add",
+    ".btn-remove",
+    ".expand-btn",
+    ".thumbnail-image",
+    ".question-actions button",
+  ];
+
+  const isIgnoredElement = ignoreElements.some((selector) =>
+    event.target.closest(selector)
+  );
+
+  if (isIgnoredElement) {
+    return;
+  }
+
+  toggleBatchSelection(questionId);
+};
+
+const clearSearchCriteria = () => {
+  Object.assign(searchCriteria, {
+    grade_ids: [],
+    subject_id: null,
+    question_category_ids: [],
+    knowledge_point_ids: [],
+    sub_knowledge_point_ids: [],
+    solution_idea_ids: [],
+    difficulty_levels: [],
+    title: "",
+    page_num: 1,
+  });
+
+  knowledgeSearch.value = "";
+  subKnowledgeSearch.value = "";
+  solutionIdeaSearch.value = "";
+  questionCategorySearch.value = "";
+  gradeSearch.value = "";
+  difficultySearch.value = "";
+
+  questionList.value = [];
+  hasSearched.value = false;
+  clearSelection();
+  ElMessage.success("检索条件已重置");
+};
+
+const toggleGradeDropdown = () => {
+  showGradeDropdown.value = !showGradeDropdown.value;
+  if (showGradeDropdown.value) {
+    filterGrades();
+  }
+};
+
+const filterGrades = () => {
+  if (!gradeSearch.value) {
+    filteredGrades.value = gradeList.value;
+  } else {
+    filteredGrades.value = gradeList.value.filter((grade) =>
+      grade.name.toLowerCase().includes(gradeSearch.value.toLowerCase())
+    );
+  }
+};
+
+const toggleGrade = (grade) => {
+  const index = searchCriteria.grade_ids.indexOf(grade.id);
+  if (index > -1) {
+    searchCriteria.grade_ids.splice(index, 1);
+  } else {
+    searchCriteria.grade_ids.push(grade.id);
+  }
+};
+
+const removeGrade = (id) => {
+  searchCriteria.grade_ids = searchCriteria.grade_ids.filter(
+    (gradeId) => gradeId !== id
+  );
+};
+
+const isGradeSelected = (id) => {
+  return searchCriteria.grade_ids.includes(id);
+};
+
+const toggleDifficultyDropdown = () => {
+  showDifficultyDropdown.value = !showDifficultyDropdown.value;
+  if (showDifficultyDropdown.value) {
+    filterDifficulties();
+  }
+};
+
+const filterDifficulties = () => {
+  if (!difficultySearch.value) {
+    filteredDifficulties.value = difficultyList.value;
+  } else {
+    filteredDifficulties.value = difficultyList.value.filter(diff =>
+      diff.name.includes(difficultySearch.value)
+    );
+  }
+};
+
+const toggleDifficulty = (diff) => {
+  const index = searchCriteria.difficulty_levels.indexOf(diff.value);
+  if (index > -1) {
+    searchCriteria.difficulty_levels.splice(index, 1);
+  } else {
+    searchCriteria.difficulty_levels.push(diff.value);
+  }
+};
+
+const removeDifficulty = (value) => {
+  searchCriteria.difficulty_levels = searchCriteria.difficulty_levels.filter(
+    diffValue => diffValue !== value
+  );
+};
+
+const isDifficultySelected = (value) => {
+  return searchCriteria.difficulty_levels.includes(value);
+};
+
+const toggleQuestionCategoryDropdown = () => {
+  showQuestionCategoryDropdown.value = !showQuestionCategoryDropdown.value;
+  if (showQuestionCategoryDropdown.value) {
+    filterQuestionCategories();
+  }
+};
+
+const toggleKnowledgeDropdown = () => {
+  showKnowledgeDropdown.value = !showKnowledgeDropdown.value;
+  if (showKnowledgeDropdown.value) {
+    filterKnowledgePoints();
+  }
+};
+
+const toggleSubKnowledgeDropdown = () => {
+  showSubKnowledgeDropdown.value = !showSubKnowledgeDropdown.value;
+  if (showSubKnowledgeDropdown.value) {
+    filterSubKnowledgePoints();
+  }
+};
+
+const toggleSolutionIdeaDropdown = () => {
+  showSolutionIdeaDropdown.value = !showSolutionIdeaDropdown.value;
+  if (showSolutionIdeaDropdown.value) {
+    filterSolutionIdeas();
+  }
+};
+
+const toggleQuestionCategory = (item) => {
+  const index = searchCriteria.question_category_ids.indexOf(item.id);
+  if (index > -1) {
+    searchCriteria.question_category_ids.splice(index, 1);
+  } else {
+    searchCriteria.question_category_ids.push(item.id);
+  }
+};
+
+const toggleKnowledgePoint = (kp) => {
+  const index = searchCriteria.knowledge_point_ids.indexOf(kp.id);
+  if (index > -1) {
+    searchCriteria.knowledge_point_ids.splice(index, 1);
+  } else {
+    searchCriteria.knowledge_point_ids.push(kp.id);
+  }
+};
+
+const toggleSubKnowledgePoint = (kp) => {
+  const index = searchCriteria.sub_knowledge_point_ids.indexOf(kp.id);
+  if (index > -1) {
+    searchCriteria.sub_knowledge_point_ids.splice(index, 1);
+  } else {
+    searchCriteria.sub_knowledge_point_ids.push(kp.id);
+  }
+};
+
+const toggleSolutionIdea = (item) => {
+  const index = searchCriteria.solution_idea_ids.indexOf(item.id);
+  if (index > -1) {
+    searchCriteria.solution_idea_ids.splice(index, 1);
+  } else {
+    searchCriteria.solution_idea_ids.push(item.id);
+  }
+};
+
+const removeQuestionCategory = (id) => {
+  searchCriteria.question_category_ids = searchCriteria.question_category_ids.filter(
+    (itemId) => itemId !== id
+  );
+};
+
+const removeKnowledgePoint = (id) => {
+  searchCriteria.knowledge_point_ids = searchCriteria.knowledge_point_ids.filter(
+    (kp) => kp !== id
+  );
+};
+
+const removeSubKnowledgePoint = (id) => {
+  searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
+    (kp) => kp !== id
+  );
+};
+
+const removeSolutionIdea = (id) => {
+  searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
+    (itemId) => itemId !== id
+  );
+};
+
+const isKnowledgeSelected = (id) => {
+  return searchCriteria.knowledge_point_ids.includes(id);
+};
+
+const isSubKnowledgeSelected = (id) => {
+  return searchCriteria.sub_knowledge_point_ids.includes(id);
+};
+
+const isSolutionIdeaSelected = (id) => {
+  return searchCriteria.solution_idea_ids.includes(id);
+};
+
+const isQuestionCategorySelected = (id) => {
+  return searchCriteria.question_category_ids.includes(id);
+};
+
+const filterKnowledgePoints = () => {
+  if (!knowledgeSearch.value) {
+    filteredKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(knowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+const filterSubKnowledgePoints = () => {
+  if (!subKnowledgeSearch.value) {
+    filteredSubKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(subKnowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+const filterSolutionIdeas = () => {
+  if (!solutionIdeaSearch.value) {
+    filteredSolutionIdeas.value = solutionIdeaList.value;
+  } else {
+    filteredSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
+      item.name.toLowerCase().includes(solutionIdeaSearch.value.toLowerCase())
+    );
+  }
+};
+
+const filterQuestionCategories = () => {
+  if (!questionCategorySearch.value) {
+    filteredQuestionCategories.value = questionCategoryList.value;
+  } else {
+    filteredQuestionCategories.value = questionCategoryList.value.filter((item) =>
+      item.name.toLowerCase().includes(questionCategorySearch.value.toLowerCase())
+    );
+  }
+};
+
+const handleClickOutside = (event) => {
+  if (!event.target.closest(".multi-select-wrapper")) {
+    showKnowledgeDropdown.value = false;
+    showSubKnowledgeDropdown.value = false;
+    showSolutionIdeaDropdown.value = false;
+    showQuestionCategoryDropdown.value = false;
+    showGradeDropdown.value = false;
+    showDifficultyDropdown.value = false;
+  }
+};
+
+const loadLists = async () => {
+  try {
+    const [s, g, sub, kp, si, qc] = await Promise.all([
+      axios.get(`${API_BASE}/questions/getSchoolList`),
+      axios.get(`${API_BASE}/questions/getGradeList`),
+      axios.get(`${API_BASE}/questions/getSubjectList`),
+      axios.get(`${API_BASE}/questions/getKnowledgePointList`),
+      axios.get(`${API_BASE}/questions/getSolutionIdeaList`),
+      axios.get(`${API_BASE}/questions/getQuestionCategoryList`),
+    ]);
+
+    schoolList.value = Object.entries(s.data.data || {}).map(([id, name]) => ({
+      id: Number(id),
+      name,
+    }));
+
+    gradeList.value = Object.entries(g.data.data || {}).map(([id, name]) => ({
+      id: Number(id),
+      name,
+    }));
+
+    subjectList.value = Object.entries(sub.data.data || {}).map(([id, name]) => ({
+      id: Number(id),
+      name,
+    }));
+
+    knowledgePointList.value = Object.entries(
+      kp.data.data || {}
+    ).map(([id, name]) => ({ id: parseInt(id), name }));
+
+    solutionIdeaList.value = Object.entries(si.data.data || {}).map(([id, name]) => ({
+      id: parseInt(id),
+      name,
+    }));
+
+    questionCategoryList.value = Object.entries(
+      qc.data.data || {}
+    ).map(([id, name]) => ({ id: parseInt(id), name }));
+
+    filteredKnowledgePoints.value = knowledgePointList.value;
+    filteredSubKnowledgePoints.value = knowledgePointList.value;
+    filteredSolutionIdeas.value = solutionIdeaList.value;
+    filteredQuestionCategories.value = questionCategoryList.value;
+    filteredGrades.value = gradeList.value;
+    filteredDifficulties.value = difficultyList.value;
+  } catch (err) {
+    console.error("获取列表失败:", err);
+    ElMessage.error("获取列表失败");
+  }
+};
+
+const findQuestions = async () => {
+  try {
+    searchCriteria.page_num = 1;
+    pageInput.value = 1;
+    const payload = { ...searchCriteria };
+
+    if (searchCriteria.grade_ids.length > 0) {
+      payload.grade_ids = searchCriteria.grade_ids.map((id) => Number(id));
+    } else {
+      payload.grade_ids = [];
+    }
+    if (searchCriteria.subject_id !== null)
+      payload.subject_id = Number(searchCriteria.subject_id);
+    if (searchCriteria.question_category_ids.length > 0)
+      payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.knowledge_point_ids.length > 0)
+      payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.sub_knowledge_point_ids.length > 0)
+      payload.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.map(
+        (id) => Number(id)
+      );
+    if (searchCriteria.solution_idea_ids.length > 0)
+      payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.difficulty_levels.length > 0)
+      payload.difficulty_levels = searchCriteria.difficulty_levels.map(level => 
+        Number(level)
+      );
+    else
+      payload.difficulty_levels = [];
+    if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
+
+    const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+    const responseData = res.data.data;
+
+    questionList.value = responseData?.data_info || [];
+
+    if (responseData) {
+      searchCriteria.page_num = responseData.page_num || 1;
+      searchCriteria.page_size = responseData.page_size || 12;
+      totalPages.value = responseData.total_pages || 1;
+      totalItems.value = responseData.total_items || 0;
+      pageInput.value = responseData.page_num || 1;
+    }
+
+    hasSearched.value = true;
+
+    setTimeout(checkContentOverflow, 100);
+
+    if (!questionList.value.length) {
+      ElMessage.info("未找到符合条件的题目");
+    } else {
+      ElMessage.success(`找到 ${totalItems.value} 条题目`);
+    }
+  } catch (err) {
+    console.error("检索失败:", err);
+    ElMessage.error("检索失败");
+    questionList.value = [];
+    hasSearched.value = true;
+  }
+};
+
+const changePage = (newPage) => {
+  if (newPage < 1 || newPage > totalPages.value) {
+    return;
+  }
+  searchCriteria.page_num = newPage;
+  pageInput.value = newPage;
+  silentFindQuestions();
+};
+
+const goToFirstPage = () => {
+  changePage(1);
+};
+
+const goToLastPage = () => {
+  changePage(totalPages.value);
+};
+
+const goToPage = () => {
+  const page = parseInt(pageInput.value);
+  if (page >= 1 && page <= totalPages.value) {
+    changePage(page);
+  } else {
+    ElMessage.warning(`请输入 1 到 ${totalPages.value} 之间的页码`);
+  }
+};
+
+const silentFindQuestions = async () => {
+  try {
+    const payload = { ...searchCriteria };
+
+    if (searchCriteria.grade_ids.length > 0) {
+      payload.grade_ids = searchCriteria.grade_ids.map((id) => Number(id));
+    } else {
+      payload.grade_ids = [];
+    }
+    if (searchCriteria.subject_id !== null)
+      payload.subject_id = Number(searchCriteria.subject_id);
+    if (searchCriteria.question_category_ids.length > 0)
+      payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.knowledge_point_ids.length > 0)
+      payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.solution_idea_ids.length > 0)
+      payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.difficulty_levels.length > 0)
+      payload.difficulty_levels = searchCriteria.difficulty_levels.map(level => 
+        Number(level)
+      );
+    else
+      payload.difficulty_levels = [];
+    if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
+
+    const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+    const responseData = res.data.data;
+
+    questionList.value = responseData?.data_info || [];
+
+    if (responseData) {
+      searchCriteria.page_num = responseData.page_num || 1;
+      searchCriteria.page_size = responseData.page_size || 12;
+      totalPages.value = responseData.total_pages || 1;
+      totalItems.value = responseData.total_items || 0;
+      pageInput.value = responseData.page_num || 1;
+    }
+
+    hasSearched.value = true;
+
+    setTimeout(checkContentOverflow, 100);
+  } catch (err) {
+    console.error("检索失败:", err);
+    ElMessage.error("检索失败");
+    questionList.value = [];
+    hasSearched.value = true;
+  }
+};
+
+const getSchoolName = (id) => {
+  if (id === null) return "-";
+  const school = schoolList.value.find((s) => s.id === Number(id));
+  return school ? school.name : "-";
+};
+
+const getGradeName = (id) => {
+  if (id === null) return "-";
+  const grade = gradeList.value.find((g) => g.id === Number(id));
+  return grade ? grade.name : "-";
+};
+
+const getSubjectName = (id) => {
+  if (id === null) return "-";
+  const subject = subjectList.value.find((s) => s.id === Number(id));
+  return subject ? subject.name : "-";
+};
+
+const getKnowledgePointName = (id) => {
+  if (id === null) return "-";
+  const kp = knowledgePointList.value.find((k) => k.id === Number(id));
+  return kp ? kp.name : "-";
+};
+
+const getSolutionIdeaName = (id) => {
+  if (id === null) return "-";
+  const item = solutionIdeaList.value.find((s) => s.id === Number(id));
+  return item ? item.name : "-";
+};
+
+const goBack = () => {
+  router.go(-1);
+};
+
+const renderTypeScoreChart = () => {
+  if (!typeScoreChartRef.value) return;
+
+  if (!typeScoreChart) {
+    typeScoreChart = echarts.init(typeScoreChartRef.value);
+  }
+
+  typeScoreChart.setOption(
+    {
+      tooltip: {
+        trigger: "item",
+        formatter: "{b}<br/>分值：{c}分<br/>占比：{d}%",
+      },
+      series: [
+        {
+          type: "pie",
+          radius: ["45%", "70%"],
+          data: typeScoreDistribution.value.map((d) => ({
+            name: d.type,
+            value: d.totalScore,
+          })),
+        },
+      ],
+    },
+    true
+  );
+};
+
+// 生命周期钩子
+onMounted(() => {
+  loadLists();
+  document.addEventListener("click", handleClickOutside);
+});
+
+// 监听器
+watch(showPaperPreview, (val) => {
+  if (val) {
+    nextTick(() => {
+      renderTypeScoreChart();
+    });
+  } else {
+    if (typeScoreChart) {
+      typeScoreChart.dispose();
+      typeScoreChart = null;
+    }
+  }
+});
+
+watch(
+  () => typeScoreDistribution.value,
+  () => {
+    if (showPaperPreview.value) {
+      nextTick(() => {
+        renderTypeScoreChart();
+      });
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

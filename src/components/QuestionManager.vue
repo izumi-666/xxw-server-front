@@ -4,28 +4,26 @@
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">
-          题库录入系统
-        </h1>
+        <h1 class="page-title">题库录入系统</h1>
       </div>
     </div>
 
     <!-- 模式选择：上传题目 vs 更新题目 -->
     <div class="mode-select">
       <!-- 上传题目按钮 - 根据权限显示 -->
-      <button 
-        v-if="hasPermission('question:create')" 
-        :class="{ active: !updateMode }" 
-        @click="exitUpdateMode" 
+      <button
+        v-if="hasPermission('question:create')"
+        :class="{ active: !updateMode }"
+        @click="exitUpdateMode"
         type="button"
       >
         上传题目
       </button>
       <!-- 更新题目按钮 - 根据权限显示 -->
-      <button 
-        v-if="hasPermission('question:*')" 
-        :class="{ active: updateMode }" 
-        @click="enterUpdateMode" 
+      <button
+        v-if="hasPermission('question:*')"
+        :class="{ active: updateMode }"
+        @click="enterUpdateMode"
         type="button"
       >
         更新题目
@@ -614,15 +612,82 @@
       <div class="search-criteria">
         <h2>检索题目</h2>
         <div class="criteria-row">
-          <!-- 年级筛选 -->
+          <!-- 年级筛选（多选） -->
           <div class="criteria-item">
             <label>年级：</label>
-            <select v-model="searchCriteria.grade_id" class="form-select">
-              <option :value="null">全部</option>
-              <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
-                {{ grade.name }}
-              </option>
-            </select>
+            <div class="searchable-select">
+              <input
+                type="text"
+                v-model="updateGradeSearch"
+                placeholder="输入关键字搜索年级..."
+                class="form-input search-input"
+                @input="filterUpdateGrades"
+                @focus="
+                  resetFilteredList('updateGrade');
+                  showUpdateGradeDropdown = true;
+                "
+                @blur="onUpdateGradeBlur"
+              />
+              <div
+                v-if="showUpdateGradeDropdown && filteredUpdateGrades.length"
+                class="dropdown-list"
+              >
+                <div
+                  v-for="grade in filteredUpdateGrades"
+                  :key="grade.id"
+                  class="dropdown-item"
+                  @mousedown="selectUpdateGrade(grade)"
+                >
+                  {{ grade.name }}
+                  <span v-if="isUpdateGradeSelected(grade.id)" class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-items" v-if="selectedUpdateGrades.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="grade in selectedUpdateGrades"
+                :key="grade.id"
+                class="selected-tag"
+                @click="removeUpdateGrade(grade.id)"
+              >
+                {{ grade.name }} ×
+              </span>
+            </div>
+          </div>
+
+          <!-- 难度筛选（多选） -->
+          <div class="criteria-item">
+            <label>难度：</label>
+            <div class="difficulty-multi-select">
+              <div class="difficulty-options">
+                <div
+                  v-for="n in 5"
+                  :key="n"
+                  class="difficulty-option"
+                  :class="{ selected: isUpdateDifficultySelected(n) }"
+                  @click="toggleUpdateDifficulty(n)"
+                >
+                  <span class="difficulty-stars">{{ n }} 星</span>
+                  <span v-if="isUpdateDifficultySelected(n)" class="selected-mark"
+                    >✓</span
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="selected-items" v-if="searchCriteria.difficulty_levels.length">
+              <span class="selected-tags-label">已选择：</span>
+              <span
+                v-for="level in searchCriteria.difficulty_levels"
+                :key="level"
+                class="selected-tag"
+                @click="toggleUpdateDifficulty(level)"
+              >
+                {{ level }}星 ×
+              </span>
+            </div>
           </div>
 
           <!-- 科目筛选 -->
@@ -888,15 +953,6 @@
             </div>
           </div>
 
-          <!-- 难度筛选 -->
-          <div class="criteria-item">
-            <label>难度：</label>
-            <select v-model="searchCriteria.difficulty_level" class="form-select">
-              <option :value="null">全部</option>
-              <option v-for="n in 5" :key="n" :value="n">{{ n }} 星</option>
-            </select>
-          </div>
-
           <!-- 题目内容关键词搜索 -->
           <div class="criteria-item">
             <label>题目内容：</label>
@@ -934,7 +990,7 @@
               <div class="table-cell">题目内容</div>
               <div class="table-cell">备注</div>
               <div class="table-cell">图片</div>
-              <div class="table-cell">操作</div>
+              <div class="table-cell" style="margin-left: 35px">操作</div>
             </div>
             <!-- 表格数据行 -->
             <div v-for="q in questionList" :key="q.id" class="table-row">
@@ -997,17 +1053,17 @@
                 <span v-else class="no-image">-</span>
               </div>
               <!-- 操作按钮单元格 -->
-              <div class="table-cell actions-cell">
-                <button 
-                  v-if="hasPermission('question:update')" 
-                  @click="loadQuestionForUpdate(q)" 
+              <div class="table-cell actions-cell" style="margin-left: 30px; padding-left: 15px;">
+                <button
+                  v-if="hasPermission('question:update')"
+                  @click="loadQuestionForUpdate(q)"
                   class="btn-update"
                 >
                   更新
                 </button>
-                <button 
-                  v-if="hasPermission('question:delete')" 
-                  @click="confirmDelete(q)" 
+                <button
+                  v-if="hasPermission('question:delete')"
+                  @click="confirmDelete(q)"
                   class="btn-delete"
                 >
                   删除
@@ -1695,14 +1751,6 @@
       </div>
     </div>
 
-    <!-- ==================== 统一弹窗提示 ==================== -->
-    <div v-if="showAlertModal" class="modal-overlay">
-      <div class="alert-modal-content">
-        <h3 class="alert-modal-title">{{ alertModalTitle }}</h3>
-        <p class="alert-modal-message">{{ alertModalMessage }}</p>
-      </div>
-    </div>
-
     <!-- ==================== 题目预览模态框 ==================== -->
     <div
       v-if="showPreviewModal"
@@ -1860,9 +1908,9 @@
                 ></div>
                 <div class="dependent-question-actions">
                   <!-- 删除按钮 - 根据权限显示 -->
-                  <button 
-                    v-if="hasPermission('question:delete')" 
-                    @click="deleteDependentQuestion(q)" 
+                  <button
+                    v-if="hasPermission('question:delete')"
+                    @click="deleteDependentQuestion(q)"
                     class="btn-delete"
                   >
                     删除
@@ -2122,11 +2170,13 @@
   </div>
 </template>
 
-<script>
+<script setup>
 // 导入Vue相关功能和依赖
 import { reactive, ref, onMounted, computed, nextTick } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from 'element-plus'
+import 'element-plus/dist/index.css'
 
 // 导入 Markdown 渲染相关
 import { marked } from "marked";
@@ -2143,3920 +2193,3425 @@ marked.setOptions({
   sanitize: false, // 允许 HTML
 });
 
-export default {
-  setup() {
-    const router = useRouter();
+const router = useRouter();
 
-    // ==================== 权限检查函数 ====================
-    /**
-     * 检查用户是否拥有指定权限
-     * @param {string} permission - 权限字符串
-     * @returns {boolean} 是否拥有权限
-     */
-    const hasPermission = (permission) => {
-      // 从localStorage获取权限列表
-      const permissions = JSON.parse(localStorage.getItem("userPermissions") || "[]");
-      
-      // 检查是否有精确权限
-      if (permissions.includes(permission)) {
-        return true;
-      }
-      
-      // 检查通配符权限
-      const permissionParts = permission.split(":");
-      if (permissionParts.length === 2) {
-        const [resource, action] = permissionParts;
-        // 检查 resource:* 形式的通配符
-        if (permissions.includes(`${resource}:*`)) {
-          return true;
-        }
-        // 检查 *:action 形式的通配符
-        if (permissions.includes(`*:${action}`)) {
-          return true;
-        }
-        // 检查 *:* 形式的通配符
-        if (permissions.includes("*:*")) {
-          return true;
-        }
-      }
-      
-      return false;
-    };
+// ==================== 权限检查函数 ====================
+/**
+ * 检查用户是否拥有指定权限
+ * @param {string} permission - 权限字符串
+ * @returns {boolean} 是否拥有权限
+ */
+const hasPermission = (permission) => {
+  // 从localStorage获取权限列表
+  const permissions = JSON.parse(localStorage.getItem("userPermissions") || "[]");
 
-    // ==================== Markdown 渲染函数 ====================
-    /**
-     * 渲染 Markdown 文本为 HTML
-     * @param {string} text - Markdown 文本
-     * @returns {string} 渲染后的 HTML
-     */
-    const renderMarkdown = (text) => {
-      if (!text) return "";
+  // 检查是否有精确权限
+  if (permissions.includes(permission)) {
+    return true;
+  }
 
-      // 预处理 LaTeX 公式
-      const processedText = text
-        // 处理行内公式 $...$
-        // 处理块级公式 $$...$$
-        .replace(/\$\$(.+?)\$\$/g, (match, formula) => {
-          try {
-            return katex.renderToString(formula, {
-              displayMode: true,
-              throwOnError: false,
-            });
-          } catch (error) {
-            return match; // 如果渲染失败，返回原公式
-          }
-        })
-        .replace(/\$(.+?)\$/g, (match, formula) => {
-          try {
-            return katex.renderToString(formula, {
-              displayMode: false,
-              throwOnError: false,
-            });
-          } catch (error) {
-            return match; // 如果渲染失败，返回原公式
-          }
+  // 检查通配符权限
+  const permissionParts = permission.split(":");
+  if (permissionParts.length === 2) {
+    const [resource, action] = permissionParts;
+    // 检查 resource:* 形式的通配符
+    if (permissions.includes(`${resource}:*`)) {
+      return true;
+    }
+    // 检查 *:action 形式的通配符
+    if (permissions.includes(`*:${action}`)) {
+      return true;
+    }
+    // 检查 *:* 形式的通配符
+    if (permissions.includes("*:*")) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+// ==================== Markdown 渲染函数 ====================
+/**
+ * 渲染 Markdown 文本为 HTML
+ * @param {string} text - Markdown 文本
+ * @returns {string} 渲染后的 HTML
+ */
+const renderMarkdown = (text) => {
+  if (!text) return "";
+
+  // 预处理 LaTeX 公式
+  const processedText = text
+    // 处理行内公式 $...$
+    // 处理块级公式 $$...$$
+    .replace(/\$\$(.+?)\$\$/g, (match, formula) => {
+      try {
+        return katex.renderToString(formula, {
+          displayMode: true,
+          throwOnError: false,
         });
-        
-      // 渲染 Markdown
-      return marked(processedText);
-    };
-
-    // ==================== 合并知识点相关状态 ====================
-    const showMergeKnowledgeModal = ref(false); // 合并知识点模态框显示状态
-    const mergeStep = ref(1); // 合并步骤：1-选择知识点，2-预览受影响题目
-    const mergeKnowledgeSearch = ref(""); // 合并知识点搜索关键词
-    const mergedKnowledgePointName = ref(""); // 合并后的知识点名称
-    const selectedMergeKnowledgePoints = ref([]); // 选中的要合并的知识点
-    const selectedMergedKnowledgePoint = ref(null); // 选中的合并后知识点（现有）
-    const showMergeKnowledgeDropdown = ref(false); // 合并知识点下拉框显示状态
-    const showMergedKnowledgeDropdown = ref(false); // 合并后知识点下拉框显示状态
-    const filteredMergeKnowledgePoints = ref([]); // 过滤后的合并知识点列表
-    const filteredMergedKnowledgePoints = ref([]); // 过滤后的合并后知识点列表
-    const affectedQuestions = ref([]); // 受影响的题目列表
-    const affectedQuestionsPageNum = ref(1); // 受影响题目当前页码
-    const affectedQuestionsPageSize = ref(5); // 受影响题目每页数量
-    const affectedQuestionsTotalPages = ref(1); // 受影响题目总页数
-    const affectedQuestionsTotalItems = ref(0); // 受影响题目总条目数
-    const affectedQuestionsPageInput = ref(1); // 受影响题目页码输入
-    const isMerging = ref(false); // 合并操作进行中状态
-
-    // ==================== 编辑知识点相关状态 ====================
-    const showEditKnowledgePointModal = ref(false); // 编辑知识点模态框显示状态
-    const editingKnowledgePoint = ref(null); // 正在编辑的知识点对象
-    const editingKnowledgePointName = ref(""); // 编辑中的知识点名称
-    const editingKnowledgePointType = ref("知识点"); // 编辑的实体类型：知识点或副知识点
-
-    // ==================== 删除实体相关状态 ====================
-    const showDeleteEntityConfirm = ref(false); // 删除实体确认框显示状态
-    const deleteEntityType = ref(""); // 删除的实体类型：knowledgePoint, solutionIdea, questionCategory
-    const deleteEntityData = ref(null); // 要删除的实体数据
-    const dependentQuestions = ref([]); // 依赖的题目列表
-
-    // ==================== 依赖题目分页相关状态 ====================
-    const dependentQuestionsPageNum = ref(1); // 依赖题目当前页码
-    const dependentQuestionsPageSize = ref(5); // 依赖题目每页数量
-    const dependentQuestionsTotalPages = ref(1); // 依赖题目总页数
-    const dependentQuestionsTotalItems = ref(0); // 依赖题目总条目数
-    const dependentQuestionsPageInput = ref(1); // 依赖题目页码输入
-
-    // ==================== 预览功能相关状态 ====================
-    const showPreviewModal = ref(false); // 预览模态框显示状态
-    const previewMode = ref("upload"); // 预览模式：upload 或 update
-
-    // ==================== 弹窗和提示相关状态 ====================
-    const showAlertModal = ref(false); // 是否显示提示弹窗
-    const alertModalTitle = ref(""); // 弹窗标题
-    const alertModalMessage = ref(""); // 弹窗消息
-    const alertModalTimer = ref(null); // 弹窗定时器
-
-    /**
-     * 显示提示弹窗
-     * @param {string} title - 弹窗标题
-     * @param {string} message - 弹窗消息
-     */
-    const showAlert = (title, message) => {
-      alertModalTitle.value = title;
-      alertModalMessage.value = message;
-      showAlertModal.value = true;
-
-      // 清除之前的定时器
-      if (alertModalTimer.value) {
-        clearTimeout(alertModalTimer.value);
+      } catch (error) {
+        return match; // 如果渲染失败，返回原公式
       }
+    })
+    .replace(/\$(.+?)\$/g, (match, formula) => {
+      try {
+        return katex.renderToString(formula, {
+          displayMode: false,
+          throwOnError: false,
+        });
+      } catch (error) {
+        return match; // 如果渲染失败，返回原公式
+      }
+    });
 
-      // 设置1秒后自动关闭弹窗
-      alertModalTimer.value = setTimeout(() => {
-        showAlertModal.value = false;
-      }, 1000);
+  // 渲染 Markdown
+  return marked(processedText);
+};
+
+// ==================== 合并知识点相关状态 ====================
+const showMergeKnowledgeModal = ref(false); // 合并知识点模态框显示状态
+const mergeStep = ref(1); // 合并步骤：1-选择知识点，2-预览受影响题目
+const mergeKnowledgeSearch = ref(""); // 合并知识点搜索关键词
+const mergedKnowledgePointName = ref(""); // 合并后的知识点名称
+const selectedMergeKnowledgePoints = ref([]); // 选中的要合并的知识点
+const selectedMergedKnowledgePoint = ref(null); // 选中的合并后知识点（现有）
+const showMergeKnowledgeDropdown = ref(false); // 合并知识点下拉框显示状态
+const showMergedKnowledgeDropdown = ref(false); // 合并后知识点下拉框显示状态
+const filteredMergeKnowledgePoints = ref([]); // 过滤后的合并知识点列表
+const filteredMergedKnowledgePoints = ref([]); // 过滤后的合并后知识点列表
+const affectedQuestions = ref([]); // 受影响的题目列表
+const affectedQuestionsTotalItems = ref(0); // 受影响题目总条目数
+const isMerging = ref(false); // 合并操作进行中状态
+
+// ==================== 编辑知识点相关状态 ====================
+const showEditKnowledgePointModal = ref(false); // 编辑知识点模态框显示状态
+const editingKnowledgePoint = ref(null); // 正在编辑的知识点对象
+const editingKnowledgePointName = ref(""); // 编辑中的知识点名称
+const editingKnowledgePointType = ref("知识点"); // 编辑的实体类型：知识点或副知识点
+
+// ==================== 删除实体相关状态 ====================
+const showDeleteEntityConfirm = ref(false); // 删除实体确认框显示状态
+const deleteEntityType = ref(""); // 删除的实体类型：knowledgePoint, solutionIdea, questionCategory
+const deleteEntityData = ref(null); // 要删除的实体数据
+const dependentQuestions = ref([]); // 依赖的题目列表
+
+// ==================== 依赖题目分页相关状态 ====================
+const dependentQuestionsPageNum = ref(1); // 依赖题目当前页码
+const dependentQuestionsPageSize = ref(5); // 依赖题目每页数量
+const dependentQuestionsTotalPages = ref(1); // 依赖题目总页数
+const dependentQuestionsTotalItems = ref(0); // 依赖题目总条目数
+const dependentQuestionsPageInput = ref(1); // 依赖题目页码输入
+
+// ==================== 预览功能相关状态 ====================
+const showPreviewModal = ref(false); // 预览模态框显示状态
+const previewMode = ref("upload"); // 预览模式：upload 或 update
+
+// ==================== 数据列表状态 ====================
+const schoolList = ref([]); // 学校列表
+const gradeList = ref([]); // 年级列表
+const subjectList = ref([]); // 科目列表
+const knowledgePointList = ref([]); // 知识点列表
+const solutionIdeaList = ref([]); // 解题思想列表
+const questionCategoryList = ref([]); // 问题类别列表
+
+// ==================== 新建内容输入状态 ====================
+const newKnowledgePoint = ref(""); // 新建知识点输入
+const newSubKnowledgePoint = ref(""); // 新建副知识点输入
+const newSolutionIdea = ref(""); // 新建解题思想输入
+const newQuestionCategory = ref(""); // 新建问题类别输入
+
+// 更新界面的新建内容输入状态
+const newUpdateKnowledgePoint = ref(""); // 更新界面新建知识点
+const newUpdateSolutionIdea = ref(""); // 更新界面新建解题思想
+const newUpdateFormKnowledgePoint = ref(""); // 更新表单新建知识点
+const newUpdateFormSubKnowledgePoint = ref(""); // 更新表单新建副知识点
+const newUpdateFormSolutionIdea = ref(""); // 更新表单新建解题思想
+
+// ==================== 其他状态 ====================
+const questionList = ref([]); // 题目列表
+const submitting = ref(false); // 提交状态
+const hasSearched = ref(false); // 是否已进行过搜索
+const updateFormRef = ref(null); // 更新表单的DOM引用
+const showImagePreview = ref(false); // 图片预览显示状态
+const previewImageUrl = ref(""); // 预览图片的URL
+
+// ==================== 记忆上传设置 ====================
+// 从localStorage读取或初始化上传记忆
+const uploadMemory = ref(
+  JSON.parse(localStorage.getItem("uploadMemory")) || {
+    school_id: null,
+    grade_id: null,
+    subject_id: null,
+    marking_type: 0,
+    difficulty_level: null,
+  }
+);
+
+// ==================== 上传题目表单数据 ====================
+const form = reactive({
+  id: null,
+  school_id: uploadMemory.value.school_id,
+  grade_id: uploadMemory.value.grade_id,
+  subject_id: uploadMemory.value.subject_id,
+  question_category_id: uploadMemory.value.question_category_id, // 问题类别ID（单选）
+  marking_type: uploadMemory.value.marking_type,
+  knowledge_point_id: null, // 知识点ID
+  solution_idea_ids: [], // 解题思想ID数组
+  difficulty_level: uploadMemory.value.difficulty_level,
+  title: "", // 题目内容
+  options: [
+    // 选择题选项数组
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+  ],
+  answer: "", // 答案
+  notes: "", // 解析
+  remark: "", // 备注
+  sub_knowledge_point_ids: [], // 副知识点ID数组
+  img_url: "", // 图片URL
+});
+
+// ==================== 更新题目表单数据 ====================
+const updateForm = reactive({
+  id: null,
+  school_id: null,
+  grade_id: null,
+  subject_id: null,
+  question_category_id: null, // 问题类别ID（单选）
+  marking_type: 0,
+  knowledge_point_id: null,
+  solution_idea_ids: [],
+  difficulty_level: null,
+  title: "",
+  options: [
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+  ],
+  answer: "",
+  notes: "",
+  remark: "",
+  sub_knowledge_point_ids: [],
+  img_url: "",
+});
+
+// ==================== 检索条件 ====================
+const searchCriteria = reactive({
+  grade_ids: [],
+  subject_id: null,
+  question_category_ids: [],
+  knowledge_point_ids: [], // 知识点ID数组
+  sub_knowledge_point_ids: [], // 副知识点ID数组
+  solution_idea_ids: [], // 解题思想ID数组
+  difficulty_levels: [],
+  title: "", // 题目关键词
+  page_num: 1, // 当前页码，默认第一页
+  page_size: 10, // 每页数量，默认10条
+});
+
+// ==================== 选择题答案索引 ====================
+const singleAnswerIndex = ref(null); // 单选题正确答案索引
+const updateSingleAnswerIndex = ref(null); // 更新界面单选题正确答案索引
+
+// ==================== 界面模式状态 ====================
+const updateMode = ref(false); // 是否为更新模式
+const showUpdateForm = ref(false); // 是否显示更新表单
+const selectedQuestion = ref(null); // 选中的题目
+const showDeleteConfirm = ref(false); // 删除确认框显示状态
+const questionToDelete = ref(null); // 待删除的题目
+
+// ==================== 搜索关键词状态 ====================
+// 上传界面的搜索关键词
+const knowledgeSearch = ref("");
+const subKnowledgeSearch = ref("");
+const solutionIdeaSearch = ref("");
+const questionCategorySearch = ref("");
+
+// 更新界面检索条件的搜索关键词
+const updateKnowledgeSearch = ref("");
+const updateSubKnowledgeSearch = ref("");
+const updateSolutionIdeaSearch = ref("");
+const updateQuestionCategorySearch = ref("");
+const updateGradeSearch = ref("");
+
+// 更新表单的搜索关键词
+const updateFormKnowledgeSearch = ref("");
+const updateFormSolutionIdeaSearch = ref("");
+const updateFormQuestionCategorySearch = ref("");
+const updateFormSubKnowledgeSearch = ref("");
+
+// ==================== 下拉框显示状态 ====================
+// 上传界面的下拉框显示状态
+const showKnowledgeDropdown = ref(false);
+const showSubKnowledgeDropdown = ref(false);
+const showSolutionIdeaDropdown = ref(false);
+const showQuestionCategoryDropdown = ref(false);
+
+// 更新界面检索条件的下拉框显示状态
+const showUpdateKnowledgeDropdown = ref(false);
+const showUpdateSubKnowledgeDropdown = ref(false);
+const showUpdateSolutionIdeaDropdown = ref(false);
+const showUpdateQuestionCategoryDropdown = ref(false);
+const showUpdateGradeDropdown = ref(false);
+
+// 更新表单的下拉框显示状态
+const showUpdateFormKnowledgeDropdown = ref(false);
+const showUpdateFormSolutionIdeaDropdown = ref(false);
+const showUpdateFormQuestionCategoryDropdown = ref(false);
+const showUpdateFormSubKnowledgeDropdown = ref(false);
+
+// ==================== 选中的对象状态 ====================
+const selectedKnowledgePoint = ref(null); // 选中的知识点
+const selectedQuestionCategory = ref(null); // 选中的问题类别
+const selectedUpdateFormKnowledgePoint = ref(null); // 更新表单选中的知识点
+const selectedUpdateFormQuestionCategory = ref(null); // 更新表单选中的问题类别
+
+// ==================== 过滤后的列表状态 ====================
+// 上传界面的过滤列表
+const filteredKnowledgePoints = ref([]);
+const filteredSubKnowledgePoints = ref([]);
+const filteredSolutionIdeas = ref([]);
+const filteredQuestionCategories = ref([]);
+
+// 更新界面检索条件的过滤列表
+const filteredUpdateKnowledgePoints = ref([]);
+const filteredUpdateSubKnowledgePoints = ref([]);
+const filteredUpdateSolutionIdeas = ref([]);
+const filteredUpdateQuestionCategories = ref([]);
+const filteredUpdateGrades = ref([]);
+
+// 更新表单的过滤列表
+const filteredUpdateFormKnowledgePoints = ref([]);
+const filteredUpdateFormSolutionIdeas = ref([]);
+const filteredUpdateFormQuestionCategories = ref([]);
+const filteredUpdateFormSubKnowledgePoints = ref([]);
+
+// ==================== 分页相关状态 ====================
+const totalPages = ref(1); // 总页数
+const totalItems = ref(0); // 总条目数
+const pageInput = ref(1); // 页码输入
+
+// ==================== 删除实体相关方法 ====================
+/**
+ * 确认删除知识点
+ * @param {Object} knowledgePoint - 知识点对象
+ */
+const confirmDeleteKnowledgePoint = async (knowledgePoint) => {
+  deleteEntityType.value = "知识点";
+  deleteEntityData.value = knowledgePoint;
+  dependentQuestionsPageNum.value = 1;
+  dependentQuestionsPageInput.value = 1;
+  await loadDependentQuestions();
+  showDeleteEntityConfirm.value = true;
+};
+
+/**
+ * 确认删除知识点
+ * @param {Object} SubknowledgePoint - 副知识点对象
+ */
+const confirmDeleteSubKnowledgePoint = async (knowledgePoint) => {
+  deleteEntityType.value = "副知识点";
+  deleteEntityData.value = knowledgePoint;
+  dependentQuestionsPageNum.value = 1;
+  dependentQuestionsPageInput.value = 1;
+  await loadDependentQuestions();
+  showDeleteEntityConfirm.value = true;
+};
+
+/**
+ * 确认删除解题思想
+ * @param {Object} solutionIdea - 解题思想对象
+ */
+const confirmDeleteSolutionIdea = async (solutionIdea) => {
+  deleteEntityType.value = "解题思想";
+  deleteEntityData.value = solutionIdea;
+  dependentQuestionsPageNum.value = 1;
+  dependentQuestionsPageInput.value = 1;
+  await loadDependentQuestions();
+  showDeleteEntityConfirm.value = true;
+};
+
+/**
+ * 确认删除问题类别
+ * @param {Object} questionCategory - 问题类别对象
+ */
+const confirmDeleteQuestionCategory = async (questionCategory) => {
+  deleteEntityType.value = "问题类别";
+  deleteEntityData.value = questionCategory;
+  dependentQuestionsPageNum.value = 1;
+  dependentQuestionsPageInput.value = 1;
+  await loadDependentQuestions();
+  showDeleteEntityConfirm.value = true;
+};
+
+/**
+ * 加载依赖的题目
+ */
+const loadDependentQuestions = async () => {
+  if (!deleteEntityData.value) return;
+
+  try {
+    let payload = {
+      page_num: dependentQuestionsPageNum.value,
+      page_size: dependentQuestionsPageSize.value,
     };
 
-    // ==================== 数据列表状态 ====================
-    const schoolList = ref([]); // 学校列表
-    const gradeList = ref([]); // 年级列表
-    const subjectList = ref([]); // 科目列表
-    const knowledgePointList = ref([]); // 知识点列表
-    const solutionIdeaList = ref([]); // 解题思想列表
-    const questionCategoryList = ref([]); // 问题类别列表
+    // 根据实体类型设置不同的检索条件
+    switch (deleteEntityType.value) {
+      case "知识点":
+        payload.knowledge_point_ids = [deleteEntityData.value.id];
+        break;
+      case "副知识点":
+        payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
+        break;
+      case "解题思想":
+        payload.solution_idea_ids = [deleteEntityData.value.id];
+        break;
+      case "问题类别":
+        payload.question_category_ids = [deleteEntityData.value.id];
+        break;
+    }
 
-    // ==================== 新建内容输入状态 ====================
-    const newKnowledgePoint = ref(""); // 新建知识点输入
-    const newSubKnowledgePoint = ref(""); // 新建副知识点输入
-    const newSolutionIdea = ref(""); // 新建解题思想输入
-    const newQuestionCategory = ref(""); // 新建问题类别输入
+    const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+    const responseData = res.data.data;
 
-    // 更新界面的新建内容输入状态
-    const newUpdateKnowledgePoint = ref(""); // 更新界面新建知识点
-    const newUpdateSolutionIdea = ref(""); // 更新界面新建解题思想
-    const newUpdateFormKnowledgePoint = ref(""); // 更新表单新建知识点
-    const newUpdateFormSubKnowledgePoint = ref(""); // 更新表单新建副知识点
-    const newUpdateFormSolutionIdea = ref(""); // 更新表单新建解题思想
+    dependentQuestions.value = responseData?.data_info || [];
+    dependentQuestionsTotalPages.value = responseData?.total_pages || 1;
+    dependentQuestionsTotalItems.value = responseData?.total_items || 0;
+    dependentQuestionsPageInput.value = dependentQuestionsPageNum.value;
+  } catch (err) {
+    console.error("加载依赖题目失败:", err);
+    ElMessage.error("加载依赖题目失败");
+  }
+};
 
-    // ==================== 其他状态 ====================
-    const questionList = ref([]); // 题目列表
-    const pendingImageFile = ref(null); // 待上传的图片文件
-    const pendingUpdateImageFile = ref(null); // 更新界面的待上传图片文件
-    const submitting = ref(false); // 提交状态
-    const hasSearched = ref(false); // 是否已进行过搜索
-    const updateFormRef = ref(null); // 更新表单的DOM引用
-    const showImagePreview = ref(false); // 图片预览显示状态
-    const previewImageUrl = ref(""); // 预览图片的URL
+/**
+ * 改变依赖题目页码
+ * @param {number} newPage - 新页码
+ */
+const changeDependentPage = (newPage) => {
+  if (newPage < 1 || newPage > dependentQuestionsTotalPages.value) {
+    return;
+  }
+  dependentQuestionsPageNum.value = newPage;
+  dependentQuestionsPageInput.value = newPage;
+  loadDependentQuestions();
+};
 
-    // ==================== 记忆上传设置 ====================
-    // 从localStorage读取或初始化上传记忆
-    const uploadMemory = ref(
-      JSON.parse(localStorage.getItem("uploadMemory")) || {
-        school_id: null,
-        grade_id: null,
-        subject_id: null,
-        marking_type: 0,
-        difficulty_level: null,
+/**
+ * 跳转到依赖题目首页
+ */
+const goToDependentFirstPage = () => {
+  changeDependentPage(1);
+};
+
+/**
+ * 跳转到依赖题目末页
+ */
+const goToDependentLastPage = () => {
+  changeDependentPage(dependentQuestionsTotalPages.value);
+};
+
+/**
+ * 跳转到依赖题目指定页码
+ */
+const goToDependentPage = () => {
+  const page = parseInt(dependentQuestionsPageInput.value);
+  if (page >= 1 && page <= dependentQuestionsTotalPages.value) {
+    changeDependentPage(page);
+  } else {
+    ElMessage.error(`请输入 1 到 ${dependentQuestionsTotalPages.value} 之间的页码`);
+  }
+};
+
+/**
+ * 删除依赖题目
+ * @param {Object} question - 题目对象
+ */
+const deleteDependentQuestion = async (question) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除题目(ID: ${question.id})吗？`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
       }
     );
+    
+    await axios.delete(`${API_BASE}/questions/deleteQuestion/${question.id}`);
+    ElMessage.success("题目删除成功");
 
-    // ==================== 上传题目表单数据 ====================
-    const form = reactive({
-      id: null,
-      school_id: uploadMemory.value.school_id,
-      grade_id: uploadMemory.value.grade_id,
-      subject_id: uploadMemory.value.subject_id,
-      question_category_id: uploadMemory.value.question_category_id, // 问题类别ID（单选）
-      marking_type: uploadMemory.value.marking_type,
-      knowledge_point_id: null, // 知识点ID
-      solution_idea_ids: [], // 解题思想ID数组
-      difficulty_level: uploadMemory.value.difficulty_level,
-      title: "", // 题目内容
-      options: [
-        // 选择题选项数组
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-      ],
-      answer: "", // 答案
-      notes: "", // 解析
-      remark: "", // 备注
-      sub_knowledge_point_ids: [], // 副知识点ID数组
-      img_url: "", // 图片URL
-    });
+    await loadDependentQuestions();
 
-    // ==================== 更新题目表单数据 ====================
-    const updateForm = reactive({
-      id: null,
-      school_id: null,
-      grade_id: null,
-      subject_id: null,
-      question_category_id: null, // 问题类别ID（单选）
-      marking_type: 0,
-      knowledge_point_id: null,
-      solution_idea_ids: [],
-      difficulty_level: null,
-      title: "",
-      options: [
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-      ],
-      answer: "",
-      notes: "",
-      remark: "",
-      sub_knowledge_point_ids: [],
-      img_url: "",
-    });
+    if (selectedQuestion.value && selectedQuestion.value.id === question.id) {
+      cancelUpdate();
+    }
+  } catch (err) {
+    if (err === 'cancel' || err === 'close') {
+      console.log('用户取消删除');
+    } else {
+      console.error("删除题目失败:", err);
+      ElMessage.error("删除题目失败");
+    }
+  }
+};
 
-    // ==================== 检索条件 ====================
-    const searchCriteria = reactive({
-      grade_id: null,
-      subject_id: null,
-      question_category_ids: [], // 改为数组，支持多选
-      knowledge_point_ids: [], // 知识点ID数组
-      sub_knowledge_point_ids: [], // 副知识点ID数组
-      solution_idea_ids: [], // 解题思想ID数组
-      difficulty_level: null,
-      title: "", // 题目关键词
-      page_num: 1, // 当前页码，默认第一页
-      page_size: 10, // 每页数量，默认10条
-    });
+/**
+ * 删除所有依赖题目
+ */
+const deleteAllDependentQuestions = async () => {
+  if (
+    !confirm(
+      `确定要删除所有 ${dependentQuestionsTotalItems.value} 道题目吗？此操作不可恢复！`
+    )
+  ) {
+    return;
+  }
 
-    // ==================== 选择题答案索引 ====================
-    const singleAnswerIndex = ref(null); // 单选题正确答案索引
-    const updateSingleAnswerIndex = ref(null); // 更新界面单选题正确答案索引
+  try {
+    // 获取所有依赖题目的ID
+    let allDependentQuestions = [];
+    let currentPage = 1;
+    const pageSize = 100; // 每页获取100条
 
-    // ==================== 界面模式状态 ====================
-    const updateMode = ref(false); // 是否为更新模式
-    const showUpdateForm = ref(false); // 是否显示更新表单
-    const selectedQuestion = ref(null); // 选中的题目
-    const showDeleteConfirm = ref(false); // 删除确认框显示状态
-    const questionToDelete = ref(null); // 待删除的题目
+    // 首先获取所有题目的ID
+    while (true) {
+      let payload = {
+        page_num: currentPage,
+        page_size: pageSize,
+      };
 
-    // ==================== 搜索关键词状态 ====================
-    // 上传界面的搜索关键词
-    const knowledgeSearch = ref("");
-    const subKnowledgeSearch = ref("");
-    const solutionIdeaSearch = ref("");
-    const questionCategorySearch = ref("");
-
-    // 更新界面检索条件的搜索关键词
-    const updateKnowledgeSearch = ref("");
-    const updateSubKnowledgeSearch = ref("");
-    const updateSolutionIdeaSearch = ref("");
-    const updateQuestionCategorySearch = ref("");
-
-    // 更新表单的搜索关键词
-    const updateFormKnowledgeSearch = ref("");
-    const updateFormSolutionIdeaSearch = ref("");
-    const updateFormQuestionCategorySearch = ref("");
-    const updateFormSubKnowledgeSearch = ref("");
-
-    // ==================== 下拉框显示状态 ====================
-    // 上传界面的下拉框显示状态
-    const showKnowledgeDropdown = ref(false);
-    const showSubKnowledgeDropdown = ref(false);
-    const showSolutionIdeaDropdown = ref(false);
-    const showQuestionCategoryDropdown = ref(false);
-
-    // 更新界面检索条件的下拉框显示状态
-    const showUpdateKnowledgeDropdown = ref(false);
-    const showUpdateSubKnowledgeDropdown = ref(false);
-    const showUpdateSolutionIdeaDropdown = ref(false);
-    const showUpdateQuestionCategoryDropdown = ref(false);
-
-    // 更新表单的下拉框显示状态
-    const showUpdateFormKnowledgeDropdown = ref(false);
-    const showUpdateFormSolutionIdeaDropdown = ref(false);
-    const showUpdateFormQuestionCategoryDropdown = ref(false);
-    const showUpdateFormSubKnowledgeDropdown = ref(false);
-
-    // ==================== 选中的对象状态 ====================
-    const selectedKnowledgePoint = ref(null); // 选中的知识点
-    const selectedQuestionCategory = ref(null); // 选中的问题类别
-    const selectedUpdateFormKnowledgePoint = ref(null); // 更新表单选中的知识点
-    const selectedUpdateFormQuestionCategory = ref(null); // 更新表单选中的问题类别
-
-    // ==================== 过滤后的列表状态 ====================
-    // 上传界面的过滤列表
-    const filteredKnowledgePoints = ref([]);
-    const filteredSubKnowledgePoints = ref([]);
-    const filteredSolutionIdeas = ref([]);
-    const filteredQuestionCategories = ref([]);
-
-    // 更新界面检索条件的过滤列表
-    const filteredUpdateKnowledgePoints = ref([]);
-    const filteredUpdateSubKnowledgePoints = ref([]);
-    const filteredUpdateSolutionIdeas = ref([]);
-    const filteredUpdateQuestionCategories = ref([]);
-
-    // 更新表单的过滤列表
-    const filteredUpdateFormKnowledgePoints = ref([]);
-    const filteredUpdateFormSolutionIdeas = ref([]);
-    const filteredUpdateFormQuestionCategories = ref([]);
-    const filteredUpdateFormSubKnowledgePoints = ref([]);
-
-    // ==================== 分页相关状态 ====================
-    const totalPages = ref(1); // 总页数
-    const totalItems = ref(0); // 总条目数
-    const pageInput = ref(1); // 页码输入
-
-    // ==================== 删除实体相关方法 ====================
-    /**
-     * 确认删除知识点
-     * @param {Object} knowledgePoint - 知识点对象
-     */
-    const confirmDeleteKnowledgePoint = async (knowledgePoint) => {
-      deleteEntityType.value = "知识点";
-      deleteEntityData.value = knowledgePoint;
-      dependentQuestionsPageNum.value = 1;
-      dependentQuestionsPageInput.value = 1;
-      await loadDependentQuestions();
-      showDeleteEntityConfirm.value = true;
-    };
-
-    /**
-     * 确认删除知识点
-     * @param {Object} SubknowledgePoint - 副知识点对象
-     */
-    const confirmDeleteSubKnowledgePoint = async (knowledgePoint) => {
-      deleteEntityType.value = "副知识点";
-      deleteEntityData.value = knowledgePoint;
-      dependentQuestionsPageNum.value = 1;
-      dependentQuestionsPageInput.value = 1;
-      await loadDependentQuestions();
-      showDeleteEntityConfirm.value = true;
-    };
-
-    /**
-     * 确认删除解题思想
-     * @param {Object} solutionIdea - 解题思想对象
-     */
-    const confirmDeleteSolutionIdea = async (solutionIdea) => {
-      deleteEntityType.value = "解题思想";
-      deleteEntityData.value = solutionIdea;
-      dependentQuestionsPageNum.value = 1;
-      dependentQuestionsPageInput.value = 1;
-      await loadDependentQuestions();
-      showDeleteEntityConfirm.value = true;
-    };
-
-    /**
-     * 确认删除问题类别
-     * @param {Object} questionCategory - 问题类别对象
-     */
-    const confirmDeleteQuestionCategory = async (questionCategory) => {
-      deleteEntityType.value = "问题类别";
-      deleteEntityData.value = questionCategory;
-      dependentQuestionsPageNum.value = 1;
-      dependentQuestionsPageInput.value = 1;
-      await loadDependentQuestions();
-      showDeleteEntityConfirm.value = true;
-    };
-
-    /**
-     * 加载依赖的题目
-     */
-    const loadDependentQuestions = async () => {
-      if (!deleteEntityData.value) return;
-
-      try {
-        let payload = {
-          page_num: dependentQuestionsPageNum.value,
-          page_size: dependentQuestionsPageSize.value,
-        };
-
-        // 根据实体类型设置不同的检索条件
-        switch (deleteEntityType.value) {
-          case "知识点":
-            payload.knowledge_point_ids = [deleteEntityData.value.id];
-            break;
-          case "副知识点":
-            payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
-            break;
-          case "解题思想":
-            payload.solution_idea_ids = [deleteEntityData.value.id];
-            break;
-          case "问题类别":
-            payload.question_category_ids = [deleteEntityData.value.id];
-            break;
-        }
-
-        const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-        const responseData = res.data.data;
-
-        dependentQuestions.value = responseData?.data_info || [];
-        dependentQuestionsTotalPages.value = responseData?.total_pages || 1;
-        dependentQuestionsTotalItems.value = responseData?.total_items || 0;
-        dependentQuestionsPageInput.value = dependentQuestionsPageNum.value;
-      } catch (err) {
-        console.error("加载依赖题目失败:", err);
-        showAlert("加载失败", "加载依赖题目失败");
+      // 根据实体类型设置不同的检索条件
+      switch (deleteEntityType.value) {
+        case "知识点":
+          payload.knowledge_point_ids = [deleteEntityData.value.id];
+          break;
+        case "副知识点":
+          payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
+          break;
+        case "解题思想":
+          payload.solution_idea_ids = [deleteEntityData.value.id];
+          break;
+        case "问题类别":
+          payload.question_category_ids = [deleteEntityData.value.id];
+          break;
       }
-    };
 
-    /**
-     * 改变依赖题目页码
-     * @param {number} newPage - 新页码
-     */
-    const changeDependentPage = (newPage) => {
-      if (newPage < 1 || newPage > dependentQuestionsTotalPages.value) {
+      const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+      const responseData = res.data.data;
+
+      if (!responseData?.data_info || responseData.data_info.length === 0) {
+        break;
+      }
+
+      allDependentQuestions = allDependentQuestions.concat(
+        responseData.data_info.map((q) => q.id)
+      );
+
+      if (currentPage >= (responseData.total_pages || 1)) {
+        break;
+      }
+      currentPage++;
+    }
+
+    // 批量删除所有题目
+    for (const questionId of allDependentQuestions) {
+      await axios.delete(`${API_BASE}/questions/deleteQuestion/${questionId}`);
+    }
+
+    ElMessage.success(`成功删除 ${allDependentQuestions.length} 道题目`);
+
+    // 重新加载依赖题目列表（应该为空）
+    await loadDependentQuestions();
+
+    // 关闭更新表单（如果打开的话）
+    cancelUpdate();
+  } catch (err) {
+    console.error("批量删除题目失败:", err);
+    ElMessage.error("批量删除题目失败");
+  }
+};
+
+/**
+ * 删除实体（知识点/解题思想/问题类别）
+ */
+const deleteEntity = async () => {
+  if (!deleteEntityData.value) return;
+
+  try {
+    let url = "";
+    let entityName = "";
+
+    switch (deleteEntityType.value) {
+      case "知识点":
+      case "副知识点":
+        url = `${API_BASE}/questions/deleteKnowledgePoint/${deleteEntityData.value.id}`;
+        entityName = deleteEntityType.value;
+        break;
+      case "解题思想":
+        url = `${API_BASE}/questions/deleteSolutionIdea/${deleteEntityData.value.id}`;
+        entityName = "解题思想";
+        break;
+      case "问题类别":
+        url = `${API_BASE}/questions/deleteQuestionCategory/${deleteEntityData.value.id}`;
+        entityName = "问题类别";
+        break;
+      default:
         return;
-      }
-      dependentQuestionsPageNum.value = newPage;
-      dependentQuestionsPageInput.value = newPage;
-      loadDependentQuestions();
-    };
+    }
+    const response = await axios.delete(url);
 
-    /**
-     * 跳转到依赖题目首页
-     */
-    const goToDependentFirstPage = () => {
-      changeDependentPage(1);
-    };
-
-    /**
-     * 跳转到依赖题目末页
-     */
-    const goToDependentLastPage = () => {
-      changeDependentPage(dependentQuestionsTotalPages.value);
-    };
-
-    /**
-     * 跳转到依赖题目指定页码
-     */
-    const goToDependentPage = () => {
-      const page = parseInt(dependentQuestionsPageInput.value);
-      if (page >= 1 && page <= dependentQuestionsTotalPages.value) {
-        changeDependentPage(page);
-      } else {
-        showAlert(
-          "输入错误",
-          `请输入 1 到 ${dependentQuestionsTotalPages.value} 之间的页码`
-        );
-      }
-    };
-
-    /**
-     * 删除依赖题目
-     * @param {Object} question - 题目对象
-     */
-    const deleteDependentQuestion = async (question) => {
-      if (!confirm(`确定要删除题目(ID: ${question.id})吗？`)) {
-        return;
-      }
-
-      try {
-        await axios.delete(`${API_BASE}/questions/deleteQuestion/${question.id}`);
-        showAlert("删除成功", "题目删除成功");
-
-        // 重新加载依赖题目
-        await loadDependentQuestions();
-
-        // 如果删除的是当前更新表单中的题目，关闭更新表单
-        if (selectedQuestion.value && selectedQuestion.value.id === question.id) {
-          cancelUpdate();
-        }
-      } catch (err) {
-        console.error("删除题目失败:", err);
-        showAlert("删除失败", "删除题目失败");
-      }
-    };
-
-    /**
-     * 删除所有依赖题目
-     */
-    const deleteAllDependentQuestions = async () => {
-      if (
-        !confirm(
-          `确定要删除所有 ${dependentQuestionsTotalItems.value} 道题目吗？此操作不可恢复！`
-        )
-      ) {
-        return;
-      }
-
-      try {
-        // 获取所有依赖题目的ID
-        let allDependentQuestions = [];
-        let currentPage = 1;
-        const pageSize = 100; // 每页获取100条
-
-        // 首先获取所有题目的ID
-        while (true) {
-          let payload = {
-            page_num: currentPage,
-            page_size: pageSize,
-          };
-
-          // 根据实体类型设置不同的检索条件
-          switch (deleteEntityType.value) {
-            case "知识点":
-              payload.knowledge_point_ids = [deleteEntityData.value.id];
-              break;
-            case "副知识点":
-              payload.sub_knowledge_point_ids = [deleteEntityData.value.id];
-              break;
-            case "解题思想":
-              payload.solution_idea_ids = [deleteEntityData.value.id];
-              break;
-            case "问题类别":
-              payload.question_category_ids = [deleteEntityData.value.id];
-              break;
-          }
-
-          const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-          const responseData = res.data.data;
-
-          if (!responseData?.data_info || responseData.data_info.length === 0) {
-            break;
-          }
-
-          allDependentQuestions = allDependentQuestions.concat(
-            responseData.data_info.map((q) => q.id)
-          );
-
-          if (currentPage >= (responseData.total_pages || 1)) {
-            break;
-          }
-          currentPage++;
-        }
-
-        // 批量删除所有题目
-        for (const questionId of allDependentQuestions) {
-          await axios.delete(`${API_BASE}/questions/deleteQuestion/${questionId}`);
-        }
-
-        showAlert("删除成功", `成功删除 ${allDependentQuestions.length} 道题目`);
-
-        // 重新加载依赖题目列表（应该为空）
-        await loadDependentQuestions();
-
-        // 关闭更新表单（如果打开的话）
-        cancelUpdate();
-      } catch (err) {
-        console.error("批量删除题目失败:", err);
-        showAlert("删除失败", "批量删除题目失败");
-      }
-    };
-
-    /**
-     * 删除实体（知识点/解题思想/问题类别）
-     */
-    const deleteEntity = async () => {
-      if (!deleteEntityData.value) return;
-
-      try {
-        let url = "";
-        let entityName = "";
-
-        switch (deleteEntityType.value) {
-          case "知识点":
-          case "副知识点":
-            url = `${API_BASE}/questions/deleteKnowledgePoint/${deleteEntityData.value.id}`;
-            entityName = deleteEntityType.value;
-            break;
-          case "解题思想":
-            url = `${API_BASE}/questions/deleteSolutionIdea/${deleteEntityData.value.id}`;
-            entityName = "解题思想";
-            break;
-          case "问题类别":
-            url = `${API_BASE}/questions/deleteQuestionCategory/${deleteEntityData.value.id}`;
-            entityName = "问题类别";
-            break;
-          default:
-            return;
-        }
-        const response = await axios.delete(url);
-
-        // 检查返回的状态码（例如知识点被绑定，返回409）
-        if (response.data?.code === 409) {
-          const { message } = response.data;
-          showAlert("无法删除", message);
-          showDeleteEntityConfirm.value = false;
-          return;
-        }
-
-        // 删除成功
-        showAlert("删除成功", `${entityName}删除成功`);
-
-        // 重新加载列表
-        await loadLists();
-
-        // 如果当前选中的实体被删除，清除选择
-        if (
-          (deleteEntityType.value === "知识点" ||
-            deleteEntityType.value === "副知识点") &&
-          selectedKnowledgePoint.value &&
-          selectedKnowledgePoint.value.id === deleteEntityData.value.id
-        ) {
-          clearKnowledgePoint();
-        }
-        if (
-          deleteEntityType.value === "问题类别" &&
-          selectedQuestionCategory.value &&
-          selectedQuestionCategory.value.id === deleteEntityData.value.id
-        ) {
-          clearQuestionCategory();
-        }
-
-        showDeleteEntityConfirm.value = false;
-        deleteEntityData.value = null;
-        dependentQuestions.value = [];
-      } catch (err) {
-        console.error(`删除${deleteEntityType.value}失败:`, err);
-        // 优先取后端返回的 message，否则显示通用提示
-        const backendMessage = err.response?.data?.message;
-        showDeleteEntityConfirm.value = false;
-        showAlert("删除失败", backendMessage);
-      }
-    };
-
-    /**
-     * 取消删除实体
-     */
-    const cancelDeleteEntity = () => {
+    // 检查返回的状态码（例如知识点被绑定，返回409）
+    if (response.data?.code === 409) {
+      const { message } = response.data;
+      ElMessage.warning(message);
       showDeleteEntityConfirm.value = false;
-      deleteEntityData.value = null;
-      dependentQuestions.value = [];
-    };
+      return;
+    }
 
-    // ==================== 预览功能相关方法 ====================
-    /**
-     * 显示预览模态框
-     */
-    const showPreview = () => {
-      if (!validateForm()) return;
-      previewMode.value = "upload";
-      showPreviewModal.value = true;
-    };
+    // 删除成功
+    ElMessage.success(`${entityName}删除成功`);
 
-    /**
-     * 显示更新预览模态框
-     */
-    const showUpdatePreview = () => {
-      if (!validateUpdateForm()) return;
-      previewMode.value = "update";
-      showPreviewModal.value = true;
-    };
+    // 重新加载列表
+    await loadLists();
 
-    /**
-     * 关闭预览模态框
-     */
-    const closePreview = () => {
-      showPreviewModal.value = false;
-    };
+    // 如果当前选中的实体被删除，清除选择
+    if (
+      (deleteEntityType.value === "知识点" || deleteEntityType.value === "副知识点") &&
+      selectedKnowledgePoint.value &&
+      selectedKnowledgePoint.value.id === deleteEntityData.value.id
+    ) {
+      clearKnowledgePoint();
+    }
+    if (
+      deleteEntityType.value === "问题类别" &&
+      selectedQuestionCategory.value &&
+      selectedQuestionCategory.value.id === deleteEntityData.value.id
+    ) {
+      clearQuestionCategory();
+    }
 
-    /**
-     * 确认提交
-     */
-    const replaceBlobUrls = async (targetForm) => {
-      if (!targetForm.pendingImages || targetForm.pendingImages.length === 0) return;
+    showDeleteEntityConfirm.value = false;
+    deleteEntityData.value = null;
+    dependentQuestions.value = [];
+  } catch (err) {
+    console.error(`删除${deleteEntityType.value}失败:`, err);
+    showDeleteEntityConfirm.value = false;
+    ElMessage.error("删除失败");
+  }
+};
 
-      for (const img of targetForm.pendingImages) {
-        const url = await uploadToImageBed(img.file);
+/**
+ * 取消删除实体
+ */
+const cancelDeleteEntity = () => {
+  showDeleteEntityConfirm.value = false;
+  deleteEntityData.value = null;
+  dependentQuestions.value = [];
+};
 
-        // 所有需要替换的字段
-        const fields = ["title", "remark", "answer", "notes"];
+// ==================== 预览功能相关方法 ====================
+/**
+ * 显示预览模态框
+ */
+const showPreview = () => {
+  if (!validateForm()) return;
+  previewMode.value = "upload";
+  showPreviewModal.value = true;
+};
 
-        fields.forEach((key) => {
-          if (targetForm[key]) {
-            targetForm[key] = targetForm[key].replaceAll(img.localUrl, url);
-          }
-        });
+/**
+ * 显示更新预览模态框
+ */
+const showUpdatePreview = () => {
+  if (!validateUpdateForm()) return;
+  previewMode.value = "update";
+  showPreviewModal.value = true;
+};
 
-        // 替换选项
-        if (targetForm.options) {
-          targetForm.options = targetForm.options.map((opt) => {
-            if (opt.text) {
-              opt.text = opt.text.replaceAll(img.localUrl, url);
-            }
-            return opt;
-          });
+/**
+ * 关闭预览模态框
+ */
+const closePreview = () => {
+  showPreviewModal.value = false;
+};
+
+/**
+ * 确认提交
+ */
+const replaceBlobUrls = async (targetForm) => {
+  if (!targetForm.pendingImages || targetForm.pendingImages.length === 0) return;
+
+  for (const img of targetForm.pendingImages) {
+    const url = await uploadToImageBed(img.file);
+
+    // 所有需要替换的字段
+    const fields = ["title", "remark", "answer", "notes"];
+
+    fields.forEach((key) => {
+      if (targetForm[key]) {
+        targetForm[key] = targetForm[key].replaceAll(img.localUrl, url);
+      }
+    });
+
+    // 替换选项
+    if (targetForm.options) {
+      targetForm.options = targetForm.options.map((opt) => {
+        if (opt.text) {
+          opt.text = opt.text.replaceAll(img.localUrl, url);
         }
-      }
-
-      // 清空 pending
-      targetForm.pendingImages = [];
-    };
-
-    const confirmSubmit = async () => {
-      const targetForm = previewMode.value === "upload" ? form : updateForm;
-
-      // 统一替换（创建或更新都可）
-      await replaceBlobUrls(targetForm);
-
-      showPreviewModal.value = false;
-
-      if (previewMode.value === "upload") {
-        handleSubmit();
-      } else {
-        handleUpdateSubmit();
-      }
-    };
-
-    /**
-     * 验证表单
-     */
-    const validateForm = () => {
-      if (!form.question_category_id) {
-        showAlert("输入错误", "请选择问题类别");
-        return false;
-      }
-      if (!form.title.trim()) {
-        showAlert("输入错误", "请输入题目内容");
-        return false;
-      }
-      return true;
-    };
-
-    /**
-     * 验证更新表单
-     */
-    const validateUpdateForm = () => {
-      if (!updateForm.question_category_id) {
-        showAlert("输入错误", "请选择问题类别");
-        return false;
-      }
-      if (!updateForm.title.trim()) {
-        showAlert("输入错误", "请输入题目内容");
-        return false;
-      }
-      return true;
-    };
-
-    // ==================== 预览数据获取方法 ====================
-    /**
-     * 获取预览的学校名称
-     */
-    const getPreviewSchoolName = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (currentForm.school_id === null) return "全部";
-      const school = schoolList.value.find((s) => s.id === currentForm.school_id);
-      return school ? school.name : "未知";
-    };
-
-    /**
-     * 获取预览的年级名称
-     */
-    const getPreviewGradeName = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (currentForm.grade_id === null) return "全部";
-      const grade = gradeList.value.find((g) => g.id === currentForm.grade_id);
-      return grade ? grade.name : "未知";
-    };
-
-    /**
-     * 获取预览的科目名称
-     */
-    const getPreviewSubjectName = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (currentForm.subject_id === null) return "全部";
-      const subject = subjectList.value.find((s) => s.id === currentForm.subject_id);
-      return subject ? subject.name : "未知";
-    };
-
-    /**
-     * 获取预览的问题类别名称
-     */
-    const getPreviewQuestionCategoryName = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (!currentForm.question_category_id) return "未选择";
-      const category = questionCategoryList.value.find(
-        (c) => c.id === currentForm.question_category_id
-      );
-      return category ? category.name : "未知";
-    };
-
-    /**
-     * 获取预览的难度级别
-     */
-    const getPreviewDifficultyLevel = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (currentForm.difficulty_level === null) return "暂无难度评级";
-      return `${currentForm.difficulty_level} 星`;
-    };
-
-    /**
-     * 获取预览的评分方法
-     */
-    const getPreviewMarkingType = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.marking_type === 1 ? "人工评分" : "自动评分";
-    };
-
-    /**
-     * 获取预览的知识点名称
-     */
-    const getPreviewKnowledgePointName = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (!currentForm.knowledge_point_id) return "未选择";
-      const kp = knowledgePointList.value.find(
-        (k) => k.id === currentForm.knowledge_point_id
-      );
-      return kp ? kp.name : "未知";
-    };
-
-    /**
-     * 获取预览的副知识点
-     */
-    const getPreviewSubKnowledgePoints = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (!currentForm.sub_knowledge_point_ids.length) return "无";
-      return currentForm.sub_knowledge_point_ids
-        .map((id) => {
-          const kp = knowledgePointList.value.find((k) => k.id === id);
-          return kp ? kp.name : "未知";
-        })
-        .join(", ");
-    };
-
-    /**
-     * 获取预览的解题思想
-     */
-    const getPreviewSolutionIdeas = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      if (!currentForm.solution_idea_ids.length) return "无";
-      return currentForm.solution_idea_ids
-        .map((id) => {
-          const si = solutionIdeaList.value.find((s) => s.id === id);
-          return si ? si.name : "未知";
-        })
-        .join(", ");
-    };
-
-    /**
-     * 获取预览的题目内容
-     */
-    const getPreviewTitle = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.title || "无";
-    };
-
-    /**
-     * 获取预览的图片URL
-     */
-    const getPreviewImageUrl = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.img_url || "";
-    };
-
-    /**
-     * 获取预览的选项
-     */
-    const getPreviewOptions = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.options || [];
-    };
-
-    /**
-     * 检查是否显示预览选项
-     */
-    const showPreviewOptions = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      const categoryName = getPreviewQuestionCategoryName();
-      return (
-        categoryName === "单选题" ||
-        categoryName.includes("单选") ||
-        categoryName === "多选题" ||
-        categoryName.includes("多选")
-      );
-    };
-
-    /**
-     * 检查选项是否为正确答案
-     */
-    const isPreviewOptionCorrect = (index) => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      const categoryName = getPreviewQuestionCategoryName();
-
-      if (categoryName === "单选题" || categoryName.includes("单选")) {
-        const currentSingleAnswerIndex =
-          previewMode.value === "upload"
-            ? singleAnswerIndex.value
-            : updateSingleAnswerIndex.value;
-        return currentSingleAnswerIndex === index;
-      } else if (categoryName === "多选题" || categoryName.includes("多选")) {
-        return currentForm.options[index]?.isAnswer || false;
-      }
-      return false;
-    };
-
-    /**
-     * 检查是否显示主观题答案
-     */
-    const showPreviewSubjectiveAnswer = () => {
-      const categoryName = getPreviewQuestionCategoryName();
-      return !(
-        categoryName === "单选题" ||
-        categoryName.includes("单选") ||
-        categoryName === "多选题" ||
-        categoryName.includes("多选")
-      );
-    };
-
-    /**
-     * 获取预览的答案
-     */
-    const getPreviewAnswer = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.answer;
-    };
-
-    /**
-     * 获取预览的解析
-     */
-    const getPreviewNotes = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.notes;
-    };
-
-    /**
-     * 获取预览的备注
-     */
-    const getPreviewRemark = () => {
-      const currentForm = previewMode.value === "upload" ? form : updateForm;
-      return currentForm.remark;
-    };
-
-    // ==================== 选项操作方法 ====================
-    /**
-     * 获取选项标签（A, B, C, ...）
-     * @param {number} index - 选项索引
-     * @returns {string} 选项标签
-     */
-    const getOptionLabel = (index) => {
-      let label = "";
-      let n = index;
-      while (n >= 0) {
-        label = String.fromCharCode((n % 26) + 65) + label;
-        n = Math.floor(n / 26) - 1;
-      }
-      return label;
-    };
-
-    /**
-     * 添加选项
-     */
-    const addOption = () => {
-      if (form.options.length < 10) {
-        form.options.push({ text: "", isAnswer: false });
-      }
-    };
-
-    /**
-     * 删除选项
-     * @param {number} index - 要删除的选项索引
-     */
-    const removeOption = (index) => {
-      if (form.options.length > 2) {
-        form.options.splice(index, 1);
-        if (singleAnswerIndex.value === index) {
-          singleAnswerIndex.value = null;
-        }
-      }
-    };
-
-    /**
-     * 更新界面添加选项
-     */
-    const addUpdateOption = () => {
-      if (updateForm.options.length < 10) {
-        updateForm.options.push({ text: "", isAnswer: false });
-      }
-    };
-
-    /**
-     * 更新界面删除选项
-     * @param {number} index - 要删除的选项索引
-     */
-    const removeUpdateOption = (index) => {
-      if (updateForm.options.length > 2) {
-        updateForm.options.splice(index, 1);
-        if (updateSingleAnswerIndex.value === index) {
-          updateSingleAnswerIndex.value = null;
-        }
-      }
-    };
-
-    // ==================== 问题类别变更处理 ====================
-    /**
-     * 处理问题类别变更
-     */
-    const handleQuestionCategoryChange = () => {
-      // 重置选项
-      form.options = [
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-      ];
-      singleAnswerIndex.value = null;
-      form.answer = "";
-
-      // 根据问题类别设置默认评分方法
-      if (selectedQuestionCategory.value) {
-        const name = selectedQuestionCategory.value.name || "";
-        const autoMarkingKeywords = ["单选", "多选"]; // 可在这里扩展更多自动评分题型
-        form.marking_type = autoMarkingKeywords.some((keyword) => name.includes(keyword))
-          ? 0
-          : 1;
-      }
-    };
-
-    /**
-     * 处理更新界面问题类别变更
-     */
-    const handleUpdateQuestionCategoryChange = () => {
-      updateForm.options = [
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-        { text: "", isAnswer: false },
-      ];
-      updateSingleAnswerIndex.value = null;
-      updateForm.answer = "";
-    };
-
-    // ==================== 知识点选择方法 ====================
-    /**
-     * 选择知识点
-     * @param {Object} kp - 知识点对象
-     */
-    const selectKnowledgePoint = (kp) => {
-      selectedKnowledgePoint.value = kp;
-      form.knowledge_point_id = kp.id;
-      knowledgeSearch.value = kp.name;
-      showKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 清除知识点选择
-     */
-    const clearKnowledgePoint = () => {
-      selectedKnowledgePoint.value = null;
-      form.knowledge_point_id = null;
-      knowledgeSearch.value = "";
-    };
-
-    // ==================== 问题类别选择方法（单选） ====================
-    /**
-     * 选择问题类别
-     * @param {Object} item - 问题类别对象
-     */
-    const selectQuestionCategory = (item) => {
-      selectedQuestionCategory.value = item;
-      form.question_category_id = item.id;
-      questionCategorySearch.value = item.name;
-      showQuestionCategoryDropdown.value = false;
-      handleQuestionCategoryChange();
-      // 更新记忆
-      uploadMemory.value.question_category_id = item.id;
-      saveUploadMemory();
-    };
-
-    /**
-     * 清除问题类别选择
-     */
-    const clearQuestionCategory = () => {
-      selectedQuestionCategory.value = null;
-      form.question_category_id = null;
-      questionCategorySearch.value = "";
-      handleQuestionCategoryChange();
-      // 更新记忆
-      uploadMemory.value.question_category_id = null;
-      saveUploadMemory();
-    };
-
-    // ==================== 解题思想选择方法 ====================
-    /**
-     * 选择解题思想
-     * @param {Object} item - 解题思想对象
-     */
-    const selectSolutionIdea = (item) => {
-      if (!form.solution_idea_ids.includes(item.id)) {
-        form.solution_idea_ids.push(item.id);
-      }
-      solutionIdeaSearch.value = "";
-      showSolutionIdeaDropdown.value = false;
-    };
-
-    /**
-     * 检查解题思想是否已选择
-     * @param {number} id - 解题思想ID
-     * @returns {boolean} 是否已选择
-     */
-    const isSolutionIdeaSelected = (id) => {
-      return form.solution_idea_ids.includes(id);
-    };
-
-    /**
-     * 移除解题思想
-     * @param {number} id - 要移除的解题思想ID
-     */
-    const removeSolutionIdea = (id) => {
-      form.solution_idea_ids = form.solution_idea_ids.filter((itemId) => itemId !== id);
-    };
-
-    // ==================== 副知识点选择方法 ====================
-    /**
-     * 选择副知识点
-     * @param {Object} kp - 副知识点对象
-     */
-    const selectSubKnowledgePoint = (kp) => {
-      if (!form.sub_knowledge_point_ids.includes(kp.id)) {
-        form.sub_knowledge_point_ids.push(kp.id);
-      }
-      subKnowledgeSearch.value = "";
-      showSubKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 检查副知识点是否已选择
-     * @param {number} id - 副知识点ID
-     * @returns {boolean} 是否已选择
-     */
-    const isSubKnowledgeSelected = (id) => {
-      return form.sub_knowledge_point_ids.includes(id);
-    };
-
-    /**
-     * 移除副知识点
-     * @param {number} id - 要移除的副知识点ID
-     */
-    const removeSubKnowledgePoint = (id) => {
-      form.sub_knowledge_point_ids = form.sub_knowledge_point_ids.filter(
-        (kp) => kp !== id
-      );
-    };
-
-    // ==================== 更新界面知识点多选方法 ====================
-    /**
-     * 更新界面选择知识点
-     * @param {Object} kp - 知识点对象
-     */
-    const selectUpdateKnowledgePoint = (kp) => {
-      if (!searchCriteria.knowledge_point_ids.includes(kp.id)) {
-        searchCriteria.knowledge_point_ids.push(kp.id);
-      }
-      updateKnowledgeSearch.value = "";
-      showUpdateKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 检查更新界面知识点是否已选择
-     * @param {number} id - 知识点ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateKnowledgeSelected = (id) => {
-      return searchCriteria.knowledge_point_ids.includes(id);
-    };
-
-    /**
-     * 移除更新界面知识点
-     * @param {number} id - 要移除的知识点ID
-     */
-    const removeUpdateKnowledgePoint = (id) => {
-      searchCriteria.knowledge_point_ids = searchCriteria.knowledge_point_ids.filter(
-        (kp) => kp !== id
-      );
-    };
-    /**
-     * 更新界面选择副知识点
-     * @param {Object} kp - 副知识点对象
-     */
-    const selectUpdateSubKnowledgePoint = (kp) => {
-      if (!searchCriteria.sub_knowledge_point_ids.includes(kp.id)) {
-        searchCriteria.sub_knowledge_point_ids.push(kp.id);
-      }
-      updateSubKnowledgeSearch.value = "";
-      showUpdateSubKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 检查更新界面副知识点是否已选择
-     * @param {number} id - 副知识点ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateSubKnowledgeSelected = (id) => {
-      return searchCriteria.sub_knowledge_point_ids.includes(id);
-    };
-
-    /**
-     * 移除更新界面副知识点
-     * @param {number} id - 要移除的副知识点ID
-     */
-    const removeUpdateSubKnowledgePoint = (id) => {
-      searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
-        (kp) => kp !== id
-      );
-    };
-
-    /**
-     * 更新界面副知识点下拉框失焦处理
-     */
-    const onUpdateSubKnowledgeBlur = () => {
-      setTimeout(() => {
-        showUpdateSubKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    // ==================== 更新界面解题思想多选方法 ====================
-    /**
-     * 更新界面选择解题思想
-     * @param {Object} item - 解题思想对象
-     */
-    const selectUpdateSolutionIdea = (item) => {
-      if (!searchCriteria.solution_idea_ids.includes(item.id)) {
-        searchCriteria.solution_idea_ids.push(item.id);
-      }
-      updateSolutionIdeaSearch.value = "";
-      showUpdateSolutionIdeaDropdown.value = false;
-    };
-
-    /**
-     * 检查更新界面解题思想是否已选择
-     * @param {number} id - 解题思想ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateSolutionIdeaSelected = (id) => {
-      return searchCriteria.solution_idea_ids.includes(id);
-    };
-
-    /**
-     * 移除更新界面解题思想
-     * @param {number} id - 要移除的解题思想ID
-     */
-    const removeUpdateSolutionIdea = (id) => {
-      searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
-    // ==================== 更新界面问题类别多选方法 ====================
-    /**
-     * 更新界面选择问题类别
-     * @param {Object} item - 问题类别对象
-     */
-    const selectUpdateQuestionCategory = (item) => {
-      if (!searchCriteria.question_category_ids.includes(item.id)) {
-        searchCriteria.question_category_ids.push(item.id);
-      }
-      updateQuestionCategorySearch.value = "";
-      showUpdateQuestionCategoryDropdown.value = false;
-    };
-
-    /**
-     * 检查更新界面问题类别是否已选择
-     * @param {number} id - 问题类别ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateQuestionCategorySelected = (id) => {
-      return searchCriteria.question_category_ids.includes(id);
-    };
-
-    /**
-     * 移除更新界面问题类别
-     * @param {number} id - 要移除的问题类别ID
-     */
-    const removeUpdateQuestionCategory = (id) => {
-      searchCriteria.question_category_ids = searchCriteria.question_category_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
-    /**
-     * 清除更新界面问题类别选择
-     */
-    const clearUpdateQuestionCategory = () => {
-      searchCriteria.question_category_ids = [];
-      updateQuestionCategorySearch.value = "";
-    };
-
-    // ==================== 更新表单知识点选择方法 ====================
-    /**
-     * 更新表单选择知识点
-     * @param {Object} kp - 知识点对象
-     */
-    const selectUpdateFormKnowledgePoint = (kp) => {
-      selectedUpdateFormKnowledgePoint.value = kp;
-      updateForm.knowledge_point_id = kp.id;
-      updateFormKnowledgeSearch.value = kp.name;
-      showUpdateFormKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 清除更新表单知识点选择
-     */
-    const clearUpdateFormKnowledgePoint = () => {
-      selectedUpdateFormKnowledgePoint.value = null;
-      updateForm.knowledge_point_id = null;
-      updateFormKnowledgeSearch.value = "";
-    };
-
-    // ==================== 更新表单问题类别单选方法 ====================
-    /**
-     * 更新表单选择问题类别
-     * @param {Object} item - 问题类别对象
-     */
-    const selectUpdateFormQuestionCategory = (item) => {
-      selectedUpdateFormQuestionCategory.value = item;
-      updateForm.question_category_id = item.id;
-      updateFormQuestionCategorySearch.value = item.name;
-      showUpdateFormQuestionCategoryDropdown.value = false;
-      handleUpdateQuestionCategoryChange();
-    };
-
-    /**
-     * 清除更新表单问题类别选择
-     */
-    const clearUpdateFormQuestionCategory = () => {
-      selectedUpdateFormQuestionCategory.value = null;
-      updateForm.question_category_id = null;
-      updateFormQuestionCategorySearch.value = "";
-      handleUpdateQuestionCategoryChange();
-    };
-
-    // ==================== 更新表单解题思想多选方法 ====================
-    /**
-     * 更新表单选择解题思想
-     * @param {Object} item - 解题思想对象
-     */
-    const selectUpdateFormSolutionIdea = (item) => {
-      if (!updateForm.solution_idea_ids.includes(item.id)) {
-        updateForm.solution_idea_ids.push(item.id);
-      }
-      updateFormSolutionIdeaSearch.value = "";
-      showUpdateFormSolutionIdeaDropdown.value = false;
-    };
-
-    /**
-     * 检查更新表单解题思想是否已选择
-     * @param {number} id - 解题思想ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateFormSolutionIdeaSelected = (id) => {
-      return updateForm.solution_idea_ids.includes(id);
-    };
-
-    /**
-     * 移除更新表单解题思想
-     * @param {number} id - 要移除的解题思想ID
-     */
-    const removeUpdateFormSolutionIdea = (id) => {
-      updateForm.solution_idea_ids = updateForm.solution_idea_ids.filter(
-        (itemId) => itemId !== id
-      );
-    };
-
-    // ==================== 更新表单副知识点选择方法 ====================
-    /**
-     * 更新表单选择副知识点
-     * @param {Object} kp - 副知识点对象
-     */
-    const selectUpdateFormSubKnowledgePoint = (kp) => {
-      if (!updateForm.sub_knowledge_point_ids.includes(kp.id)) {
-        updateForm.sub_knowledge_point_ids.push(kp.id);
-      }
-      updateFormSubKnowledgeSearch.value = "";
-      showUpdateFormSubKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 检查更新表单副知识点是否已选择
-     * @param {number} id - 副知识点ID
-     * @returns {boolean} 是否已选择
-     */
-    const isUpdateFormSubKnowledgeSelected = (id) => {
-      return updateForm.sub_knowledge_point_ids.includes(id);
-    };
-
-    /**
-     * 移除更新表单副知识点
-     * @param {number} id - 要移除的副知识点ID
-     */
-    const removeUpdateFormSubKnowledgePoint = (id) => {
-      updateForm.sub_knowledge_point_ids = updateForm.sub_knowledge_point_ids.filter(
-        (kp) => kp !== id
-      );
-    };
-
-    // ==================== 图片预览方法 ====================
-    /**
-     * 预览图片
-     * @param {string} url - 图片URL
-     */
-    const previewImage = (url) => {
-      previewImageUrl.value = url;
-      showImagePreview.value = true;
-    };
-
-    /**
-     * 关闭图片预览
-     */
-    const closeImagePreview = () => {
-      showImagePreview.value = false;
-      previewImageUrl.value = "";
-    };
-
-    // ==================== 下拉框失焦处理方法 ====================
-    // 这些方法使用setTimeout延迟隐藏下拉框，确保点击选项能够正常触发
-    const onKnowledgeBlur = () => {
-      setTimeout(() => {
-        showKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    const onSubKnowledgeBlur = () => {
-      setTimeout(() => {
-        showSubKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    const onSolutionIdeaBlur = () => {
-      setTimeout(() => {
-        showSolutionIdeaDropdown.value = false;
-      }, 200);
-    };
-
-    const onQuestionCategoryBlur = () => {
-      setTimeout(() => {
-        showQuestionCategoryDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateKnowledgeBlur = () => {
-      setTimeout(() => {
-        showUpdateKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateSolutionIdeaBlur = () => {
-      setTimeout(() => {
-        showUpdateSolutionIdeaDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateQuestionCategoryBlur = () => {
-      setTimeout(() => {
-        showUpdateQuestionCategoryDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateFormKnowledgeBlur = () => {
-      setTimeout(() => {
-        showUpdateFormKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateFormSolutionIdeaBlur = () => {
-      setTimeout(() => {
-        showUpdateFormSolutionIdeaDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateFormQuestionCategoryBlur = () => {
-      setTimeout(() => {
-        showUpdateFormQuestionCategoryDropdown.value = false;
-      }, 200);
-    };
-
-    const onUpdateFormSubKnowledgeBlur = () => {
-      setTimeout(() => {
-        showUpdateFormSubKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    // ==================== 列表过滤方法 ====================
-    /**
-     * 过滤知识点列表
-     */
-    const filterKnowledgePoints = () => {
-      if (!knowledgeSearch.value) {
-        filteredKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(knowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤副知识点列表
-     */
-    const filterSubKnowledgePoints = () => {
-      if (!subKnowledgeSearch.value) {
-        filteredSubKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(subKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤解题思想列表
-     */
-    const filterSolutionIdeas = () => {
-      if (!solutionIdeaSearch.value) {
-        filteredSolutionIdeas.value = solutionIdeaList.value;
-      } else {
-        filteredSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
-          item.name.toLowerCase().includes(solutionIdeaSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤问题类别列表
-     */
-    const filterQuestionCategories = () => {
-      if (!questionCategorySearch.value) {
-        filteredQuestionCategories.value = questionCategoryList.value;
-      } else {
-        filteredQuestionCategories.value = questionCategoryList.value.filter((item) =>
-          item.name.toLowerCase().includes(questionCategorySearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新界面知识点列表
-     */
-    const filterUpdateKnowledgePoints = () => {
-      if (!updateKnowledgeSearch.value) {
-        filteredUpdateKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredUpdateKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(updateKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新界面副知识点列表
-     */
-    const filterUpdateSubKnowledgePoints = () => {
-      if (!updateSubKnowledgeSearch.value) {
-        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(updateSubKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新界面解题思想列表
-     */
-    const filterUpdateSolutionIdeas = () => {
-      if (!updateSolutionIdeaSearch.value) {
-        filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
-      } else {
-        filteredUpdateSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
-          item.name.toLowerCase().includes(updateSolutionIdeaSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新界面问题类别列表
-     */
-    const filterUpdateQuestionCategories = () => {
-      if (!updateQuestionCategorySearch.value) {
-        filteredUpdateQuestionCategories.value = questionCategoryList.value;
-      } else {
-        filteredUpdateQuestionCategories.value = questionCategoryList.value.filter(
-          (item) =>
-            item.name
-              .toLowerCase()
-              .includes(updateQuestionCategorySearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新表单知识点列表
-     */
-    const filterUpdateFormKnowledgePoints = () => {
-      if (!updateFormKnowledgeSearch.value) {
-        filteredUpdateFormKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredUpdateFormKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(updateFormKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新表单解题思想列表
-     */
-    const filterUpdateFormSolutionIdeas = () => {
-      if (!updateFormSolutionIdeaSearch.value) {
-        filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
-      } else {
-        filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
-          item.name
-            .toLowerCase()
-            .includes(updateFormSolutionIdeaSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新表单问题类别列表
-     */
-    const filterUpdateFormQuestionCategories = () => {
-      if (!updateFormQuestionCategorySearch.value) {
-        filteredUpdateFormQuestionCategories.value = questionCategoryList.value;
-      } else {
-        filteredUpdateFormQuestionCategories.value = questionCategoryList.value.filter(
-          (item) =>
-            item.name
-              .toLowerCase()
-              .includes(updateFormQuestionCategorySearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤更新表单副知识点列表
-     */
-    const filterUpdateFormSubKnowledgePoints = () => {
-      if (!updateFormSubKnowledgeSearch.value) {
-        filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value.filter(
-          (kp) =>
-            kp.name
-              .toLowerCase()
-              .includes(updateFormSubKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    const resetFilteredList = (type) => {
-      switch (type) {
-        // =========== 上传界面 ===========
-        case "subKnowledge":
-          filteredSubKnowledgePoints.value = knowledgePointList.value;
-          break;
-        case "solutionIdea":
-          filteredSolutionIdeas.value = solutionIdeaList.value;
-          break;
-        // =========== 合并预览页面 ===========
-        case "mergeKnowledge":
-          filteredMergeKnowledgePoints.value = knowledgePointList.value;
-          break;
-
-        // =========== 更新界面 ===========
-        case "updateKnowledge":
-          filteredUpdateKnowledgePoints.value = knowledgePointList.value;
-          break;
-        case "updateSubKnowledge":
-          filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
-          break;
-        case "updateSolutionIdea":
-          filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
-          break;
-
-        // =========== 更新表单 ===========
-        case "updateFormSolutionIdea":
-          filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
-          break;
-        case "updateFormSubKnowledge":
-          filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
-          break;
-      }
-    };
-
-    // ==================== 图片上传配置 ====================
-    const IMAGE_BED_CONFIG = {
-      apiUrl: "https://xxwpic.flito.art/api/index.php", // 图床API地址
-      token: "1c17b11693cb5ec63859b091c5b9c1b2", // 图床API令牌
-    };
-
-    // ==================== 图片上传处理 ====================
-    /**
-     * 上传图片到图床
-     * @param {File} file - 图片文件
-     * @returns {Promise<string>} 图片URL
-     */
-    const uploadToImageBed = async (file) => {
-      try {
-        const formData = new FormData();
-        formData.append("image", file);
-        formData.append("token", IMAGE_BED_CONFIG.token);
-
-        const response = await fetch(IMAGE_BED_CONFIG.apiUrl, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error(`上传失败: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.code === 200 && result.result === "success") {
-          return result.url; // 返回图片URL
-        } else {
-          throw new Error("图床返回错误");
-        }
-      } catch (error) {
-        console.error("图片上传失败:", error);
-        throw new Error("图片上传失败，请重试");
-      }
-    };
-
-    /**
-     * 处理图片上传
-     * @param {Event} event - 文件输入事件
-     */
-    const handleImageUpload = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      // 验证文件类型
-      if (!file.type.startsWith("image/")) {
-        showAlert("文件错误", "请选择图片文件");
-        return;
-      }
-
-      // 验证文件大小（5MB限制）
-      if (file.size > 5 * 1024 * 1024) {
-        showAlert("文件过大", "图片大小不能超过5MB");
-        return;
-      }
-
-      // 创建对象URL用于预览
-      const previewUrl = URL.createObjectURL(file);
-      form.img_url = previewUrl;
-      pendingImageFile.value = file;
-      event.target.value = ""; // 重置文件输入
-
-      // 显示上传中状态
-      showAlert("上传中", "图片正在上传...", "info");
-    };
-
-    /**
-     * 处理更新界面图片上传
-     * @param {Event} event - 文件输入事件
-     */
-    const handleUpdateImageUpload = async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      if (!file.type.startsWith("image/")) {
-        showAlert("文件错误", "请选择图片文件");
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        showAlert("文件过大", "图片大小不能超过5MB");
-        return;
-      }
-
-      // 创建对象URL用于预览
-      const previewUrl = URL.createObjectURL(file);
-      updateForm.img_url = previewUrl;
-      pendingUpdateImageFile.value = file; // 保存文件，等待确认上传
-      event.target.value = "";
-    };
-
-    /**
-     * 移除图片
-     */
-    const removeImage = () => {
-      form.img_url = "";
-      pendingImageFile.value = null;
-    };
-
-    /**
-     * 移除更新界面图片
-     */
-    const removeUpdateImage = () => {
-      updateForm.img_url = "";
-      pendingUpdateImageFile.value = null;
-    };
-    /**
-     * 上传待处理的图片（在表单提交时调用）
-     * @param {string} mode - 模式：'upload' 或 'update'
-     * @returns {Promise<boolean>} 是否上传成功
-     */
-    const uploadPendingImage = async (mode) => {
-      try {
-        const pendingFile =
-          mode === "upload" ? pendingImageFile.value : pendingUpdateImageFile.value;
-        const formData = mode === "upload" ? form : updateForm;
-
-        if (!pendingFile) {
-          return true; // 没有待上传的图片，直接返回成功
-        }
-
-        showAlert("上传中", "图片正在上传到图床...", "info");
-
-        // 上传到图床
-        const imageUrl = await uploadToImageBed(pendingFile);
-
-        // 使用图床返回的URL替换预览URL
-        formData.img_url = imageUrl;
-
-        // 清空待处理文件
-        if (mode === "upload") {
-          pendingImageFile.value = null;
-        } else {
-          pendingUpdateImageFile.value = null;
-        }
-        return true;
-      } catch (error) {
-        console.error("图片上传失败:", error);
-        showAlert("上传失败", error.message);
-        return false;
-      }
-    };
-
-    /**
-     * 获取 textarea 对应字段和表单对象
-     * 这里通过 data-form="form" 或 data-form="updateForm" 来区分
-     */
-    const getFormInfo = (textarea) => {
-      const formName = textarea.dataset.form;
-      const field = textarea.dataset.field;
-      const optIndex = textarea.dataset.opt;
-
-      const formObject = formName === "updateForm" ? updateForm : form;
-
-      const optObj = optIndex !== undefined ? formObject.options[optIndex] : null;
-
-      return { formObject, field, optObj };
-    };
-
-    const handlePaste = async (event) => {
-      const textarea = event.target;
-      const { formObject, field, optObj } = getFormInfo(textarea);
-      if (!formObject || !field) return;
-
-      const items = event.clipboardData.items;
-
-      for (let item of items) {
-        if (item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          const localUrl = URL.createObjectURL(file);
-
-          if (!formObject.pendingImages) formObject.pendingImages = [];
-          formObject.pendingImages.push({ file, localUrl });
-
-          insertImageMarkdown(localUrl, textarea, formObject, field, optObj);
-        }
-      }
-    };
-
-    const pendingImages = reactive([]);
-    function savePendingImage(file, blobUrl, formObject, field) {
-      pendingImages.push({
-        file,
-        blobUrl,
-        formObject,
-        field,
+        return opt;
       });
     }
+  }
 
-    const handleDrop = async (event) => {
-      const textarea = event.target;
-      const { formObject, field, optObj } = getFormInfo(textarea);
-      if (!formObject || !field) return;
+  // 清空 pending
+  targetForm.pendingImages = [];
+};
 
-      for (let file of event.dataTransfer.files) {
-        if (file.type.startsWith("image/")) {
-          const localUrl = URL.createObjectURL(file);
+const confirmSubmit = async () => {
+  const targetForm = previewMode.value === "upload" ? form : updateForm;
 
-          if (!formObject.pendingImages) formObject.pendingImages = [];
-          formObject.pendingImages.push({ file, localUrl });
+  // 统一替换（创建或更新都可）
+  await replaceBlobUrls(targetForm);
 
-          insertImageMarkdown(localUrl, textarea, formObject, field, optObj);
-        }
-      }
-    };
+  showPreviewModal.value = false;
 
-    /**
-     * 插入 Markdown 图片
-     */
-    const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
+  if (previewMode.value === "upload") {
+    handleSubmit();
+  } else {
+    handleUpdateSubmit();
+  }
+};
 
-      const targetObj = optObj || formObject;
-      const oldText = targetObj[field] || "";
-      const markdown = `![image](${url})`;
+/**
+ * 验证表单
+ */
+const validateForm = () => {
+  if (!form.question_category_id) {
+    ElMessage.error("请选择问题类别");
+    return false;
+  }
+  if (!form.title.trim()) {
+    ElMessage.error("请输入题目内容");
+    return false;
+  }
+  return true;
+};
 
-      targetObj[field] = oldText.slice(0, start) + markdown + oldText.slice(end);
+/**
+ * 验证更新表单
+ */
+const validateUpdateForm = () => {
+  if (!updateForm.question_category_id) {
+    ElMessage.error("请选择问题类别");
+    return false;
+  }
+  if (!updateForm.title.trim()) {
+    ElMessage.error("请输入题目内容");
+    return false;
+  }
+  return true;
+};
 
-      textarea.setSelectionRange(start + markdown.length, start + markdown.length);
-    };
+// ==================== 预览数据获取方法 ====================
+/**
+ * 获取预览的学校名称
+ */
+const getPreviewSchoolName = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (currentForm.school_id === null) return "全部";
+  const school = schoolList.value.find((s) => s.id === currentForm.school_id);
+  return school ? school.name : "未知";
+};
 
-    // ==================== 记忆功能 ====================
-    /**
-     * 保存上传记忆到localStorage
-     */
-    const saveUploadMemory = () => {
-      uploadMemory.value = {
-        school_id: form.school_id,
-        grade_id: form.grade_id,
-        subject_id: form.subject_id,
-        question_category_id: form.question_category_id,
-        marking_type: form.marking_type,
-        difficulty_level: form.difficulty_level,
-      };
-      localStorage.setItem("uploadMemory", JSON.stringify(uploadMemory.value));
-    };
+/**
+ * 获取预览的年级名称
+ */
+const getPreviewGradeName = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (currentForm.grade_id === null) return "全部";
+  const grade = gradeList.value.find((g) => g.id === currentForm.grade_id);
+  return grade ? grade.name : "未知";
+};
 
-    // ==================== 生命周期和数据加载 ====================
-    /**
-     * 组件挂载时执行
-     */
-    onMounted(() => {
-      loadLists();
+/**
+ * 获取预览的科目名称
+ */
+const getPreviewSubjectName = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (currentForm.subject_id === null) return "全部";
+  const subject = subjectList.value.find((s) => s.id === currentForm.subject_id);
+  return subject ? subject.name : "未知";
+};
+
+/**
+ * 获取预览的问题类别名称
+ */
+const getPreviewQuestionCategoryName = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (!currentForm.question_category_id) return "未选择";
+  const category = questionCategoryList.value.find(
+    (c) => c.id === currentForm.question_category_id
+  );
+  return category ? category.name : "未知";
+};
+
+/**
+ * 获取预览的难度级别
+ */
+const getPreviewDifficultyLevel = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (currentForm.difficulty_level === null) return "暂无难度评级";
+  return `${currentForm.difficulty_level} 星`;
+};
+
+/**
+ * 获取预览的评分方法
+ */
+const getPreviewMarkingType = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  return currentForm.marking_type === 1 ? "人工评分" : "自动评分";
+};
+
+/**
+ * 获取预览的知识点名称
+ */
+const getPreviewKnowledgePointName = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (!currentForm.knowledge_point_id) return "未选择";
+  const kp = knowledgePointList.value.find(
+    (k) => k.id === currentForm.knowledge_point_id
+  );
+  return kp ? kp.name : "未知";
+};
+
+/**
+ * 获取预览的副知识点
+ */
+const getPreviewSubKnowledgePoints = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (!currentForm.sub_knowledge_point_ids.length) return "无";
+  return currentForm.sub_knowledge_point_ids
+    .map((id) => {
+      const kp = knowledgePointList.value.find((k) => k.id === id);
+      return kp ? kp.name : "未知";
+    })
+    .join(", ");
+};
+
+/**
+ * 获取预览的解题思想
+ */
+const getPreviewSolutionIdeas = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  if (!currentForm.solution_idea_ids.length) return "无";
+  return currentForm.solution_idea_ids
+    .map((id) => {
+      const si = solutionIdeaList.value.find((s) => s.id === id);
+      return si ? si.name : "未知";
+    })
+    .join(", ");
+};
+
+/**
+ * 获取预览的题目内容
+ */
+const getPreviewTitle = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  return currentForm.title || "无";
+};
+
+/**
+ * 获取预览的图片URL
+ */
+const getPreviewImageUrl = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  return currentForm.img_url || "";
+};
+
+/**
+ * 获取预览的选项
+ */
+const getPreviewOptions = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  return currentForm.options || [];
+};
+
+/**
+ * 检查是否显示预览选项
+ */
+const showPreviewOptions = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  const categoryName = getPreviewQuestionCategoryName();
+  return (
+    categoryName === "单选题" ||
+    categoryName.includes("单选") ||
+    categoryName === "多选题" ||
+    categoryName.includes("多选")
+  );
+};
+
+/**
+ * 检查选项是否为正确答案
+ */
+const isPreviewOptionCorrect = (index) => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  const categoryName = getPreviewQuestionCategoryName();
+
+  if (categoryName === "单选题" || categoryName.includes("单选")) {
+    const currentSingleAnswerIndex =
+      previewMode.value === "upload"
+        ? singleAnswerIndex.value
+        : updateSingleAnswerIndex.value;
+    return currentSingleAnswerIndex === index;
+  } else if (categoryName === "多选题" || categoryName.includes("多选")) {
+    return currentForm.options[index]?.isAnswer || false;
+  }
+  return false;
+};
+
+/**
+ * 检查是否显示主观题答案
+ */
+const showPreviewSubjectiveAnswer = () => {
+  const categoryName = getPreviewQuestionCategoryName();
+  return !(
+    categoryName === "单选题" ||
+    categoryName.includes("单选") ||
+    categoryName === "多选题" ||
+    categoryName.includes("多选")
+  );
+};
+
+/**
+ * 获取预览的答案
+ */
+const getPreviewAnswer = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  return currentForm.answer;
+};
+
+/**
+ * 获取预览的解析
+ */
+const getPreviewNotes = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  return currentForm.notes;
+};
+
+/**
+ * 获取预览的备注
+ */
+const getPreviewRemark = () => {
+  const currentForm = previewMode.value === "upload" ? form : updateForm;
+  return currentForm.remark;
+};
+
+// ==================== 选项操作方法 ====================
+/**
+ * 获取选项标签（A, B, C, ...）
+ * @param {number} index - 选项索引
+ * @returns {string} 选项标签
+ */
+const getOptionLabel = (index) => {
+  let label = "";
+  let n = index;
+  while (n >= 0) {
+    label = String.fromCharCode((n % 26) + 65) + label;
+    n = Math.floor(n / 26) - 1;
+  }
+  return label;
+};
+
+/**
+ * 添加选项
+ */
+const addOption = () => {
+  if (form.options.length < 10) {
+    form.options.push({ text: "", isAnswer: false });
+  }
+};
+
+/**
+ * 删除选项
+ * @param {number} index - 要删除的选项索引
+ */
+const removeOption = (index) => {
+  if (form.options.length > 2) {
+    form.options.splice(index, 1);
+    if (singleAnswerIndex.value === index) {
+      singleAnswerIndex.value = null;
+    }
+  }
+};
+
+/**
+ * 更新界面添加选项
+ */
+const addUpdateOption = () => {
+  if (updateForm.options.length < 10) {
+    updateForm.options.push({ text: "", isAnswer: false });
+  }
+};
+
+/**
+ * 更新界面删除选项
+ * @param {number} index - 要删除的选项索引
+ */
+const removeUpdateOption = (index) => {
+  if (updateForm.options.length > 2) {
+    updateForm.options.splice(index, 1);
+    if (updateSingleAnswerIndex.value === index) {
+      updateSingleAnswerIndex.value = null;
+    }
+  }
+};
+
+// ==================== 问题类别变更处理 ====================
+/**
+ * 处理问题类别变更
+ */
+const handleQuestionCategoryChange = () => {
+  // 重置选项
+  form.options = [
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+  ];
+  singleAnswerIndex.value = null;
+  form.answer = "";
+
+  // 根据问题类别设置默认评分方法
+  if (selectedQuestionCategory.value) {
+    const name = selectedQuestionCategory.value.name || "";
+    const autoMarkingKeywords = ["单选", "多选"]; // 可在这里扩展更多自动评分题型
+    form.marking_type = autoMarkingKeywords.some((keyword) => name.includes(keyword))
+      ? 0
+      : 1;
+  }
+};
+
+/**
+ * 处理更新界面问题类别变更
+ */
+const handleUpdateQuestionCategoryChange = () => {
+  updateForm.options = [
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+    { text: "", isAnswer: false },
+  ];
+  updateSingleAnswerIndex.value = null;
+  updateForm.answer = "";
+};
+
+// ==================== 知识点选择方法 ====================
+/**
+ * 选择知识点
+ * @param {Object} kp - 知识点对象
+ */
+const selectKnowledgePoint = (kp) => {
+  selectedKnowledgePoint.value = kp;
+  form.knowledge_point_id = kp.id;
+  knowledgeSearch.value = kp.name;
+  showKnowledgeDropdown.value = false;
+};
+
+/**
+ * 清除知识点选择
+ */
+const clearKnowledgePoint = () => {
+  selectedKnowledgePoint.value = null;
+  form.knowledge_point_id = null;
+  knowledgeSearch.value = "";
+};
+
+// ==================== 问题类别选择方法（单选） ====================
+/**
+ * 选择问题类别
+ * @param {Object} item - 问题类别对象
+ */
+const selectQuestionCategory = (item) => {
+  selectedQuestionCategory.value = item;
+  form.question_category_id = item.id;
+  questionCategorySearch.value = item.name;
+  showQuestionCategoryDropdown.value = false;
+  handleQuestionCategoryChange();
+  // 更新记忆
+  uploadMemory.value.question_category_id = item.id;
+  saveUploadMemory();
+};
+
+/**
+ * 清除问题类别选择
+ */
+const clearQuestionCategory = () => {
+  selectedQuestionCategory.value = null;
+  form.question_category_id = null;
+  questionCategorySearch.value = "";
+  handleQuestionCategoryChange();
+  // 更新记忆
+  uploadMemory.value.question_category_id = null;
+  saveUploadMemory();
+};
+
+// ==================== 解题思想选择方法 ====================
+/**
+ * 选择解题思想
+ * @param {Object} item - 解题思想对象
+ */
+const selectSolutionIdea = (item) => {
+  if (!form.solution_idea_ids.includes(item.id)) {
+    form.solution_idea_ids.push(item.id);
+  }
+  solutionIdeaSearch.value = "";
+  showSolutionIdeaDropdown.value = false;
+};
+
+/**
+ * 检查解题思想是否已选择
+ * @param {number} id - 解题思想ID
+ * @returns {boolean} 是否已选择
+ */
+const isSolutionIdeaSelected = (id) => {
+  return form.solution_idea_ids.includes(id);
+};
+
+/**
+ * 移除解题思想
+ * @param {number} id - 要移除的解题思想ID
+ */
+const removeSolutionIdea = (id) => {
+  form.solution_idea_ids = form.solution_idea_ids.filter((itemId) => itemId !== id);
+};
+
+// ==================== 副知识点选择方法 ====================
+/**
+ * 选择副知识点
+ * @param {Object} kp - 副知识点对象
+ */
+const selectSubKnowledgePoint = (kp) => {
+  if (!form.sub_knowledge_point_ids.includes(kp.id)) {
+    form.sub_knowledge_point_ids.push(kp.id);
+  }
+  subKnowledgeSearch.value = "";
+  showSubKnowledgeDropdown.value = false;
+};
+
+/**
+ * 检查副知识点是否已选择
+ * @param {number} id - 副知识点ID
+ * @returns {boolean} 是否已选择
+ */
+const isSubKnowledgeSelected = (id) => {
+  return form.sub_knowledge_point_ids.includes(id);
+};
+
+/**
+ * 移除副知识点
+ * @param {number} id - 要移除的副知识点ID
+ */
+const removeSubKnowledgePoint = (id) => {
+  form.sub_knowledge_point_ids = form.sub_knowledge_point_ids.filter((kp) => kp !== id);
+};
+
+// ==================== 更新界面知识点多选方法 ====================
+/**
+ * 更新界面选择知识点
+ * @param {Object} kp - 知识点对象
+ */
+const selectUpdateKnowledgePoint = (kp) => {
+  if (!searchCriteria.knowledge_point_ids.includes(kp.id)) {
+    searchCriteria.knowledge_point_ids.push(kp.id);
+  }
+  updateKnowledgeSearch.value = "";
+  showUpdateKnowledgeDropdown.value = false;
+};
+
+/**
+ * 检查更新界面知识点是否已选择
+ * @param {number} id - 知识点ID
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateKnowledgeSelected = (id) => {
+  return searchCriteria.knowledge_point_ids.includes(id);
+};
+
+/**
+ * 移除更新界面知识点
+ * @param {number} id - 要移除的知识点ID
+ */
+const removeUpdateKnowledgePoint = (id) => {
+  searchCriteria.knowledge_point_ids = searchCriteria.knowledge_point_ids.filter(
+    (kp) => kp !== id
+  );
+};
+/**
+ * 更新界面选择副知识点
+ * @param {Object} kp - 副知识点对象
+ */
+const selectUpdateSubKnowledgePoint = (kp) => {
+  if (!searchCriteria.sub_knowledge_point_ids.includes(kp.id)) {
+    searchCriteria.sub_knowledge_point_ids.push(kp.id);
+  }
+  updateSubKnowledgeSearch.value = "";
+  showUpdateSubKnowledgeDropdown.value = false;
+};
+
+/**
+ * 检查更新界面副知识点是否已选择
+ * @param {number} id - 副知识点ID
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateSubKnowledgeSelected = (id) => {
+  return searchCriteria.sub_knowledge_point_ids.includes(id);
+};
+
+/**
+ * 移除更新界面副知识点
+ * @param {number} id - 要移除的副知识点ID
+ */
+const removeUpdateSubKnowledgePoint = (id) => {
+  searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
+    (kp) => kp !== id
+  );
+};
+
+/**
+ * 更新界面副知识点下拉框失焦处理
+ */
+const onUpdateSubKnowledgeBlur = () => {
+  setTimeout(() => {
+    showUpdateSubKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+// ==================== 更新界面解题思想多选方法 ====================
+/**
+ * 更新界面选择解题思想
+ * @param {Object} item - 解题思想对象
+ */
+const selectUpdateSolutionIdea = (item) => {
+  if (!searchCriteria.solution_idea_ids.includes(item.id)) {
+    searchCriteria.solution_idea_ids.push(item.id);
+  }
+  updateSolutionIdeaSearch.value = "";
+  showUpdateSolutionIdeaDropdown.value = false;
+};
+
+/**
+ * 检查更新界面解题思想是否已选择
+ * @param {number} id - 解题思想ID
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateSolutionIdeaSelected = (id) => {
+  return searchCriteria.solution_idea_ids.includes(id);
+};
+
+/**
+ * 移除更新界面解题思想
+ * @param {number} id - 要移除的解题思想ID
+ */
+const removeUpdateSolutionIdea = (id) => {
+  searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
+    (itemId) => itemId !== id
+  );
+};
+
+// ==================== 更新界面问题类别多选方法 ====================
+/**
+ * 更新界面选择问题类别
+ * @param {Object} item - 问题类别对象
+ */
+const selectUpdateQuestionCategory = (item) => {
+  if (!searchCriteria.question_category_ids.includes(item.id)) {
+    searchCriteria.question_category_ids.push(item.id);
+  }
+  updateQuestionCategorySearch.value = "";
+  showUpdateQuestionCategoryDropdown.value = false;
+};
+
+/**
+ * 检查更新界面问题类别是否已选择
+ * @param {number} id - 问题类别ID
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateQuestionCategorySelected = (id) => {
+  return searchCriteria.question_category_ids.includes(id);
+};
+
+/**
+ * 移除更新界面问题类别
+ * @param {number} id - 要移除的问题类别ID
+ */
+const removeUpdateQuestionCategory = (id) => {
+  searchCriteria.question_category_ids = searchCriteria.question_category_ids.filter(
+    (itemId) => itemId !== id
+  );
+};
+
+/**
+ * 清除更新界面问题类别选择
+ */
+const clearUpdateQuestionCategory = () => {
+  searchCriteria.question_category_ids = [];
+  updateQuestionCategorySearch.value = "";
+};
+
+/**
+ * 更新界面选择年级
+ * @param {Object} grade - 年级对象
+ */
+const selectUpdateGrade = (grade) => {
+  if (!searchCriteria.grade_ids.includes(grade.id)) {
+    searchCriteria.grade_ids.push(grade.id);
+  }
+  updateGradeSearch.value = "";
+  showUpdateGradeDropdown.value = false;
+};
+
+/**
+ * 检查更新界面年级是否已选择
+ * @param {number} id - 年级ID
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateGradeSelected = (id) => {
+  return searchCriteria.grade_ids.includes(id);
+};
+
+/**
+ * 移除更新界面年级
+ * @param {number} id - 要移除的年级ID
+ */
+const removeUpdateGrade = (id) => {
+  searchCriteria.grade_ids = searchCriteria.grade_ids.filter((gradeId) => gradeId !== id);
+};
+
+/**
+ * 检查更新界面难度是否已选择
+ * @param {number} level - 难度级别
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateDifficultySelected = (level) => {
+  return searchCriteria.difficulty_levels.includes(level);
+};
+
+/**
+ * 选择或取消选择难度级别
+ * @param {number} level - 难度级别
+ */
+const toggleUpdateDifficulty = (level) => {
+  if (isUpdateDifficultySelected(level)) {
+    // 如果已经选择，则移除
+    searchCriteria.difficulty_levels = searchCriteria.difficulty_levels.filter(
+      (l) => l !== level
+    );
+  } else {
+    // 如果未选择，则添加
+    searchCriteria.difficulty_levels.push(level);
+  }
+};
+
+// ==================== 更新表单知识点选择方法 ====================
+/**
+ * 更新表单选择知识点
+ * @param {Object} kp - 知识点对象
+ */
+const selectUpdateFormKnowledgePoint = (kp) => {
+  selectedUpdateFormKnowledgePoint.value = kp;
+  updateForm.knowledge_point_id = kp.id;
+  updateFormKnowledgeSearch.value = kp.name;
+  showUpdateFormKnowledgeDropdown.value = false;
+};
+
+/**
+ * 清除更新表单知识点选择
+ */
+const clearUpdateFormKnowledgePoint = () => {
+  selectedUpdateFormKnowledgePoint.value = null;
+  updateForm.knowledge_point_id = null;
+  updateFormKnowledgeSearch.value = "";
+};
+
+// ==================== 更新表单问题类别单选方法 ====================
+/**
+ * 更新表单选择问题类别
+ * @param {Object} item - 问题类别对象
+ */
+const selectUpdateFormQuestionCategory = (item) => {
+  selectedUpdateFormQuestionCategory.value = item;
+  updateForm.question_category_id = item.id;
+  updateFormQuestionCategorySearch.value = item.name;
+  showUpdateFormQuestionCategoryDropdown.value = false;
+  handleUpdateQuestionCategoryChange();
+};
+
+/**
+ * 清除更新表单问题类别选择
+ */
+const clearUpdateFormQuestionCategory = () => {
+  selectedUpdateFormQuestionCategory.value = null;
+  updateForm.question_category_id = null;
+  updateFormQuestionCategorySearch.value = "";
+  handleUpdateQuestionCategoryChange();
+};
+
+// ==================== 更新表单解题思想多选方法 ====================
+/**
+ * 更新表单选择解题思想
+ * @param {Object} item - 解题思想对象
+ */
+const selectUpdateFormSolutionIdea = (item) => {
+  if (!updateForm.solution_idea_ids.includes(item.id)) {
+    updateForm.solution_idea_ids.push(item.id);
+  }
+  updateFormSolutionIdeaSearch.value = "";
+  showUpdateFormSolutionIdeaDropdown.value = false;
+};
+
+/**
+ * 检查更新表单解题思想是否已选择
+ * @param {number} id - 解题思想ID
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateFormSolutionIdeaSelected = (id) => {
+  return updateForm.solution_idea_ids.includes(id);
+};
+
+/**
+ * 移除更新表单解题思想
+ * @param {number} id - 要移除的解题思想ID
+ */
+const removeUpdateFormSolutionIdea = (id) => {
+  updateForm.solution_idea_ids = updateForm.solution_idea_ids.filter(
+    (itemId) => itemId !== id
+  );
+};
+
+// ==================== 更新表单副知识点选择方法 ====================
+/**
+ * 更新表单选择副知识点
+ * @param {Object} kp - 副知识点对象
+ */
+const selectUpdateFormSubKnowledgePoint = (kp) => {
+  if (!updateForm.sub_knowledge_point_ids.includes(kp.id)) {
+    updateForm.sub_knowledge_point_ids.push(kp.id);
+  }
+  updateFormSubKnowledgeSearch.value = "";
+  showUpdateFormSubKnowledgeDropdown.value = false;
+};
+
+/**
+ * 检查更新表单副知识点是否已选择
+ * @param {number} id - 副知识点ID
+ * @returns {boolean} 是否已选择
+ */
+const isUpdateFormSubKnowledgeSelected = (id) => {
+  return updateForm.sub_knowledge_point_ids.includes(id);
+};
+
+/**
+ * 移除更新表单副知识点
+ * @param {number} id - 要移除的副知识点ID
+ */
+const removeUpdateFormSubKnowledgePoint = (id) => {
+  updateForm.sub_knowledge_point_ids = updateForm.sub_knowledge_point_ids.filter(
+    (kp) => kp !== id
+  );
+};
+
+// ==================== 图片预览方法 ====================
+/**
+ * 预览图片
+ * @param {string} url - 图片URL
+ */
+const previewImage = (url) => {
+  previewImageUrl.value = url;
+  showImagePreview.value = true;
+};
+
+/**
+ * 关闭图片预览
+ */
+const closeImagePreview = () => {
+  showImagePreview.value = false;
+  previewImageUrl.value = "";
+};
+
+// ==================== 下拉框失焦处理方法 ====================
+// 这些方法使用setTimeout延迟隐藏下拉框，确保点击选项能够正常触发
+const onKnowledgeBlur = () => {
+  setTimeout(() => {
+    showKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+const onSubKnowledgeBlur = () => {
+  setTimeout(() => {
+    showSubKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+const onSolutionIdeaBlur = () => {
+  setTimeout(() => {
+    showSolutionIdeaDropdown.value = false;
+  }, 200);
+};
+
+const onQuestionCategoryBlur = () => {
+  setTimeout(() => {
+    showQuestionCategoryDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateKnowledgeBlur = () => {
+  setTimeout(() => {
+    showUpdateKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateSolutionIdeaBlur = () => {
+  setTimeout(() => {
+    showUpdateSolutionIdeaDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateQuestionCategoryBlur = () => {
+  setTimeout(() => {
+    showUpdateQuestionCategoryDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateGradeBlur = () => {
+  setTimeout(() => {
+    showUpdateGradeDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateFormKnowledgeBlur = () => {
+  setTimeout(() => {
+    showUpdateFormKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateFormSolutionIdeaBlur = () => {
+  setTimeout(() => {
+    showUpdateFormSolutionIdeaDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateFormQuestionCategoryBlur = () => {
+  setTimeout(() => {
+    showUpdateFormQuestionCategoryDropdown.value = false;
+  }, 200);
+};
+
+const onUpdateFormSubKnowledgeBlur = () => {
+  setTimeout(() => {
+    showUpdateFormSubKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+// ==================== 列表过滤方法 ====================
+/**
+ * 过滤知识点列表
+ */
+const filterKnowledgePoints = () => {
+  if (!knowledgeSearch.value) {
+    filteredKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(knowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤副知识点列表
+ */
+const filterSubKnowledgePoints = () => {
+  if (!subKnowledgeSearch.value) {
+    filteredSubKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(subKnowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤解题思想列表
+ */
+const filterSolutionIdeas = () => {
+  if (!solutionIdeaSearch.value) {
+    filteredSolutionIdeas.value = solutionIdeaList.value;
+  } else {
+    filteredSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
+      item.name.toLowerCase().includes(solutionIdeaSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤问题类别列表
+ */
+const filterQuestionCategories = () => {
+  if (!questionCategorySearch.value) {
+    filteredQuestionCategories.value = questionCategoryList.value;
+  } else {
+    filteredQuestionCategories.value = questionCategoryList.value.filter((item) =>
+      item.name.toLowerCase().includes(questionCategorySearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新界面知识点列表
+ */
+const filterUpdateKnowledgePoints = () => {
+  if (!updateKnowledgeSearch.value) {
+    filteredUpdateKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredUpdateKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(updateKnowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新界面副知识点列表
+ */
+const filterUpdateSubKnowledgePoints = () => {
+  if (!updateSubKnowledgeSearch.value) {
+    filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredUpdateSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(updateSubKnowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新界面解题思想列表
+ */
+const filterUpdateSolutionIdeas = () => {
+  if (!updateSolutionIdeaSearch.value) {
+    filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
+  } else {
+    filteredUpdateSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
+      item.name.toLowerCase().includes(updateSolutionIdeaSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新界面问题类别列表
+ */
+const filterUpdateQuestionCategories = () => {
+  if (!updateQuestionCategorySearch.value) {
+    filteredUpdateQuestionCategories.value = questionCategoryList.value;
+  } else {
+    filteredUpdateQuestionCategories.value = questionCategoryList.value.filter((item) =>
+      item.name.toLowerCase().includes(updateQuestionCategorySearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新界面年级列表
+ */
+const filterUpdateGrades = () => {
+  if (!updateGradeSearch.value) {
+    filteredUpdateGrades.value = gradeList.value;
+  } else {
+    filteredUpdateGrades.value = gradeList.value.filter((grade) =>
+      grade.name.toLowerCase().includes(updateGradeSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新表单知识点列表
+ */
+const filterUpdateFormKnowledgePoints = () => {
+  if (!updateFormKnowledgeSearch.value) {
+    filteredUpdateFormKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredUpdateFormKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(updateFormKnowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新表单解题思想列表
+ */
+const filterUpdateFormSolutionIdeas = () => {
+  if (!updateFormSolutionIdeaSearch.value) {
+    filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
+  } else {
+    filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value.filter((item) =>
+      item.name.toLowerCase().includes(updateFormSolutionIdeaSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新表单问题类别列表
+ */
+const filterUpdateFormQuestionCategories = () => {
+  if (!updateFormQuestionCategorySearch.value) {
+    filteredUpdateFormQuestionCategories.value = questionCategoryList.value;
+  } else {
+    filteredUpdateFormQuestionCategories.value = questionCategoryList.value.filter(
+      (item) =>
+        item.name
+          .toLowerCase()
+          .includes(updateFormQuestionCategorySearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤更新表单副知识点列表
+ */
+const filterUpdateFormSubKnowledgePoints = () => {
+  if (!updateFormSubKnowledgeSearch.value) {
+    filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(updateFormSubKnowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+const resetFilteredList = (type) => {
+  switch (type) {
+    // =========== 上传界面 ===========
+    case "subKnowledge":
+      filteredSubKnowledgePoints.value = knowledgePointList.value;
+      break;
+    case "solutionIdea":
+      filteredSolutionIdeas.value = solutionIdeaList.value;
+      break;
+    // =========== 合并预览页面 ===========
+    case "mergeKnowledge":
+      filteredMergeKnowledgePoints.value = knowledgePointList.value;
+      break;
+
+    // =========== 更新界面 ===========
+    case "updateKnowledge":
+      filteredUpdateKnowledgePoints.value = knowledgePointList.value;
+      break;
+    case "updateSubKnowledge":
+      filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
+      break;
+    case "updateSolutionIdea":
+      filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
+      break;
+
+    // =========== 更新表单 ===========
+    case "updateFormSolutionIdea":
+      filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
+      break;
+    case "updateFormSubKnowledge":
+      filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
+      break;
+    case "updateGrade":
+      filteredUpdateGrades.value = gradeList.value;
+      break;
+  }
+};
+
+// ==================== 图片上传配置 ====================
+const IMAGE_BED_CONFIG = {
+  apiUrl: "https://xxwpic.flito.art/api/index.php", // 图床API地址
+  token: "1c17b11693cb5ec63859b091c5b9c1b2", // 图床API令牌
+};
+
+// ==================== 图片上传处理 ====================
+/**
+ * 上传图片到图床
+ * @param {File} file - 图片文件
+ * @returns {Promise<string>} 图片URL
+ */
+const uploadToImageBed = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("token", IMAGE_BED_CONFIG.token);
+
+    const response = await fetch(IMAGE_BED_CONFIG.apiUrl, {
+      method: "POST",
+      body: formData,
     });
 
-    /**
-     * 加载所有数据列表
-     */
-    const loadLists = async () => {
-      try {
-        // 并行请求所有数据
-        const [s, g, sub, kp, si, qc] = await Promise.all([
-          axios.get(`${API_BASE}/questions/getSchoolList`),
-          axios.get(`${API_BASE}/questions/getGradeList`),
-          axios.get(`${API_BASE}/questions/getSubjectList`),
-          axios.get(`${API_BASE}/questions/getKnowledgePointList`),
-          axios.get(`${API_BASE}/questions/getSolutionIdeaList`),
-          axios.get(`${API_BASE}/questions/getQuestionCategoryList`),
-        ]);
-
-        // 处理学校列表数据
-        schoolList.value = Object.entries(s.data.data || {}).map(([id, name]) => ({
-          id: Number(id),
-          name,
-        }));
-
-        // 处理年级列表数据
-        gradeList.value = Object.entries(g.data.data || {}).map(([id, name]) => ({
-          id: Number(id),
-          name,
-        }));
-
-        // 处理科目列表数据
-        subjectList.value = Object.entries(sub.data.data || {}).map(([id, name]) => ({
-          id: Number(id),
-          name,
-        }));
-
-        // 处理知识点列表数据
-        knowledgePointList.value = Object.entries(
-          kp.data.data || {}
-        ).map(([id, name]) => ({ id: parseInt(id), name }));
-
-        // 处理解题思想列表数据
-        solutionIdeaList.value = Object.entries(si.data.data || {}).map(([id, name]) => ({
-          id: parseInt(id),
-          name,
-        }));
-
-        // 处理问题类别列表数据
-        questionCategoryList.value = Object.entries(
-          qc.data.data || {}
-        ).map(([id, name]) => ({ id: parseInt(id), name }));
-
-        // 初始化所有过滤后的列表
-        filteredKnowledgePoints.value = knowledgePointList.value;
-        filteredSubKnowledgePoints.value = knowledgePointList.value;
-        filteredSolutionIdeas.value = solutionIdeaList.value;
-        filteredQuestionCategories.value = questionCategoryList.value;
-
-        filteredUpdateKnowledgePoints.value = knowledgePointList.value;
-        filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
-        filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
-        filteredUpdateQuestionCategories.value = questionCategoryList.value;
-
-        filteredUpdateFormKnowledgePoints.value = knowledgePointList.value;
-        filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
-        filteredUpdateFormQuestionCategories.value = questionCategoryList.value;
-        filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
-
-        // 初始化合并知识点相关列表
-        filteredMergeKnowledgePoints.value = knowledgePointList.value;
-        filteredMergedKnowledgePoints.value = knowledgePointList.value;
-
-        if (uploadMemory.value.question_category_id) {
-          const rememberedCategory = questionCategoryList.value.find(
-            (category) => category.id === uploadMemory.value.question_category_id
-          );
-          if (rememberedCategory) {
-            selectedQuestionCategory.value = rememberedCategory;
-            form.question_category_id = rememberedCategory.id;
-            questionCategorySearch.value = rememberedCategory.name;
-          } else {
-            // 如果记忆的类别不存在，清除记忆
-            uploadMemory.value.question_category_id = null;
-            saveUploadMemory();
-          }
-        }
-      } catch (err) {
-        console.error("获取列表失败:", err);
-        showAlert("加载失败", "获取列表失败");
-      }
-    };
-
-    // ==================== 新建内容上传方法 ====================
-    /**
-     * 上传知识点
-     */
-    const uploadKnowledgePoint = async () => {
-      if (!newKnowledgePoint.value.trim()) {
-        showAlert("输入错误", "请输入知识点名称");
-        return;
-      }
-
-      try {
-        // 分割输入内容（支持逗号和中文逗号）
-        const items = newKnowledgePoint.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        if (res.data.code === 500) {
-          showAlert("上传失败", "知识点已存在");
-          return;
-        }
-        showAlert("上传成功", "知识点上传成功");
-        newKnowledgePoint.value = "";
-        await loadLists(); // 重新加载列表
-      } catch (err) {
-        console.error("上传知识点失败:", err);
-        showAlert("上传失败", "上传知识点失败");
-      }
-    };
-
-    /**
-     * 上传副知识点
-     */
-    const uploadSubKnowledgePoint = async () => {
-      if (!newSubKnowledgePoint.value.trim()) {
-        showAlert("输入错误", "请输入副知识点名称");
-        return;
-      }
-
-      try {
-        const items = newSubKnowledgePoint.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        if (res.data.code === 500) {
-          showAlert("上传失败", "副知识点已存在");
-          return;
-        }
-        showAlert("上传成功", "副知识点上传成功");
-        newSubKnowledgePoint.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传副知识点失败:", err);
-        showAlert("上传失败", "上传副知识点失败");
-      }
-    };
-
-    /**
-     * 上传解题思想
-     */
-    const uploadSolutionIdea = async () => {
-      if (!newSolutionIdea.value.trim()) {
-        showAlert("输入错误", "请输入解题思想");
-        return;
-      }
-
-      try {
-        const items = newSolutionIdea.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
-        showAlert("上传成功", "解题思想上传成功");
-        newSolutionIdea.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传解题思想失败:", err);
-        showAlert("上传失败", "上传解题思想失败");
-      }
-    };
-
-    /**
-     * 上传问题类别
-     */
-    const uploadQuestionCategory = async () => {
-      if (!newQuestionCategory.value.trim()) {
-        showAlert("输入错误", "请输入问题类别");
-        return;
-      }
-
-      try {
-        const items = newQuestionCategory.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadQuestionCategory`, items);
-        showAlert("上传成功", "问题类别上传成功");
-        newQuestionCategory.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传问题类别失败:", err);
-        showAlert("上传失败", "上传问题类别失败");
-      }
-    };
-
-    // ==================== 更新界面新建内容上传方法 ====================
-    /**
-     * 更新界面上传知识点
-     */
-    const uploadUpdateKnowledgePoint = async () => {
-      if (!newUpdateKnowledgePoint.value.trim()) {
-        showAlert("输入错误", "请输入知识点名称");
-        return;
-      }
-
-      try {
-        const items = newUpdateKnowledgePoint.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        if (res.data.code === 500) {
-          showAlert("上传失败", "知识点已存在");
-          return;
-        }
-        showAlert("上传成功", "知识点上传成功");
-        newUpdateKnowledgePoint.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传知识点失败:", err);
-        showAlert("上传失败", "上传知识点失败");
-      }
-    };
-
-    /**
-     * 更新界面上传解题思想
-     */
-    const uploadUpdateSolutionIdea = async () => {
-      if (!newUpdateSolutionIdea.value.trim()) {
-        showAlert("输入错误", "请输入解题思想");
-        return;
-      }
-
-      try {
-        const items = newUpdateSolutionIdea.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
-        showAlert("上传成功", "解题思想上传成功");
-        newUpdateSolutionIdea.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传解题思想失败:", err);
-        showAlert("上传失败", "上传解题思想失败");
-      }
-    };
-
-    /**
-     * 更新表单上传知识点
-     */
-    const uploadUpdateFormKnowledgePoint = async () => {
-      if (!newUpdateFormKnowledgePoint.value.trim()) {
-        showAlert("输入错误", "请输入知识点名称");
-        return;
-      }
-
-      try {
-        const items = newUpdateFormKnowledgePoint.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        if (res.data.code === 500) {
-          showAlert("上传失败", "知识点已存在");
-          return;
-        }
-        showAlert("上传成功", "知识点上传成功");
-        newUpdateFormKnowledgePoint.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传知识点失败:", err);
-        showAlert("上传失败", "上传知识点失败");
-      }
-    };
-
-    /**
-     * 更新表单上传副知识点
-     */
-    const uploadUpdateFormSubKnowledgePoint = async () => {
-      if (!newUpdateFormSubKnowledgePoint.value.trim()) {
-        showAlert("输入错误", "请输入副知识点名称");
-        return;
-      }
-
-      try {
-        const items = newUpdateFormSubKnowledgePoint.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
-        if (res.data.code === 500) {
-          showAlert("上传失败", "副知识点已存在");
-          return;
-        }
-        showAlert("上传成功", "副知识点上传成功");
-        newUpdateFormSubKnowledgePoint.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传副知识点失败:", err);
-        showAlert("上传失败", "上传副知识点失败");
-      }
-    };
-
-    /**
-     * 更新表单上传解题思想
-     */
-    const uploadUpdateFormSolutionIdea = async () => {
-      if (!newUpdateFormSolutionIdea.value.trim()) {
-        showAlert("输入错误", "请输入解题思想");
-        return;
-      }
-
-      try {
-        const items = newUpdateFormSolutionIdea.value
-          .split(/[,，]/)
-          .map((item) => item.trim())
-          .filter((item) => item);
-        await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
-        showAlert("上传成功", "解题思想上传成功");
-        newUpdateFormSolutionIdea.value = "";
-        await loadLists();
-      } catch (err) {
-        console.error("上传解题思想失败:", err);
-        showAlert("上传失败", "上传解题思想失败");
-      }
-    };
-
-    // ==================== 题目检索和操作 ====================
-    /**
-     * 检索题目
-     */
-    const findQuestions = async () => {
-      try {
-        searchCriteria.page_num = 1;
-        pageInput.value = 1;
-        const payload = { ...searchCriteria };
-
-        // 构建检索条件，过滤空值
-        if (searchCriteria.grade_id !== null)
-          payload.grade_id = Number(searchCriteria.grade_id);
-        if (searchCriteria.subject_id !== null)
-          payload.subject_id = Number(searchCriteria.subject_id);
-        if (searchCriteria.question_category_ids.length > 0)
-          // 改为数组判断
-          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.knowledge_point_ids.length > 0)
-          payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.sub_knowledge_point_ids.length > 0)
-          payload.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.map(
-            (id) => Number(id)
-          );
-        if (searchCriteria.solution_idea_ids.length > 0)
-          payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.difficulty_level !== null)
-          payload.difficulty_level = Number(searchCriteria.difficulty_level);
-        if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
-
-        const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-        const responseData = res.data.data; // 获取返回的data对象
-
-        // 修复：正确设置分页数据
-        questionList.value = responseData?.data_info || [];
-
-        // 从响应数据的data字段中获取分页信息
-        if (responseData) {
-          searchCriteria.page_num = responseData.page_num || 1;
-          searchCriteria.page_size = responseData.page_size || 10;
-          totalPages.value = responseData.total_pages || 1;
-          totalItems.value = responseData.total_items || 0;
-          pageInput.value = responseData.page_num || 1; // 同步页码输入框
-        }
-
-        hasSearched.value = true;
-
-        if (!questionList.value.length) {
-          showAlert("检索结果", "未找到符合条件的题目");
-        } else {
-          showAlert("检索成功", `找到 ${totalItems.value} 条题目`);
-        }
-      } catch (err) {
-        console.error("检索失败:", err);
-        showAlert("检索失败", "检索失败");
-        questionList.value = [];
-        hasSearched.value = true;
-      }
-    };
-    /**
-     * 跳转到首页
-     */
-    const goToFirstPage = () => {
-      changePage(1);
-    };
-
-    /**
-     * 跳转到末页
-     */
-    const goToLastPage = () => {
-      changePage(totalPages.value);
-    };
-
-    /**
-     * 改变页码
-     * @param {number} newPage - 新的页码
-     */
-    const changePage = (newPage) => {
-      if (newPage < 1 || newPage > totalPages.value) {
-        return;
-      }
-      searchCriteria.page_num = newPage;
-      pageInput.value = newPage; // 同步页码输入框
-      silentFindQuestions();
-    };
-
-    /**
-     * 跳转到指定页码
-     */
-    const goToPage = () => {
-      const page = parseInt(pageInput.value);
-      if (page >= 1 && page <= totalPages.value) {
-        changePage(page);
-      } else {
-        showAlert("输入错误", `请输入 1 到 ${totalPages.value} 之间的页码`);
-      }
-    };
-
-    //查找某个元素的"真正负责滚动的父级容器"（scroll parent）
-    function findScrollParent(el) {
-      let current = el.parentNode;
-      while (current && current !== document.body) {
-        const overflowY = window.getComputedStyle(current).overflowY;
-        if (overflowY === "scroll" || overflowY === "auto") {
-          return current;
-        }
-        current = current.parentNode;
-      }
-      return window; // 找不到时退回 window
+    if (!response.ok) {
+      throw new Error(`上传失败: ${response.status}`);
     }
 
-    /**
-     * 加载题目到更新表单
-     * @param {Object} q - 题目对象
-     */
-    const loadQuestionForUpdate = async (q) => {
-      selectedQuestion.value = q;
-      showUpdateForm.value = true;
+    const result = await response.json();
 
-      // 重置表单并填充数据
-      updateForm.id = q.id;
-      updateForm.title = q.title || "";
-      updateForm.school_id = q.school_id ? Number(q.school_id) : null;
-      updateForm.grade_id = q.grade_id ? Number(q.grade_id) : null;
-      updateForm.subject_id = q.subject_id ? Number(q.subject_id) : null;
-      updateForm.question_category_id = q.question_category_id
-        ? Number(q.question_category_id)
-        : null;
-      updateForm.marking_type = q.marking_type || 0;
-      updateForm.knowledge_point_id = q.knowledge_point_id
-        ? Number(q.knowledge_point_id)
-        : null;
-      updateForm.solution_idea_ids = q.solution_idea_ids
-        ? q.solution_idea_ids.map((id) => Number(id))
-        : [];
-      updateForm.difficulty_level = q.difficulty_level
-        ? Number(q.difficulty_level)
-        : null;
-      updateForm.answer = q.answer || "";
-      updateForm.notes = q.notes || "";
-      updateForm.remark = q.remark || "";
-      updateForm.sub_knowledge_point_ids = (q.sub_knowledge_point_ids || []).map((id) =>
+    if (result.code === 200 && result.result === "success") {
+      return result.url; // 返回图片URL
+    } else {
+      throw new Error("图床返回错误");
+    }
+  } catch (error) {
+    console.error("图片上传失败:", error);
+    throw new Error("图片上传失败，请重试");
+  }
+};
+
+/**
+ * 上传待处理的图片（在表单提交时调用）
+ * @param {string} mode - 模式：'upload' 或 'update'
+ * @returns {Promise<boolean>} 是否上传成功
+ */
+const uploadPendingImage = async (mode) => {
+  try {
+    const formData = mode === "upload" ? form : updateForm;
+
+    if (!formData.pendingImages || formData.pendingImages.length === 0) {
+      return true; // 没有待上传的图片，直接返回成功
+    }
+
+    ElMessage.warning("图片正在上传到图床...");
+
+    // 上传所有待处理的图片
+    for (const img of formData.pendingImages) {
+      // 上传到图床
+      const imageUrl = await uploadToImageBed(img.file);
+
+      // 使用图床返回的URL替换预览URL
+      // 在所有字段中替换临时URL
+      const fields = ["title", "remark", "answer", "notes", "img_url"];
+      fields.forEach((key) => {
+        if (formData[key] && typeof formData[key] === "string") {
+          formData[key] = formData[key].replaceAll(img.localUrl, imageUrl);
+        }
+      });
+
+      // 替换选项中的临时URL
+      if (formData.options) {
+        formData.options = formData.options.map((opt) => {
+          if (opt.text && typeof opt.text === "string") {
+            opt.text = opt.text.replaceAll(img.localUrl, imageUrl);
+          }
+          return opt;
+        });
+      }
+    }
+
+    // 清空待处理图片
+    formData.pendingImages = [];
+    
+    return true;
+  } catch (error) {
+    console.error("图片上传失败:", error);
+    ElMessage.error("上传失败");
+    return false;
+  }
+};
+
+/**
+ * 获取 textarea 对应字段和表单对象
+ * 这里通过 data-form="form" 或 data-form="updateForm" 来区分
+ */
+const getFormInfo = (textarea) => {
+  const formName = textarea.dataset.form;
+  const field = textarea.dataset.field;
+  const optIndex = textarea.dataset.opt;
+
+  const formObject = formName === "updateForm" ? updateForm : form;
+
+  const optObj = optIndex !== undefined ? formObject.options[optIndex] : null;
+
+  return { formObject, field, optObj };
+};
+
+const handlePaste = async (event) => {
+  const textarea = event.target;
+  const { formObject, field, optObj } = getFormInfo(textarea);
+  if (!formObject || !field) return;
+
+  const items = event.clipboardData.items;
+
+  for (let item of items) {
+    if (item.type.startsWith("image/")) {
+      const file = item.getAsFile();
+      const localUrl = URL.createObjectURL(file);
+
+      if (!formObject.pendingImages) formObject.pendingImages = [];
+      formObject.pendingImages.push({ file, localUrl });
+
+      insertImageMarkdown(localUrl, textarea, formObject, field, optObj);
+    }
+  }
+};
+
+const pendingImages = reactive([]);
+
+const handleDrop = async (event) => {
+  const textarea = event.target;
+  const { formObject, field, optObj } = getFormInfo(textarea);
+  if (!formObject || !field) return;
+
+  for (let file of event.dataTransfer.files) {
+    if (file.type.startsWith("image/")) {
+      const localUrl = URL.createObjectURL(file);
+
+      if (!formObject.pendingImages) formObject.pendingImages = [];
+      formObject.pendingImages.push({ file, localUrl });
+
+      insertImageMarkdown(localUrl, textarea, formObject, field, optObj);
+    }
+  }
+};
+
+/**
+ * 插入 Markdown 图片
+ */
+const insertImageMarkdown = (url, textarea, formObject, field, optObj) => {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  const targetObj = optObj || formObject;
+  const oldText = targetObj[field] || "";
+  const markdown = `![image](${url})`;
+
+  targetObj[field] = oldText.slice(0, start) + markdown + oldText.slice(end);
+
+  textarea.setSelectionRange(start + markdown.length, start + markdown.length);
+};
+
+// ==================== 记忆功能 ====================
+/**
+ * 保存上传记忆到localStorage
+ */
+const saveUploadMemory = () => {
+  uploadMemory.value = {
+    school_id: form.school_id,
+    grade_id: form.grade_id,
+    subject_id: form.subject_id,
+    question_category_id: form.question_category_id,
+    marking_type: form.marking_type,
+    difficulty_level: form.difficulty_level,
+  };
+  localStorage.setItem("uploadMemory", JSON.stringify(uploadMemory.value));
+};
+
+// ==================== 生命周期和数据加载 ====================
+/**
+ * 组件挂载时执行
+ */
+onMounted(() => {
+  loadLists();
+});
+
+/**
+ * 加载所有数据列表
+ */
+const loadLists = async () => {
+  try {
+    // 并行请求所有数据
+    const [s, g, sub, kp, si, qc] = await Promise.all([
+      axios.get(`${API_BASE}/questions/getSchoolList`),
+      axios.get(`${API_BASE}/questions/getGradeList`),
+      axios.get(`${API_BASE}/questions/getSubjectList`),
+      axios.get(`${API_BASE}/questions/getKnowledgePointList`),
+      axios.get(`${API_BASE}/questions/getSolutionIdeaList`),
+      axios.get(`${API_BASE}/questions/getQuestionCategoryList`),
+    ]);
+
+    // 处理学校列表数据
+    schoolList.value = Object.entries(s.data.data || {}).map(([id, name]) => ({
+      id: Number(id),
+      name,
+    }));
+
+    // 处理年级列表数据
+    gradeList.value = Object.entries(g.data.data || {}).map(([id, name]) => ({
+      id: Number(id),
+      name,
+    }));
+
+    // 处理科目列表数据
+    subjectList.value = Object.entries(sub.data.data || {}).map(([id, name]) => ({
+      id: Number(id),
+      name,
+    }));
+
+    // 处理知识点列表数据
+    knowledgePointList.value = Object.entries(kp.data.data || {}).map(([id, name]) => ({
+      id: parseInt(id),
+      name,
+    }));
+
+    // 处理解题思想列表数据
+    solutionIdeaList.value = Object.entries(si.data.data || {}).map(([id, name]) => ({
+      id: parseInt(id),
+      name,
+    }));
+
+    // 处理问题类别列表数据
+    questionCategoryList.value = Object.entries(qc.data.data || {}).map(([id, name]) => ({
+      id: parseInt(id),
+      name,
+    }));
+
+    // 初始化所有过滤后的列表
+    filteredKnowledgePoints.value = knowledgePointList.value;
+    filteredSubKnowledgePoints.value = knowledgePointList.value;
+    filteredSolutionIdeas.value = solutionIdeaList.value;
+    filteredQuestionCategories.value = questionCategoryList.value;
+
+    filteredUpdateKnowledgePoints.value = knowledgePointList.value;
+    filteredUpdateSubKnowledgePoints.value = knowledgePointList.value;
+    filteredUpdateSolutionIdeas.value = solutionIdeaList.value;
+    filteredUpdateQuestionCategories.value = questionCategoryList.value;
+
+    filteredUpdateFormKnowledgePoints.value = knowledgePointList.value;
+    filteredUpdateFormSolutionIdeas.value = solutionIdeaList.value;
+    filteredUpdateFormQuestionCategories.value = questionCategoryList.value;
+    filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
+
+    // 初始化合并知识点相关列表
+    filteredMergeKnowledgePoints.value = knowledgePointList.value;
+    filteredMergedKnowledgePoints.value = knowledgePointList.value;
+
+    if (uploadMemory.value.question_category_id) {
+      const rememberedCategory = questionCategoryList.value.find(
+        (category) => category.id === uploadMemory.value.question_category_id
+      );
+      if (rememberedCategory) {
+        selectedQuestionCategory.value = rememberedCategory;
+        form.question_category_id = rememberedCategory.id;
+        questionCategorySearch.value = rememberedCategory.name;
+      } else {
+        // 如果记忆的类别不存在，清除记忆
+        uploadMemory.value.question_category_id = null;
+        saveUploadMemory();
+      }
+    }
+  } catch (err) {
+    console.error("获取列表失败:", err);
+    ElMessage.error("获取列表失败");
+  }
+};
+
+// ==================== 新建内容上传方法 ====================
+/**
+ * 上传知识点
+ */
+const uploadKnowledgePoint = async () => {
+  if (!newKnowledgePoint.value.trim()) {
+    ElMessage.error("请输入知识点名称");
+    return;
+  }
+
+  try {
+    // 分割输入内容（支持逗号和中文逗号）
+    const items = newKnowledgePoint.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+    if (res.data.code === 500) {
+      ElMessage.error("知识点已存在");
+      return;
+    }
+    ElMessage.success("知识点上传成功");
+    newKnowledgePoint.value = "";
+    await loadLists(); // 重新加载列表
+  } catch (err) {
+    console.error("上传知识点失败:", err);
+    ElMessage.error("上传知识点失败");
+  }
+};
+
+/**
+ * 上传副知识点
+ */
+const uploadSubKnowledgePoint = async () => {
+  if (!newSubKnowledgePoint.value.trim()) {
+    ElMessage.error("请输入副知识点名称");
+    return;
+  }
+
+  try {
+    const items = newSubKnowledgePoint.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+    if (res.data.code === 500) {
+      ElMessage.error("副知识点已存在");
+      return;
+    }
+    ElMessage.success("副知识点上传成功");
+    newSubKnowledgePoint.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传副知识点失败:", err);
+    ElMessage.error("上传副知识点失败");
+  }
+};
+
+/**
+ * 上传解题思想
+ */
+const uploadSolutionIdea = async () => {
+  if (!newSolutionIdea.value.trim()) {
+    ElMessage.error("请输入解题思想");
+    return;
+  }
+
+  try {
+    const items = newSolutionIdea.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
+    ElMessage.success("解题思想上传成功");
+    newSolutionIdea.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传解题思想失败:", err);
+    ElMessage.error("上传解题思想失败");
+  }
+};
+
+/**
+ * 上传问题类别
+ */
+const uploadQuestionCategory = async () => {
+  if (!newQuestionCategory.value.trim()) {
+    ElMessage.error("请输入问题类别");
+    return;
+  }
+
+  try {
+    const items = newQuestionCategory.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    await axios.post(`${API_BASE}/questions/uploadQuestionCategory`, items);
+    ElMessage.success("问题类别上传成功");
+    newQuestionCategory.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传问题类别失败:", err);
+    ElMessage.error("上传问题类别失败");
+  }
+};
+
+// ==================== 更新界面新建内容上传方法 ====================
+/**
+ * 更新界面上传知识点
+ */
+const uploadUpdateKnowledgePoint = async () => {
+  if (!newUpdateKnowledgePoint.value.trim()) {
+    ElMessage.error("请输入知识点名称");
+    return;
+  }
+
+  try {
+    const items = newUpdateKnowledgePoint.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+    if (res.data.code === 500) {
+      ElMessage.error("知识点已存在");
+      return;
+    }
+    ElMessage.success("知识点上传成功");
+    newUpdateKnowledgePoint.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传知识点失败:", err);
+    ElMessage.error("上传知识点失败");
+  }
+};
+
+/**
+ * 更新界面上传解题思想
+ */
+const uploadUpdateSolutionIdea = async () => {
+  if (!newUpdateSolutionIdea.value.trim()) {
+    showAleElMessage.errorrt("请输入解题思想");
+    return;
+  }
+
+  try {
+    const items = newUpdateSolutionIdea.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
+    ElMessage.success("解题思想上传成功");
+    newUpdateSolutionIdea.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传解题思想失败:", err);
+    ElMessage.error("上传解题思想失败");
+  }
+};
+
+/**
+ * 更新表单上传知识点
+ */
+const uploadUpdateFormKnowledgePoint = async () => {
+  if (!newUpdateFormKnowledgePoint.value.trim()) {
+    showAlElMessage.errorert("请输入知识点名称");
+    return;
+  }
+
+  try {
+    const items = newUpdateFormKnowledgePoint.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+    if (res.data.code === 500) {
+      ElMessage.error("知识点已存在");
+      return;
+    }
+    ElMessage.success("知识点上传成功");
+    newUpdateFormKnowledgePoint.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传知识点失败:", err);
+    ElMessage.error("上传知识点失败");
+  }
+};
+
+/**
+ * 更新表单上传副知识点
+ */
+const uploadUpdateFormSubKnowledgePoint = async () => {
+  if (!newUpdateFormSubKnowledgePoint.value.trim()) {
+    ElMessage.error("请输入副知识点名称");
+    return;
+  }
+
+  try {
+    const items = newUpdateFormSubKnowledgePoint.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    const res = await axios.post(`${API_BASE}/questions/uploadKnowledgePoint`, items);
+    if (res.data.code === 500) {
+      ElMessage.error("副知识点已存在");
+      return;
+    }
+    ElMessage.success("副知识点上传成功");
+    newUpdateFormSubKnowledgePoint.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传副知识点失败:", err);
+    ElMessage.error("上传副知识点失败");
+  }
+};
+
+/**
+ * 更新表单上传解题思想
+ */
+const uploadUpdateFormSolutionIdea = async () => {
+  if (!newUpdateFormSolutionIdea.value.trim()) {
+    ElMessage.error("请输入解题思想");
+    return;
+  }
+
+  try {
+    const items = newUpdateFormSolutionIdea.value
+      .split(/[,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item);
+    await axios.post(`${API_BASE}/questions/uploadSolutionIdea`, items);
+    ElMessage.success("解题思想上传成功");
+    newUpdateFormSolutionIdea.value = "";
+    await loadLists();
+  } catch (err) {
+    console.error("上传解题思想失败:", err);
+    ElMessage.error("上传解题思想失败");
+  }
+};
+
+// ==================== 题目检索和操作 ====================
+/**
+ * 检索题目
+ */
+const findQuestions = async () => {
+  try {
+    searchCriteria.page_num = 1;
+    pageInput.value = 1;
+    const payload = { ...searchCriteria };
+
+    // 构建检索条件，过滤空值
+    if (searchCriteria.grade_ids.length > 0)
+      payload.grade_ids = searchCriteria.grade_ids.map((id) => Number(id));
+    if (searchCriteria.subject_id !== null)
+      payload.subject_id = Number(searchCriteria.subject_id);
+    if (searchCriteria.question_category_ids.length > 0)
+      payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
         Number(id)
       );
-      updateForm.img_url = q.img_url || "";
+    if (searchCriteria.knowledge_point_ids.length > 0)
+      payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.sub_knowledge_point_ids.length > 0)
+      payload.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.solution_idea_ids.length > 0)
+      payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.difficulty_levels.length > 0)
+      payload.difficulty_levels = searchCriteria.difficulty_levels.map((level) =>
+        Number(level)
+      );
+    if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
 
-      // 设置知识点显示
-      if (q.knowledge_point_id) {
-        const currentKnowledge = knowledgePointList.value.find(
-          (k) => k.id === Number(q.knowledge_point_id)
-        );
-        if (currentKnowledge) {
-          selectedUpdateFormKnowledgePoint.value = currentKnowledge;
-          updateFormKnowledgeSearch.value = currentKnowledge.name;
-        }
-      }
+    const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+    const responseData = res.data.data; // 获取返回的data对象
 
-      // 设置问题类别显示
-      if (q.question_category_id) {
-        const currentQuestionCategory = questionCategoryList.value.find(
-          (c) => c.id === Number(q.question_category_id)
-        );
-        if (currentQuestionCategory) {
-          selectedUpdateFormQuestionCategory.value = currentQuestionCategory;
-          updateFormQuestionCategorySearch.value = currentQuestionCategory.name;
-        }
-      }
+    // 正确设置分页数据
+    questionList.value = responseData?.data_info || [];
 
-      // 处理选择题选项
-      const questionCategoryName = selectedUpdateFormQuestionCategory.value?.name;
-      if (
-        questionCategoryName &&
-        (questionCategoryName === "单选题" ||
-          questionCategoryName.includes("单选") ||
+    // 从响应数据的data字段中获取分页信息
+    if (responseData) {
+      searchCriteria.page_num = responseData.page_num || 1;
+      searchCriteria.page_size = responseData.page_size || 10;
+      totalPages.value = responseData.total_pages || 1;
+      totalItems.value = responseData.total_items || 0;
+      pageInput.value = responseData.page_num || 1; // 同步页码输入框
+    }
+
+    hasSearched.value = true;
+
+    if (!questionList.value.length) {
+      ElMessage.error("未找到符合条件的题目");
+    } else {
+      ElMessage.success(`找到 ${totalItems.value} 条题目`);
+    }
+  } catch (err) {
+    console.error("检索失败:", err);
+    ElMessage.error("检索失败");
+    questionList.value = [];
+    hasSearched.value = true;
+  }
+};
+/**
+ * 跳转到首页
+ */
+const goToFirstPage = () => {
+  changePage(1);
+};
+
+/**
+ * 跳转到末页
+ */
+const goToLastPage = () => {
+  changePage(totalPages.value);
+};
+
+/**
+ * 改变页码
+ * @param {number} newPage - 新的页码
+ */
+const changePage = (newPage) => {
+  if (newPage < 1 || newPage > totalPages.value) {
+    return;
+  }
+  searchCriteria.page_num = newPage;
+  pageInput.value = newPage; // 同步页码输入框
+  silentFindQuestions();
+};
+
+/**
+ * 跳转到指定页码
+ */
+const goToPage = () => {
+  const page = parseInt(pageInput.value);
+  if (page >= 1 && page <= totalPages.value) {
+    changePage(page);
+  } else {
+    ElMessage.error(`请输入 1 到 ${totalPages.value} 之间的页码`);
+  }
+};
+
+//查找某个元素的"真正负责滚动的父级容器"（scroll parent）
+function findScrollParent(el) {
+  let current = el.parentNode;
+  while (current && current !== document.body) {
+    const overflowY = window.getComputedStyle(current).overflowY;
+    if (overflowY === "scroll" || overflowY === "auto") {
+      return current;
+    }
+    current = current.parentNode;
+  }
+  return window; // 找不到时退回 window
+}
+
+/**
+ * 加载题目到更新表单
+ * @param {Object} q - 题目对象
+ */
+const loadQuestionForUpdate = async (q) => {
+  selectedQuestion.value = q;
+  showUpdateForm.value = true;
+
+  // 重置表单并填充数据
+  updateForm.id = q.id;
+  updateForm.title = q.title || "";
+  updateForm.school_id = q.school_id ? Number(q.school_id) : null;
+  updateForm.grade_id = q.grade_id ? Number(q.grade_id) : null;
+  updateForm.subject_id = q.subject_id ? Number(q.subject_id) : null;
+  updateForm.question_category_id = q.question_category_id
+    ? Number(q.question_category_id)
+    : null;
+  updateForm.marking_type = q.marking_type || 0;
+  updateForm.knowledge_point_id = q.knowledge_point_id
+    ? Number(q.knowledge_point_id)
+    : null;
+  updateForm.solution_idea_ids = q.solution_idea_ids
+    ? q.solution_idea_ids.map((id) => Number(id))
+    : [];
+  updateForm.difficulty_level = q.difficulty_level ? Number(q.difficulty_level) : null;
+  updateForm.answer = q.answer || "";
+  updateForm.notes = q.notes || "";
+  updateForm.remark = q.remark || "";
+  updateForm.sub_knowledge_point_ids = (q.sub_knowledge_point_ids || []).map((id) =>
+    Number(id)
+  );
+  updateForm.img_url = q.img_url || "";
+
+  updateForm.pendingImages = [];
+
+  // 设置知识点显示
+  if (q.knowledge_point_id) {
+    const currentKnowledge = knowledgePointList.value.find(
+      (k) => k.id === Number(q.knowledge_point_id)
+    );
+    if (currentKnowledge) {
+      selectedUpdateFormKnowledgePoint.value = currentKnowledge;
+      updateFormKnowledgeSearch.value = currentKnowledge.name;
+    }
+  }
+
+  // 设置问题类别显示
+  if (q.question_category_id) {
+    const currentQuestionCategory = questionCategoryList.value.find(
+      (c) => c.id === Number(q.question_category_id)
+    );
+    if (currentQuestionCategory) {
+      selectedUpdateFormQuestionCategory.value = currentQuestionCategory;
+      updateFormQuestionCategorySearch.value = currentQuestionCategory.name;
+    }
+  }
+
+  // 处理选择题选项
+  const questionCategoryName = selectedUpdateFormQuestionCategory.value?.name;
+  if (
+    questionCategoryName &&
+    (questionCategoryName === "单选题" ||
+      questionCategoryName.includes("单选") ||
+      questionCategoryName === "多选题" ||
+      questionCategoryName.includes("多选"))
+  ) {
+    if (q.options && typeof q.options === "object") {
+      // 对选项按键名排序
+      const sortedEntries = Object.entries(q.options).sort(([keyA], [keyB]) => {
+        return keyA.localeCompare(keyB);
+      });
+
+      updateForm.options = sortedEntries.map(([key, text], index) => {
+        const optionKey = getOptionLabel(index);
+        let isAnswer = false;
+
+        // 根据问题类别设置正确答案
+        if (questionCategoryName === "单选题" || questionCategoryName.includes("单选")) {
+          isAnswer = q.answer === optionKey;
+        } else if (
           questionCategoryName === "多选题" ||
-          questionCategoryName.includes("多选"))
-      ) {
-        if (q.options && typeof q.options === "object") {
-          // 对选项按键名排序
-          const sortedEntries = Object.entries(q.options).sort(([keyA], [keyB]) => {
-            return keyA.localeCompare(keyB);
-          });
-
-          updateForm.options = sortedEntries.map(([key, text], index) => {
-            const optionKey = getOptionLabel(index);
-            let isAnswer = false;
-
-            // 根据问题类别设置正确答案
-            if (
-              questionCategoryName === "单选题" ||
-              questionCategoryName.includes("单选")
-            ) {
-              isAnswer = q.answer === optionKey;
-            } else if (
-              questionCategoryName === "多选题" ||
-              questionCategoryName.includes("多选")
-            ) {
-              if (q.answer) {
-                const answers = q.answer.split(",").map((a) => a.trim());
-                isAnswer = answers.includes(optionKey);
-              }
-            }
-
-            return {
-              text: text || "",
-              isAnswer: isAnswer,
-            };
-          });
-
-          // 设置单选题正确答案索引
-          if (
-            questionCategoryName === "单选题" ||
-            questionCategoryName.includes("单选")
-          ) {
-            const answerIndex = updateForm.options.findIndex((opt) => opt.isAnswer);
-            updateSingleAnswerIndex.value = answerIndex !== -1 ? answerIndex : null;
-          }
-        }
-      }
-      await nextTick();
-
-      // 滚动到更新表单
-      const el = updateFormRef.value;
-      const scrollParent = findScrollParent(el);
-
-      scrollParent.scrollTo({
-        top: el.offsetTop - 20,
-        behavior: "smooth",
-      });
-    };
-
-    /**
-     * 取消更新
-     */
-    const cancelUpdate = () => {
-      showUpdateForm.value = false;
-      selectedQuestion.value = null;
-      updateFormKnowledgeSearch.value = "";
-      updateFormSolutionIdeaSearch.value = "";
-      updateFormQuestionCategorySearch.value = "";
-      updateFormSubKnowledgeSearch.value = "";
-      selectedUpdateFormKnowledgePoint.value = null;
-      selectedUpdateFormQuestionCategory.value = null;
-    };
-
-    /**
-     * 确认删除题目
-     * @param {Object} q - 题目对象
-     */
-    const confirmDelete = (q) => {
-      questionToDelete.value = q;
-      showDeleteConfirm.value = true;
-    };
-
-    /**
-     * 取消删除
-     */
-    const cancelDelete = () => {
-      showDeleteConfirm.value = false;
-      questionToDelete.value = null;
-    };
-
-    /**
-     * 删除题目
-     */
-    const deleteQuestion = async () => {
-      if (!questionToDelete.value) return;
-
-      try {
-        const id = questionToDelete.value.id;
-        await axios.delete(`${API_BASE}/questions/deleteQuestion/${id}`);
-        showAlert("删除成功", "题目删除成功");
-
-        // 从列表中移除已删除的题目
-        questionList.value = questionList.value.filter((q) => q.id !== id);
-
-        showDeleteConfirm.value = false;
-        questionToDelete.value = null;
-      } catch (err) {
-        console.error("删除失败:", err);
-        showAlert("删除失败", "删除失败");
-      }
-    };
-
-    // ==================== 表单提交处理 ====================
-    /**
-     * 处理题目提交
-     */
-    const handleSubmit = async () => {
-      // 验证问题类别是否选择
-      if (!form.question_category_id) {
-        showAlert("输入错误", "请选择问题类别");
-        return;
-      }
-
-      try {
-        submitting.value = true;
-
-        // 先上传题目图片到图床
-        const imageUploadSuccess = await uploadPendingImage("upload");
-        if (!imageUploadSuccess) {
-          submitting.value = false;
-          return;
-        }
-
-        let optionsPayload = {};
-        let answerPayload = "";
-
-        const questionCategoryName = selectedQuestionCategory.value?.name;
-
-        // 处理选择题选项和答案
-        if (
-          questionCategoryName &&
-          (questionCategoryName === "单选题" ||
-            questionCategoryName.includes("单选") ||
-            questionCategoryName === "多选题" ||
-            questionCategoryName.includes("多选"))
+          questionCategoryName.includes("多选")
         ) {
-          form.options.forEach((opt, i) => {
-            const key = getOptionLabel(i);
-            optionsPayload[`option_${key}`] = opt.text;
-          });
-
-          if (
-            questionCategoryName === "单选题" ||
-            questionCategoryName.includes("单选")
-          ) {
-            answerPayload =
-              singleAnswerIndex.value !== null
-                ? getOptionLabel(singleAnswerIndex.value)
-                : "";
-          } else if (
-            questionCategoryName === "多选题" ||
-            questionCategoryName.includes("多选")
-          ) {
-            answerPayload = form.options
-              .map((opt, i) => (opt.isAnswer ? getOptionLabel(i) : null))
-              .filter(Boolean)
-              .join(",");
+          if (q.answer) {
+            const answers = q.answer.split(",").map((a) => a.trim());
+            isAnswer = answers.includes(optionKey);
           }
-        } else {
-          answerPayload = form.answer;
         }
 
-        // 构建提交数据
-        const payload = {
-          school_id: form.school_id !== null ? Number(form.school_id) : null,
-          grade_id: form.grade_id !== null ? Number(form.grade_id) : null,
-          subject_id: form.subject_id !== null ? Number(form.subject_id) : null,
-          question_category_id:
-            form.question_category_id !== null ? Number(form.question_category_id) : null,
-          marking_type: form.marking_type,
-          knowledge_point_id:
-            form.knowledge_point_id !== null ? Number(form.knowledge_point_id) : null,
-          solution_idea_ids: form.solution_idea_ids.map((id) => Number(id)),
-          difficulty_level:
-            form.difficulty_level !== null ? Number(form.difficulty_level) : null,
-          title: form.title,
-          ...(questionCategoryName &&
-          (questionCategoryName === "单选题" ||
-            questionCategoryName.includes("单选") ||
-            questionCategoryName === "多选题" ||
-            questionCategoryName.includes("多选"))
-            ? { options: optionsPayload }
-            : {}),
-          answer: answerPayload,
-          notes: form.notes,
-          remark: form.remark,
-          sub_knowledge_point_ids: form.sub_knowledge_point_ids.map((id) => Number(id)),
-          img_url: form.img_url,
+        return {
+          text: text || "",
+          isAnswer: isAnswer,
         };
-
-        const res = await axios.post(
-          `${API_BASE}/questions/uploadSingleQuestion`,
-          payload
-        );
-        if (res.data.message && res.data.message.includes("题目已存在")) {
-          showAlert("上传失败", "题目已存在，无法重复上传");
-        } else {
-          showAlert("上传成功");
-          saveUploadMemory(); // 保存用户设置
-          resetForm(); // 重置表单
-        }
-      } catch (err) {
-        console.error("提交失败:", err);
-        showAlert("提交失败", err.response?.data?.message || err.message);
-      } finally {
-        submitting.value = false;
-      }
-    };
-
-    /**
-     * 处理题目更新提交
-     */
-    const handleUpdateSubmit = async () => {
-      if (!updateForm.question_category_id) {
-        showAlert("验证错误", "请选择问题类别");
-        return;
-      }
-
-      try {
-        submitting.value = true;
-        // 先上传题目图片到图床
-        const imageUploadSuccess = await uploadPendingImage("update");
-        if (!imageUploadSuccess) {
-          submitting.value = false;
-          return;
-        }
-
-        let optionsPayload = {};
-        let answerPayload = "";
-
-        const questionCategoryName = selectedUpdateFormQuestionCategory.value?.name;
-
-        // 处理选择题选项和答案
-        if (
-          questionCategoryName &&
-          (questionCategoryName === "单选题" ||
-            questionCategoryName.includes("单选") ||
-            questionCategoryName === "多选题" ||
-            questionCategoryName.includes("多选"))
-        ) {
-          updateForm.options.forEach((opt, i) => {
-            const key = getOptionLabel(i);
-            optionsPayload[`option_${key}`] = opt.text;
-          });
-
-          if (
-            questionCategoryName === "单选题" ||
-            questionCategoryName.includes("单选")
-          ) {
-            answerPayload =
-              updateSingleAnswerIndex.value !== null
-                ? getOptionLabel(updateSingleAnswerIndex.value)
-                : "";
-          } else if (
-            questionCategoryName === "多选题" ||
-            questionCategoryName.includes("多选")
-          ) {
-            answerPayload = updateForm.options
-              .map((opt, i) => (opt.isAnswer ? getOptionLabel(i) : null))
-              .filter(Boolean)
-              .join(",");
-          }
-        } else {
-          answerPayload = updateForm.answer;
-        }
-
-        // 构建更新数据
-        const payload = {
-          id: updateForm.id,
-          school_id: updateForm.school_id !== null ? Number(updateForm.school_id) : null,
-          grade_id: updateForm.grade_id !== null ? Number(updateForm.grade_id) : null,
-          subject_id:
-            updateForm.subject_id !== null ? Number(updateForm.subject_id) : null,
-          question_category_id:
-            updateForm.question_category_id !== null
-              ? Number(updateForm.question_category_id)
-              : null,
-          marking_type: updateForm.marking_type,
-          knowledge_point_id:
-            updateForm.knowledge_point_id !== null
-              ? Number(updateForm.knowledge_point_id)
-              : null,
-          solution_idea_ids: updateForm.solution_idea_ids.map((id) => Number(id)),
-          difficulty_level:
-            updateForm.difficulty_level !== null
-              ? Number(updateForm.difficulty_level)
-              : null,
-          title: updateForm.title,
-          ...(questionCategoryName &&
-          (questionCategoryName === "单选题" ||
-            questionCategoryName.includes("单选") ||
-            questionCategoryName === "多选题" ||
-            questionCategoryName.includes("多选"))
-            ? { options: optionsPayload }
-            : {}),
-          answer: answerPayload,
-          notes: updateForm.notes,
-          remark: updateForm.remark,
-          sub_knowledge_point_ids: updateForm.sub_knowledge_point_ids.map((id) =>
-            Number(id)
-          ),
-          img_url: updateForm.img_url,
-        };
-
-        const res = await axios.post(`${API_BASE}/questions/updateQuestion`, payload);
-        // 检查响应消息是否为"题目已存在"
-        if (res.data.message && res.data.message.includes("题目已存在")) {
-          showAlert("更新失败", "题目已存在，无法更新");
-        } else {
-          showAlert("更新成功");
-          await silentFindQuestions(); // 静默刷新列表
-          cancelUpdate(); // 关闭更新表单
-        }
-      } catch (err) {
-        console.error("更新失败:", err);
-        showAlert("更新失败", err.response?.data?.message || err.message);
-      } finally {
-        submitting.value = false;
-      }
-    };
-
-    /**
-     * 静默检索题目（不显示弹窗）
-     */
-    const silentFindQuestions = async () => {
-      try {
-        const payload = { ...searchCriteria };
-
-        // 构建检索条件
-        if (searchCriteria.grade_id !== null)
-          payload.grade_id = Number(searchCriteria.grade_id);
-        if (searchCriteria.subject_id !== null)
-          payload.subject_id = Number(searchCriteria.subject_id);
-        if (searchCriteria.question_category_ids.length > 0)
-          // 改为数组判断
-          payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.knowledge_point_ids.length > 0)
-          payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.solution_idea_ids.length > 0)
-          payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
-            Number(id)
-          );
-        if (searchCriteria.difficulty_level !== null)
-          payload.difficulty_level = Number(searchCriteria.difficulty_level);
-        if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
-
-        const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-        const responseData = res.data.data;
-
-        questionList.value = responseData?.data_info || [];
-
-        // 从响应数据的data字段中获取分页信息
-        if (responseData) {
-          searchCriteria.page_num = responseData.page_num || 1;
-          searchCriteria.page_size = responseData.page_size || 10;
-          totalPages.value = responseData.total_pages || 1;
-          totalItems.value = responseData.total_items || 0;
-          pageInput.value = responseData.page_num || 1;
-        }
-
-        hasSearched.value = true;
-
-        // 静默操作，不显示任何弹窗
-      } catch (err) {
-        console.error("检索失败:", err);
-        questionList.value = [];
-        hasSearched.value = true;
-        // 静默操作，不显示错误弹窗
-      }
-    };
-
-    // ==================== 表单重置和模式切换 ====================
-    /**
-     * 重置上传表单
-     */
-    const resetForm = () => {
-      Object.assign(form, {
-        id: null,
-        title: "",
-        options: [
-          { text: "", isAnswer: false },
-          { text: "", isAnswer: false },
-          { text: "", isAnswer: false },
-          { text: "", isAnswer: false },
-        ],
-        answer: "",
-        notes: "",
-        remark: "",
-        sub_knowledge_point_ids: [],
-        solution_idea_ids: [],
-        img_url: "",
       });
-      singleAnswerIndex.value = null;
-      knowledgeSearch.value = "";
-      subKnowledgeSearch.value = "";
-      solutionIdeaSearch.value = "";
-      pendingImageFile.value = null;
-      selectedKnowledgePoint.value = null;
-    };
 
-    /**
-     * 进入更新模式
-     */
-    const enterUpdateMode = () => {
-      updateMode.value = true;
-      questionList.value = [];
-      showUpdateForm.value = false;
-      selectedQuestion.value = null;
-      updateKnowledgeSearch.value = "";
-      updateSubKnowledgeSearch.value = "";
-      updateSolutionIdeaSearch.value = "";
-      updateQuestionCategorySearch.value = "";
-      searchCriteria.knowledge_point_ids = [];
-      searchCriteria.sub_knowledge_point_ids = [];
-      searchCriteria.solution_idea_ids = [];
-      searchCriteria.question_category_ids = []; // 改为数组
-      searchCriteria.page_num = 1; // 重置为第一页
-      searchCriteria.page_size = 10; // 重置每页数量
-      totalPages.value = 1; // 重置总页数
-      totalItems.value = 0; // 重置总条目数
-      pageInput.value = 1; // 重置页码输入
-      hasSearched.value = false;
-      Object.assign(searchCriteria, {
-        grade_id: null,
-        subject_id: null,
-        question_category_ids: [], // 改为数组
-        knowledge_point_ids: [],
-        sub_knowledge_point_ids: [],
-        solution_idea_ids: [],
-        difficulty_level: null,
-        title: "",
-        page_num: 1, // 确保重置
-        page_size: 10, // 确保重置
+      // 设置单选题正确答案索引
+      if (questionCategoryName === "单选题" || questionCategoryName.includes("单选")) {
+        const answerIndex = updateForm.options.findIndex((opt) => opt.isAnswer);
+        updateSingleAnswerIndex.value = answerIndex !== -1 ? answerIndex : null;
+      }
+    }
+  }
+  await nextTick();
+
+  // 滚动到更新表单
+  const el = updateFormRef.value;
+  const scrollParent = findScrollParent(el);
+
+  scrollParent.scrollTo({
+    top: el.offsetTop - 20,
+    behavior: "smooth",
+  });
+};
+
+/**
+ * 取消更新
+ */
+const cancelUpdate = () => {
+  showUpdateForm.value = false;
+  selectedQuestion.value = null;
+  updateFormKnowledgeSearch.value = "";
+  updateFormSolutionIdeaSearch.value = "";
+  updateFormQuestionCategorySearch.value = "";
+  updateFormSubKnowledgeSearch.value = "";
+  selectedUpdateFormKnowledgePoint.value = null;
+  selectedUpdateFormQuestionCategory.value = null;
+};
+
+/**
+ * 确认删除题目
+ * @param {Object} q - 题目对象
+ */
+const confirmDelete = (q) => {
+  questionToDelete.value = q;
+  showDeleteConfirm.value = true;
+};
+
+/**
+ * 取消删除
+ */
+const cancelDelete = () => {
+  showDeleteConfirm.value = false;
+  questionToDelete.value = null;
+};
+
+/**
+ * 删除题目
+ */
+const deleteQuestion = async () => {
+  if (!questionToDelete.value) return;
+
+  try {
+    const id = questionToDelete.value.id;
+    await axios.delete(`${API_BASE}/questions/deleteQuestion/${id}`);
+    ElMessage.success("题目删除成功");
+
+    // 从列表中移除已删除的题目
+    questionList.value = questionList.value.filter((q) => q.id !== id);
+
+    showDeleteConfirm.value = false;
+    questionToDelete.value = null;
+  } catch (err) {
+    console.error("删除失败:", err);
+    ElMessage.error("删除失败");
+  }
+};
+
+// ==================== 表单提交处理 ====================
+/**
+ * 处理题目提交
+ */
+const handleSubmit = async () => {
+  // 验证问题类别是否选择
+  if (!form.question_category_id) {
+    ElMessage.error("请选择问题类别");
+    return;
+  }
+
+  try {
+    submitting.value = true;
+
+    // 先上传题目图片到图床
+    const imageUploadSuccess = await uploadPendingImage("upload");
+    if (!imageUploadSuccess) {
+      submitting.value = false;
+      return;
+    }
+
+    let optionsPayload = {};
+    let answerPayload = "";
+
+    const questionCategoryName = selectedQuestionCategory.value?.name;
+
+    // 处理选择题选项和答案
+    if (
+      questionCategoryName &&
+      (questionCategoryName === "单选题" ||
+        questionCategoryName.includes("单选") ||
+        questionCategoryName === "多选题" ||
+        questionCategoryName.includes("多选"))
+    ) {
+      form.options.forEach((opt, i) => {
+        const key = getOptionLabel(i);
+        optionsPayload[`option_${key}`] = opt.text;
       });
-    };
 
-    /**
-     * 退出更新模式
-     */
-    const exitUpdateMode = () => {
-      updateMode.value = false;
-      questionList.value = [];
-      resetForm();
-      hasSearched.value = false;
-    };
-
-    // ==================== 辅助方法 ====================
-    /**
-     * 根据ID获取学校名称
-     * @param {number} id - 学校ID
-     * @returns {string} 学校名称
-     */
-    const getSchoolName = (id) => {
-      if (id === null) return "-";
-      const school = schoolList.value.find((s) => s.id === Number(id));
-      return school ? school.name : "-";
-    };
-
-    /**
-     * 根据ID获取年级名称
-     * @param {number} id - 年级ID
-     * @returns {string} 年级名称
-     */
-    const getGradeName = (id) => {
-      if (id === null) return "-";
-      const grade = gradeList.value.find((g) => g.id === Number(id));
-      return grade ? grade.name : "-";
-    };
-
-    /**
-     * 根据ID获取科目名称
-     * @param {number} id - 科目ID
-     * @returns {string} 科目名称
-     */
-    const getSubjectName = (id) => {
-      if (id === null) return "-";
-      const subject = subjectList.value.find((s) => s.id === Number(id));
-      return subject ? subject.name : "-";
-    };
-
-    /**
-     * 根据ID获取知识点名称
-     * @param {number} id - 知识点ID
-     * @returns {string} 知识点名称
-     */
-    const getKnowledgePointName = (id) => {
-      if (id === null) return "-";
-      const kp = knowledgePointList.value.find((k) => k.id === Number(id));
-      return kp ? kp.name : "-";
-    };
-
-    /**
-     * 根据ID获取解题思想名称
-     * @param {number} id - 解题思想ID
-     * @returns {string} 解题思想名称
-     */
-    const getSolutionIdeaName = (id) => {
-      if (id === null) return "-";
-      const item = solutionIdeaList.value.find((s) => s.id === Number(id));
-      return item ? item.name : "-";
-    };
-
-    /**
-     * 根据ID获取问题类别名称
-     * @param {number} id - 问题类别ID
-     * @returns {string} 问题类别名称
-     */
-    const getQuestionCategoryName = (id) => {
-      if (id === null) return "-";
-      const item = questionCategoryList.value.find((c) => c.id === Number(id));
-      return item ? item.name : "-";
-    };
-
-    /**
-     * 根据评分方法代码获取评分方法名称
-     * @param {number} type - 评分方法代码
-     * @returns {string} 评分方法名称
-     */
-    const getMarkingTypeName = (type) => {
-      const types = {
-        0: "自动评分",
-        1: "人工评分",
-      };
-      return types[type] || "-";
-    };
-
-    // ==================== 计算属性 ====================
-    /**
-     * 是否显示单选题选项区域
-     */
-    const showSingleOptions = computed(() => {
-      if (!selectedQuestionCategory.value) return false;
-      const name = selectedQuestionCategory.value.name;
-      return name === "单选题" || name.includes("单选");
-    });
-
-    /**
-     * 是否显示多选题选项区域
-     */
-    const showMultipleOptions = computed(() => {
-      if (!selectedQuestionCategory.value) return false;
-      const name = selectedQuestionCategory.value.name;
-      return name === "多选题" || name.includes("多选");
-    });
-
-    /**
-     * 是否显示主观题答案区域
-     */
-    const showSubjectiveAnswer = computed(() => {
-      if (!selectedQuestionCategory.value) return true; // 默认显示主观题区域
-      const name = selectedQuestionCategory.value.name;
-      return !(
-        name === "单选题" ||
-        name.includes("单选") ||
-        name === "多选题" ||
-        name.includes("多选")
-      );
-    });
-
-    /**
-     * 更新界面是否显示单选题选项区域
-     */
-    const showUpdateSingleOptions = computed(() => {
-      if (!selectedUpdateFormQuestionCategory.value) return false;
-      const name = selectedUpdateFormQuestionCategory.value.name;
-      return name === "单选题" || name.includes("单选");
-    });
-
-    /**
-     * 更新界面是否显示多选题选项区域
-     */
-    const showUpdateMultipleOptions = computed(() => {
-      if (!selectedUpdateFormQuestionCategory.value) return false;
-      const name = selectedUpdateFormQuestionCategory.value.name;
-      return name === "多选题" || name.includes("多选");
-    });
-
-    /**
-     * 更新界面是否显示主观题答案区域
-     */
-    const showUpdateSubjectiveAnswer = computed(() => {
-      if (!selectedUpdateFormQuestionCategory.value) return true; // 默认显示主观题区域
-      const name = selectedUpdateFormQuestionCategory.value.name;
-      return !(
-        name === "单选题" ||
-        name.includes("单选") ||
-        name === "多选题" ||
-        name.includes("多选")
-      );
-    });
-
-    /**
-     * 选中的副知识点对象列表
-     */
-    const selectedSubKnowledgePoints = computed(() => {
-      return form.sub_knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 选中的解题思想对象列表
-     */
-    const selectedSolutionIdeas = computed(() => {
-      return form.solution_idea_ids
-        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的知识点对象列表
-     */
-    const selectedUpdateKnowledgePoints = computed(() => {
-      return searchCriteria.knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的副知识点对象列表
-     */
-    const selectedUpdateSubKnowledgePoints = computed(() => {
-      return searchCriteria.sub_knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的解题思想对象列表
-     */
-    const selectedUpdateSolutionIdeas = computed(() => {
-      return searchCriteria.solution_idea_ids
-        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新界面选中的问题类别对象列表
-     */
-    const selectedUpdateQuestionCategories = computed(() => {
-      return searchCriteria.question_category_ids
-        .map((id) => questionCategoryList.value.find((c) => c.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新表单选中的解题思想对象列表
-     */
-    const selectedUpdateFormSolutionIdeas = computed(() => {
-      return updateForm.solution_idea_ids
-        .map((id) => solutionIdeaList.value.find((s) => s.id === id))
-        .filter(Boolean);
-    });
-
-    /**
-     * 更新表单选中的副知识点对象列表
-     */
-    const selectedUpdateFormSubKnowledgePoints = computed(() => {
-      return updateForm.sub_knowledge_point_ids
-        .map((id) => knowledgePointList.value.find((k) => k.id === id))
-        .filter(Boolean);
-    });
-
-    // ==================== 合并知识点相关方法 ====================
-    /**
-     * 打开合并知识点模态框
-     */
-    const openMergeKnowledgeModal = () => {
-      showMergeKnowledgeModal.value = true;
-      mergeStep.value = 1;
-      selectedMergeKnowledgePoints.value = [];
-      selectedMergedKnowledgePoint.value = null;
-      mergedKnowledgePointName.value = "";
-      mergeKnowledgeSearch.value = "";
-      filteredMergeKnowledgePoints.value = knowledgePointList.value;
-      filteredMergedKnowledgePoints.value = knowledgePointList.value;
-    };
-
-    /**
-     * 关闭合并知识点模态框
-     */
-    const closeMergeKnowledgeModal = () => {
-      showMergeKnowledgeModal.value = false;
-      mergeStep.value = 1;
-      selectedMergeKnowledgePoints.value = [];
-      selectedMergedKnowledgePoint.value = null;
-      mergedKnowledgePointName.value = "";
-      affectedQuestions.value = [];
-    };
-
-    /**
-     * 过滤合并知识点列表
-     */
-    const filterMergeKnowledgePoints = () => {
-      if (!mergeKnowledgeSearch.value) {
-        filteredMergeKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredMergeKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(mergeKnowledgeSearch.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 过滤合并后知识点列表
-     */
-    const filterMergedKnowledgePoints = () => {
-      if (!mergedKnowledgePointName.value) {
-        filteredMergedKnowledgePoints.value = knowledgePointList.value;
-      } else {
-        filteredMergedKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-          kp.name.toLowerCase().includes(mergedKnowledgePointName.value.toLowerCase())
-        );
-      }
-    };
-
-    /**
-     * 选择要合并的知识点
-     * @param {Object} kp - 知识点对象
-     */
-    const selectMergeKnowledgePoint = (kp) => {
-      if (!selectedMergeKnowledgePoints.value.find((item) => item.id === kp.id)) {
-        selectedMergeKnowledgePoints.value.push(kp);
-      }
-      mergeKnowledgeSearch.value = "";
-      showMergeKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 检查知识点是否已选择用于合并
-     * @param {number} id - 知识点ID
-     * @returns {boolean} 是否已选择
-     */
-    const isMergeKnowledgeSelected = (id) => {
-      return selectedMergeKnowledgePoints.value.some((kp) => kp.id === id);
-    };
-
-    /**
-     * 移除要合并的知识点
-     * @param {number} id - 知识点ID
-     */
-    const removeMergeKnowledgePoint = (id) => {
-      selectedMergeKnowledgePoints.value = selectedMergeKnowledgePoints.value.filter(
-        (kp) => kp.id !== id
-      );
-    };
-
-    /**
-     * 选择合并后的知识点
-     * @param {Object} kp - 知识点对象
-     */
-    const selectMergedKnowledgePoint = (kp) => {
-      selectedMergedKnowledgePoint.value = kp;
-      mergedKnowledgePointName.value = kp.name;
-      showMergedKnowledgeDropdown.value = false;
-    };
-
-    /**
-     * 清除合并后知识点选择
-     */
-    const clearMergedKnowledgePoint = () => {
-      selectedMergedKnowledgePoint.value = null;
-      mergedKnowledgePointName.value = "";
-    };
-
-    /**
-     * 合并知识点下拉框失焦处理
-     */
-    const onMergeKnowledgeBlur = () => {
-      setTimeout(() => {
-        showMergeKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    /**
-     * 合并后知识点下拉框失焦处理
-     */
-    const onMergedKnowledgeBlur = () => {
-      setTimeout(() => {
-        showMergedKnowledgeDropdown.value = false;
-      }, 200);
-    };
-
-    /**
-     * 预览合并
-     */
-    const previewMerge = async () => {
-      try {
-        isMerging.value = true;
-        // 确定合并后的知识点ID
-        let mergedKnowledgePointId = null;
-        // 如果选择了现有的知识点，使用其ID
-        if (selectedMergedKnowledgePoint.value) {
-          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
-        } else {
-          // 如果是新知识点，先创建
-          const newKnowledgePointResponse = await axios.post(
-            `${API_BASE}/questions/uploadKnowledgePoint`,
-            [mergedKnowledgePointName.value.trim()]
-          );
-          if (newKnowledgePointResponse.data.code === 500) {
-            closeMergeKnowledgeModal();
-            showAlert("创建失败", "知识点已存在");
-            isMerging.value = false;
-            return;
-          }
-          // 重新加载知识点列表以获取新创建的ID
-          await loadLists();
-          // 从更新后的列表中查找新创建的知识点
-          const newKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.name === mergedKnowledgePointName.value.trim()
-          );
-          if (newKnowledgePoint) {
-            mergedKnowledgePointId = newKnowledgePoint.id;
-          } else {
-            isMerging.value = false;
-            return;
-          }
-        }
-        // 第一次调用合并接口，confirm=false
-        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
-        const response = await axios.post(
-          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
-          sourceIds
-        );
-        const responseData = response.data.data;
-        affectedQuestions.value = Array.isArray(responseData) ? responseData : [];
-
-        // 因为不分页，所以固定为 1 页
-        affectedQuestionsTotalItems.value = affectedQuestions.value.length;
-        affectedQuestionsTotalPages.value = 1;
-
-        affectedQuestionsPageNum.value = 1;
-        affectedQuestionsPageInput.value = 1;
-
-        // 进入步骤2
-        mergeStep.value = 2;
-      } catch (err) {
-        console.error("预览合并失败:", err);
-        closeMergeKnowledgeModal();
-        showAlert("预览失败", err.response?.data?.message || err.message);
-      } finally {
-        isMerging.value = false;
-      }
-    };
-
-    /**
-     * 确认合并
-     */
-    const confirmMerge = async () => {
-      try {
-        isMerging.value = true;
-
-        // 确定合并后的知识点ID
-        let mergedKnowledgePointId = null;
-
-        // 如果选择了现有的知识点，使用其ID
-        if (selectedMergedKnowledgePoint.value) {
-          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
-        } else {
-          // 从知识点列表中查找
-          const targetKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.name === mergedKnowledgePointName.value.trim()
-          );
-
-          if (targetKnowledgePoint) {
-            mergedKnowledgePointId = targetKnowledgePoint.id;
-          } else {
-            showAlert("合并失败", "无法找到目标知识点");
-            isMerging.value = false;
-            return;
-          }
-        }
-
-        // 第二次调用合并接口，confirm=true
-        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
-        await axios.post(
-          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/true`,
-          sourceIds
-        );
-
-        showAlert("合并成功", "知识点合并完成");
-        closeMergeKnowledgeModal();
-
-        // 重新加载知识点列表
-        await loadLists();
-      } catch (err) {
-        console.error("合并失败:", err);
-        showAlert("合并失败", err.response?.data?.message || err.message);
-      } finally {
-        isMerging.value = false;
-      }
-    };
-
-    /**
-     * 改变受影响题目页码
-     * @param {number} newPage - 新页码
-     */
-    const changeAffectedPage = (newPage) => {
-      if (newPage < 1 || newPage > affectedQuestionsTotalPages.value) {
-        return;
-      }
-      affectedQuestionsPageNum.value = newPage;
-      affectedQuestionsPageInput.value = newPage;
-      loadAffectedQuestions();
-    };
-
-    /**
-     * 跳转到受影响题目首页
-     */
-    const goToAffectedFirstPage = () => {
-      changeAffectedPage(1);
-    };
-
-    /**
-     * 跳转到受影响题目末页
-     */
-    const goToAffectedLastPage = () => {
-      changeAffectedPage(affectedQuestionsTotalPages.value);
-    };
-
-    /**
-     * 跳转到受影响题目指定页码
-     */
-    const goToAffectedPage = () => {
-      const page = parseInt(affectedQuestionsPageInput.value);
-      if (page >= 1 && page <= affectedQuestionsTotalPages.value) {
-        changeAffectedPage(page);
-      } else {
-        showAlert(
-          "输入错误",
-          `请输入 1 到 ${affectedQuestionsTotalPages.value} 之间的页码`
-        );
-      }
-    };
-
-    /**
-     * 加载受影响题目（用于分页）
-     */
-    const loadAffectedQuestions = async () => {
-      if (
-        selectedMergeKnowledgePoints.value.length < 2 ||
-        !mergedKnowledgePointName.value.trim()
+      if (questionCategoryName === "单选题" || questionCategoryName.includes("单选")) {
+        answerPayload =
+          singleAnswerIndex.value !== null ? getOptionLabel(singleAnswerIndex.value) : "";
+      } else if (
+        questionCategoryName === "多选题" ||
+        questionCategoryName.includes("多选")
       ) {
+        answerPayload = form.options
+          .map((opt, i) => (opt.isAnswer ? getOptionLabel(i) : null))
+          .filter(Boolean)
+          .join(",");
+      }
+    } else {
+      answerPayload = form.answer;
+    }
+
+    // 构建提交数据
+    const payload = {
+      school_id: form.school_id !== null ? Number(form.school_id) : null,
+      grade_id: form.grade_id !== null ? Number(form.grade_id) : null,
+      subject_id: form.subject_id !== null ? Number(form.subject_id) : null,
+      question_category_id:
+        form.question_category_id !== null ? Number(form.question_category_id) : null,
+      marking_type: form.marking_type,
+      knowledge_point_id:
+        form.knowledge_point_id !== null ? Number(form.knowledge_point_id) : null,
+      solution_idea_ids: form.solution_idea_ids.map((id) => Number(id)),
+      difficulty_level:
+        form.difficulty_level !== null ? Number(form.difficulty_level) : null,
+      title: form.title,
+      ...(questionCategoryName &&
+      (questionCategoryName === "单选题" ||
+        questionCategoryName.includes("单选") ||
+        questionCategoryName === "多选题" ||
+        questionCategoryName.includes("多选"))
+        ? { options: optionsPayload }
+        : {}),
+      answer: answerPayload,
+      notes: form.notes,
+      remark: form.remark,
+      sub_knowledge_point_ids: form.sub_knowledge_point_ids.map((id) => Number(id)),
+      img_url: form.img_url,
+    };
+
+    const res = await axios.post(`${API_BASE}/questions/uploadSingleQuestion`, payload);
+    if (res.data.message && res.data.message.includes("题目已存在")) {
+      ElMessage.error("题目已存在");
+    } else {
+      ElMessage.success("上传成功");
+      saveUploadMemory(); // 保存用户设置
+      resetForm(); // 重置表单
+    }
+  } catch (err) {
+    console.error("提交失败:", err);
+    ElMessage.error("提交失败");
+  } finally {
+    submitting.value = false;
+  }
+};
+
+/**
+ * 处理题目更新提交
+ */
+const handleUpdateSubmit = async () => {
+  if (!updateForm.question_category_id) {
+    ElMessage.error("请选择问题类别");
+    return;
+  }
+
+  try {
+    submitting.value = true;
+    // 先上传题目图片到图床
+    const imageUploadSuccess = await uploadPendingImage("update");
+    if (!imageUploadSuccess) {
+      submitting.value = false;
+      return;
+    }
+
+    let optionsPayload = {};
+    let answerPayload = "";
+
+    const questionCategoryName = selectedUpdateFormQuestionCategory.value?.name;
+
+    // 处理选择题选项和答案
+    if (
+      questionCategoryName &&
+      (questionCategoryName === "单选题" ||
+        questionCategoryName.includes("单选") ||
+        questionCategoryName === "多选题" ||
+        questionCategoryName.includes("多选"))
+    ) {
+      updateForm.options.forEach((opt, i) => {
+        const key = getOptionLabel(i);
+        optionsPayload[`option_${key}`] = opt.text;
+      });
+
+      if (questionCategoryName === "单选题" || questionCategoryName.includes("单选")) {
+        answerPayload =
+          updateSingleAnswerIndex.value !== null
+            ? getOptionLabel(updateSingleAnswerIndex.value)
+            : "";
+      } else if (
+        questionCategoryName === "多选题" ||
+        questionCategoryName.includes("多选")
+      ) {
+        answerPayload = updateForm.options
+          .map((opt, i) => (opt.isAnswer ? getOptionLabel(i) : null))
+          .filter(Boolean)
+          .join(",");
+      }
+    } else {
+      answerPayload = updateForm.answer;
+    }
+
+    // 构建更新数据
+    const payload = {
+      id: updateForm.id,
+      school_id: updateForm.school_id !== null ? Number(updateForm.school_id) : null,
+      grade_id: updateForm.grade_id !== null ? Number(updateForm.grade_id) : null,
+      subject_id: updateForm.subject_id !== null ? Number(updateForm.subject_id) : null,
+      question_category_id:
+        updateForm.question_category_id !== null
+          ? Number(updateForm.question_category_id)
+          : null,
+      marking_type: updateForm.marking_type,
+      knowledge_point_id:
+        updateForm.knowledge_point_id !== null
+          ? Number(updateForm.knowledge_point_id)
+          : null,
+      solution_idea_ids: updateForm.solution_idea_ids.map((id) => Number(id)),
+      difficulty_level:
+        updateForm.difficulty_level !== null ? Number(updateForm.difficulty_level) : null,
+      title: updateForm.title,
+      ...(questionCategoryName &&
+      (questionCategoryName === "单选题" ||
+        questionCategoryName.includes("单选") ||
+        questionCategoryName === "多选题" ||
+        questionCategoryName.includes("多选"))
+        ? { options: optionsPayload }
+        : {}),
+      answer: answerPayload,
+      notes: updateForm.notes,
+      remark: updateForm.remark,
+      sub_knowledge_point_ids: updateForm.sub_knowledge_point_ids.map((id) => Number(id)),
+      img_url: updateForm.img_url,
+    };
+
+    const res = await axios.post(`${API_BASE}/questions/updateQuestion`, payload);
+    // 检查响应消息是否为"题目已存在"
+    if (res.data.message && res.data.message.includes("题目已存在")) {
+      ElMessage.error("题目已存在");
+    } else {
+      ElMessage.success("更新成功");
+      await silentFindQuestions(); // 静默刷新列表
+      cancelUpdate(); // 关闭更新表单
+    }
+  } catch (err) {
+    console.error("更新失败:", err);
+    ElMessage.error("更新失败");
+  } finally {
+    submitting.value = false;
+  }
+};
+
+/**
+ * 静默检索题目（不显示弹窗）
+ */
+const silentFindQuestions = async () => {
+  try {
+    const payload = { ...searchCriteria };
+
+    // 构建检索条件
+    if (searchCriteria.grade_id !== null)
+      payload.grade_id = Number(searchCriteria.grade_id);
+    if (searchCriteria.subject_id !== null)
+      payload.subject_id = Number(searchCriteria.subject_id);
+    if (searchCriteria.question_category_ids.length > 0)
+      // 改为数组判断
+      payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.knowledge_point_ids.length > 0)
+      payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.solution_idea_ids.length > 0)
+      payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
+        Number(id)
+      );
+    if (searchCriteria.difficulty_level !== null)
+      payload.difficulty_level = Number(searchCriteria.difficulty_level);
+    if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
+
+    const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
+    const responseData = res.data.data;
+
+    questionList.value = responseData?.data_info || [];
+
+    // 从响应数据的data字段中获取分页信息
+    if (responseData) {
+      searchCriteria.page_num = responseData.page_num || 1;
+      searchCriteria.page_size = responseData.page_size || 10;
+      totalPages.value = responseData.total_pages || 1;
+      totalItems.value = responseData.total_items || 0;
+      pageInput.value = responseData.page_num || 1;
+    }
+
+    hasSearched.value = true;
+
+    // 静默操作，不显示任何弹窗
+  } catch (err) {
+    console.error("检索失败:", err);
+    questionList.value = [];
+    hasSearched.value = true;
+    // 静默操作，不显示错误弹窗
+  }
+};
+
+// ==================== 表单重置和模式切换 ====================
+/**
+ * 重置上传表单
+ */
+const resetForm = () => {
+  Object.assign(form, {
+    id: null,
+    title: "",
+    options: [
+      { text: "", isAnswer: false },
+      { text: "", isAnswer: false },
+      { text: "", isAnswer: false },
+      { text: "", isAnswer: false },
+    ],
+    answer: "",
+    notes: "",
+    remark: "",
+    sub_knowledge_point_ids: [],
+    solution_idea_ids: [],
+    img_url: "",
+    pendingImages: [],
+  });
+  singleAnswerIndex.value = null;
+  knowledgeSearch.value = "";
+  subKnowledgeSearch.value = "";
+  solutionIdeaSearch.value = "";
+  questionCategorySearch.value = "";
+  selectedKnowledgePoint.value = null;
+  selectedQuestionCategory.value = null;
+  pendingImages.length = 0;
+};
+
+/**
+ * 进入更新模式
+ */
+const enterUpdateMode = () => {
+  updateMode.value = true;
+  questionList.value = [];
+  showUpdateForm.value = false;
+  selectedQuestion.value = null;
+  updateGradeSearch.value = "";
+  updateKnowledgeSearch.value = "";
+  updateSubKnowledgeSearch.value = "";
+  updateSolutionIdeaSearch.value = "";
+  updateQuestionCategorySearch.value = "";
+  searchCriteria.grade_ids = [];
+  searchCriteria.knowledge_point_ids = [];
+  searchCriteria.sub_knowledge_point_ids = [];
+  searchCriteria.solution_idea_ids = [];
+  searchCriteria.question_category_ids = []; // 改为数组
+  searchCriteria.difficulty_levels = [];
+  searchCriteria.page_num = 1; // 重置为第一页
+  searchCriteria.page_size = 10; // 重置每页数量
+  totalPages.value = 1; // 重置总页数
+  totalItems.value = 0; // 重置总条目数
+  pageInput.value = 1; // 重置页码输入
+  hasSearched.value = false;
+  Object.assign(searchCriteria, {
+    grade_ids: [],
+    subject_id: null,
+    question_category_ids: [], // 改为数组
+    knowledge_point_ids: [],
+    sub_knowledge_point_ids: [],
+    solution_idea_ids: [],
+    difficulty_levels: [],
+    title: "",
+    page_num: 1, // 确保重置
+    page_size: 10, // 确保重置
+  });
+};
+
+/**
+ * 退出更新模式
+ */
+const exitUpdateMode = () => {
+  updateMode.value = false;
+  questionList.value = [];
+  resetForm();
+  hasSearched.value = false;
+};
+
+// ==================== 辅助方法 ====================
+/**
+ * 根据ID获取学校名称
+ * @param {number} id - 学校ID
+ * @returns {string} 学校名称
+ */
+const getSchoolName = (id) => {
+  if (id === null) return "-";
+  const school = schoolList.value.find((s) => s.id === Number(id));
+  return school ? school.name : "-";
+};
+
+/**
+ * 根据ID获取年级名称
+ * @param {number} id - 年级ID
+ * @returns {string} 年级名称
+ */
+const getGradeName = (id) => {
+  if (id === null) return "-";
+  const grade = gradeList.value.find((g) => g.id === Number(id));
+  return grade ? grade.name : "-";
+};
+
+/**
+ * 根据ID获取科目名称
+ * @param {number} id - 科目ID
+ * @returns {string} 科目名称
+ */
+const getSubjectName = (id) => {
+  if (id === null) return "-";
+  const subject = subjectList.value.find((s) => s.id === Number(id));
+  return subject ? subject.name : "-";
+};
+
+/**
+ * 根据ID获取知识点名称
+ * @param {number} id - 知识点ID
+ * @returns {string} 知识点名称
+ */
+const getKnowledgePointName = (id) => {
+  if (id === null) return "-";
+  const kp = knowledgePointList.value.find((k) => k.id === Number(id));
+  return kp ? kp.name : "-";
+};
+
+/**
+ * 根据ID获取解题思想名称
+ * @param {number} id - 解题思想ID
+ * @returns {string} 解题思想名称
+ */
+const getSolutionIdeaName = (id) => {
+  if (id === null) return "-";
+  const item = solutionIdeaList.value.find((s) => s.id === Number(id));
+  return item ? item.name : "-";
+};
+
+/**
+ * 根据ID获取问题类别名称
+ * @param {number} id - 问题类别ID
+ * @returns {string} 问题类别名称
+ */
+const getQuestionCategoryName = (id) => {
+  if (id === null) return "-";
+  const item = questionCategoryList.value.find((c) => c.id === Number(id));
+  return item ? item.name : "-";
+};
+
+/**
+ * 根据评分方法代码获取评分方法名称
+ * @param {number} type - 评分方法代码
+ * @returns {string} 评分方法名称
+ */
+const getMarkingTypeName = (type) => {
+  const types = {
+    0: "自动评分",
+    1: "人工评分",
+  };
+  return types[type] || "-";
+};
+
+// ==================== 计算属性 ====================
+/**
+ * 是否显示单选题选项区域
+ */
+const showSingleOptions = computed(() => {
+  if (!selectedQuestionCategory.value) return false;
+  const name = selectedQuestionCategory.value.name;
+  return name === "单选题" || name.includes("单选");
+});
+
+/**
+ * 是否显示多选题选项区域
+ */
+const showMultipleOptions = computed(() => {
+  if (!selectedQuestionCategory.value) return false;
+  const name = selectedQuestionCategory.value.name;
+  return name === "多选题" || name.includes("多选");
+});
+
+/**
+ * 是否显示主观题答案区域
+ */
+const showSubjectiveAnswer = computed(() => {
+  if (!selectedQuestionCategory.value) return true; // 默认显示主观题区域
+  const name = selectedQuestionCategory.value.name;
+  return !(
+    name === "单选题" ||
+    name.includes("单选") ||
+    name === "多选题" ||
+    name.includes("多选")
+  );
+});
+
+/**
+ * 更新界面是否显示单选题选项区域
+ */
+const showUpdateSingleOptions = computed(() => {
+  if (!selectedUpdateFormQuestionCategory.value) return false;
+  const name = selectedUpdateFormQuestionCategory.value.name;
+  return name === "单选题" || name.includes("单选");
+});
+
+/**
+ * 更新界面是否显示多选题选项区域
+ */
+const showUpdateMultipleOptions = computed(() => {
+  if (!selectedUpdateFormQuestionCategory.value) return false;
+  const name = selectedUpdateFormQuestionCategory.value.name;
+  return name === "多选题" || name.includes("多选");
+});
+
+/**
+ * 更新界面是否显示主观题答案区域
+ */
+const showUpdateSubjectiveAnswer = computed(() => {
+  if (!selectedUpdateFormQuestionCategory.value) return true; // 默认显示主观题区域
+  const name = selectedUpdateFormQuestionCategory.value.name;
+  return !(
+    name === "单选题" ||
+    name.includes("单选") ||
+    name === "多选题" ||
+    name.includes("多选")
+  );
+});
+
+/**
+ * 选中的副知识点对象列表
+ */
+const selectedSubKnowledgePoints = computed(() => {
+  return form.sub_knowledge_point_ids
+    .map((id) => knowledgePointList.value.find((k) => k.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 选中的解题思想对象列表
+ */
+const selectedSolutionIdeas = computed(() => {
+  return form.solution_idea_ids
+    .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 更新界面选中的知识点对象列表
+ */
+const selectedUpdateKnowledgePoints = computed(() => {
+  return searchCriteria.knowledge_point_ids
+    .map((id) => knowledgePointList.value.find((k) => k.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 更新界面选中的副知识点对象列表
+ */
+const selectedUpdateSubKnowledgePoints = computed(() => {
+  return searchCriteria.sub_knowledge_point_ids
+    .map((id) => knowledgePointList.value.find((k) => k.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 更新界面选中的解题思想对象列表
+ */
+const selectedUpdateSolutionIdeas = computed(() => {
+  return searchCriteria.solution_idea_ids
+    .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 更新界面选中的问题类别对象列表
+ */
+const selectedUpdateQuestionCategories = computed(() => {
+  return searchCriteria.question_category_ids
+    .map((id) => questionCategoryList.value.find((c) => c.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 更新表单选中的解题思想对象列表
+ */
+const selectedUpdateFormSolutionIdeas = computed(() => {
+  return updateForm.solution_idea_ids
+    .map((id) => solutionIdeaList.value.find((s) => s.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 更新表单选中的副知识点对象列表
+ */
+const selectedUpdateFormSubKnowledgePoints = computed(() => {
+  return updateForm.sub_knowledge_point_ids
+    .map((id) => knowledgePointList.value.find((k) => k.id === id))
+    .filter(Boolean);
+});
+
+/**
+ * 更新表单选中的年级对象列表
+ */
+const selectedUpdateGrades = computed(() => {
+  return searchCriteria.grade_ids
+    .map((id) => gradeList.value.find((g) => g.id === id))
+    .filter(Boolean);
+});
+
+// ==================== 合并知识点相关方法 ====================
+/**
+ * 打开合并知识点模态框
+ */
+const openMergeKnowledgeModal = () => {
+  showMergeKnowledgeModal.value = true;
+  mergeStep.value = 1;
+  selectedMergeKnowledgePoints.value = [];
+  selectedMergedKnowledgePoint.value = null;
+  mergedKnowledgePointName.value = "";
+  mergeKnowledgeSearch.value = "";
+  filteredMergeKnowledgePoints.value = knowledgePointList.value;
+  filteredMergedKnowledgePoints.value = knowledgePointList.value;
+};
+
+/**
+ * 关闭合并知识点模态框
+ */
+const closeMergeKnowledgeModal = () => {
+  showMergeKnowledgeModal.value = false;
+  mergeStep.value = 1;
+  selectedMergeKnowledgePoints.value = [];
+  selectedMergedKnowledgePoint.value = null;
+  mergedKnowledgePointName.value = "";
+  affectedQuestions.value = [];
+};
+
+/**
+ * 过滤合并知识点列表
+ */
+const filterMergeKnowledgePoints = () => {
+  if (!mergeKnowledgeSearch.value) {
+    filteredMergeKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredMergeKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(mergeKnowledgeSearch.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 过滤合并后知识点列表
+ */
+const filterMergedKnowledgePoints = () => {
+  if (!mergedKnowledgePointName.value) {
+    filteredMergedKnowledgePoints.value = knowledgePointList.value;
+  } else {
+    filteredMergedKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
+      kp.name.toLowerCase().includes(mergedKnowledgePointName.value.toLowerCase())
+    );
+  }
+};
+
+/**
+ * 选择要合并的知识点
+ * @param {Object} kp - 知识点对象
+ */
+const selectMergeKnowledgePoint = (kp) => {
+  if (!selectedMergeKnowledgePoints.value.find((item) => item.id === kp.id)) {
+    selectedMergeKnowledgePoints.value.push(kp);
+  }
+  mergeKnowledgeSearch.value = "";
+  showMergeKnowledgeDropdown.value = false;
+};
+
+/**
+ * 检查知识点是否已选择用于合并
+ * @param {number} id - 知识点ID
+ * @returns {boolean} 是否已选择
+ */
+const isMergeKnowledgeSelected = (id) => {
+  return selectedMergeKnowledgePoints.value.some((kp) => kp.id === id);
+};
+
+/**
+ * 移除要合并的知识点
+ * @param {number} id - 知识点ID
+ */
+const removeMergeKnowledgePoint = (id) => {
+  selectedMergeKnowledgePoints.value = selectedMergeKnowledgePoints.value.filter(
+    (kp) => kp.id !== id
+  );
+};
+
+/**
+ * 选择合并后的知识点
+ * @param {Object} kp - 知识点对象
+ */
+const selectMergedKnowledgePoint = (kp) => {
+  selectedMergedKnowledgePoint.value = kp;
+  mergedKnowledgePointName.value = kp.name;
+  showMergedKnowledgeDropdown.value = false;
+};
+
+/**
+ * 清除合并后知识点选择
+ */
+const clearMergedKnowledgePoint = () => {
+  selectedMergedKnowledgePoint.value = null;
+  mergedKnowledgePointName.value = "";
+};
+
+/**
+ * 合并知识点下拉框失焦处理
+ */
+const onMergeKnowledgeBlur = () => {
+  setTimeout(() => {
+    showMergeKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+/**
+ * 合并后知识点下拉框失焦处理
+ */
+const onMergedKnowledgeBlur = () => {
+  setTimeout(() => {
+    showMergedKnowledgeDropdown.value = false;
+  }, 200);
+};
+
+/**
+ * 预览合并
+ */
+const previewMerge = async () => {
+  try {
+    isMerging.value = true;
+    // 确定合并后的知识点ID
+    let mergedKnowledgePointId = null;
+    // 如果选择了现有的知识点，使用其ID
+    if (selectedMergedKnowledgePoint.value) {
+      mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+    } else {
+      // 如果是新知识点，先创建
+      const newKnowledgePointResponse = await axios.post(
+        `${API_BASE}/questions/uploadKnowledgePoint`,
+        [mergedKnowledgePointName.value.trim()]
+      );
+      if (newKnowledgePointResponse.data.code === 500) {
+        closeMergeKnowledgeModal();
+        ElMessage.error("知识点已存在");
+        isMerging.value = false;
         return;
       }
-
-      try {
-        // 确定合并后的知识点ID
-        let mergedKnowledgePointId = null;
-
-        if (selectedMergedKnowledgePoint.value) {
-          mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
-        } else {
-          const targetKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.name === mergedKnowledgePointName.value.trim()
-          );
-
-          if (targetKnowledgePoint) {
-            mergedKnowledgePointId = targetKnowledgePoint.id;
-          } else {
-            return;
-          }
-        }
-
-        const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
-        const response = await axios.post(
-          `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
-          sourceIds,
-          {
-            params: {
-              page_num: affectedQuestionsPageNum.value,
-              page_size: affectedQuestionsPageSize.value,
-            },
-          }
-        );
-
-        const responseData = response.data.data;
-        affectedQuestions.value = responseData?.data_info || [];
-        affectedQuestionsTotalPages.value = responseData?.total_pages || 1;
-        affectedQuestionsTotalItems.value = responseData?.total_items || 0;
-        affectedQuestionsPageInput.value = affectedQuestionsPageNum.value;
-      } catch (err) {
-        console.error("加载受影响题目失败:", err);
-        showAlert("加载失败", "加载受影响题目失败");
-      }
-    };
-
-    // ==================== 编辑知识点相关方法 ====================
-    /**
-     * 编辑知识点
-     * @param {Object} knowledgePoint - 知识点对象
-     * @param {string} type - 类型：知识点或副知识点
-     */
-    const editKnowledgePoint = (knowledgePoint, type = "知识点") => {
-      editingKnowledgePoint.value = knowledgePoint;
-      editingKnowledgePointName.value = knowledgePoint.name;
-      editingKnowledgePointType.value = type;
-      showEditKnowledgePointModal.value = true;
-    };
-
-    /**
-     * 更新知识点名称
-     */
-    const updateKnowledgePointName = async () => {
-      if (!editingKnowledgePoint.value || !editingKnowledgePointName.value.trim()) {
-        cancelEditKnowledgePoint();
-        showAlert("输入错误", "请输入知识点名称");
+      // 重新加载知识点列表以获取新创建的ID
+      await loadLists();
+      // 从更新后的列表中查找新创建的知识点
+      const newKnowledgePoint = knowledgePointList.value.find(
+        (kp) => kp.name === mergedKnowledgePointName.value.trim()
+      );
+      if (newKnowledgePoint) {
+        mergedKnowledgePointId = newKnowledgePoint.id;
+      } else {
+        isMerging.value = false;
         return;
       }
+    }
+    // 第一次调用合并接口，confirm=false
+    const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+    const response = await axios.post(
+      `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/false`,
+      sourceIds
+    );
+    const responseData = response.data.data;
+    affectedQuestions.value = Array.isArray(responseData) ? responseData : [];
 
-      try {
-        const response = await axios.post(
-          `${API_BASE}/questions/updateKnowledgePointName`,
-          {
-            id: editingKnowledgePoint.value.id,
-            name: editingKnowledgePointName.value.trim(),
-          }
-        );
-        if (response.data?.code === 409) {
-          cancelEditKnowledgePoint();
-          showAlert("更新失败", response.data.message || "知识点已存在");
-          return; // 直接结束，不执行后面的成功逻辑
-        }
+    // 因为不分页，所以固定为 1 页
+    affectedQuestionsTotalItems.value = affectedQuestions.value.length;
+    affectedQuestionsTotalPages.value = 1;
 
-        showAlert("更新成功", `${editingKnowledgePointType.value}名称更新成功`);
+    affectedQuestionsPageNum.value = 1;
+    affectedQuestionsPageInput.value = 1;
 
-        // 重新加载列表
-        await loadLists();
+    // 进入步骤2
+    mergeStep.value = 2;
+  } catch (err) {
+    console.error("预览合并失败:", err);
+    closeMergeKnowledgeModal();
+    ElMessage.error("预览失败");
+  } finally {
+    isMerging.value = false;
+  }
+};
 
-        // 如果当前选中的知识点被编辑，更新选中状态
-        if (
-          selectedKnowledgePoint.value &&
-          selectedKnowledgePoint.value.id === editingKnowledgePoint.value.id
-        ) {
-          const updatedKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.id === editingKnowledgePoint.value.id
-          );
-          if (updatedKnowledgePoint) {
-            selectedKnowledgePoint.value = updatedKnowledgePoint;
-            form.knowledge_point_id = updatedKnowledgePoint.id;
-            knowledgeSearch.value = updatedKnowledgePoint.name;
-          }
-        }
+/**
+ * 确认合并
+ */
+const confirmMerge = async () => {
+  try {
+    isMerging.value = true;
 
-        // 如果更新表单中选中的知识点被编辑，更新选中状态
-        if (
-          selectedUpdateFormKnowledgePoint.value &&
-          selectedUpdateFormKnowledgePoint.value.id === editingKnowledgePoint.value.id
-        ) {
-          const updatedKnowledgePoint = knowledgePointList.value.find(
-            (kp) => kp.id === editingKnowledgePoint.value.id
-          );
-          if (updatedKnowledgePoint) {
-            selectedUpdateFormKnowledgePoint.value = updatedKnowledgePoint;
-            updateForm.knowledge_point_id = updatedKnowledgePoint.id;
-            updateFormKnowledgeSearch.value = updatedKnowledgePoint.name;
-          }
-        }
+    // 确定合并后的知识点ID
+    let mergedKnowledgePointId = null;
 
-        cancelEditKnowledgePoint();
-      } catch (err) {
-        console.error("更新知识点名称失败:", err);
-        cancelEditKnowledgePoint();
-        showAlert("更新失败", err.response?.data?.message || err.message);
+    // 如果选择了现有的知识点，使用其ID
+    if (selectedMergedKnowledgePoint.value) {
+      mergedKnowledgePointId = selectedMergedKnowledgePoint.value.id;
+    } else {
+      // 从知识点列表中查找
+      const targetKnowledgePoint = knowledgePointList.value.find(
+        (kp) => kp.name === mergedKnowledgePointName.value.trim()
+      );
+
+      if (targetKnowledgePoint) {
+        mergedKnowledgePointId = targetKnowledgePoint.id;
+      } else {
+        ElMessage.error("无法找到目标知识点");
+        isMerging.value = false;
+        return;
       }
-    };
+    }
 
-    /**
-     * 取消编辑知识点
-     */
-    const cancelEditKnowledgePoint = () => {
-      showEditKnowledgePointModal.value = false;
-      editingKnowledgePoint.value = null;
-      editingKnowledgePointName.value = "";
-      editingKnowledgePointType.value = "知识点";
-    };
+    // 第二次调用合并接口，confirm=true
+    const sourceIds = selectedMergeKnowledgePoints.value.map((kp) => kp.id);
+    await axios.post(
+      `${API_BASE}/questions/mergeKnowledgePoints/${mergedKnowledgePointId}/true`,
+      sourceIds
+    );
 
-    // ==================== 返回所有响应式数据和方法 ====================
-    return {
-      // 权限检查函数
-      hasPermission,
-      
-      // 表单数据
-      form,
-      updateForm,
-      searchCriteria,
+    ElMessage.success("知识点合并完成");
+    closeMergeKnowledgeModal();
 
-      // 数据列表
-      schoolList,
-      gradeList,
-      subjectList,
-      knowledgePointList,
-      solutionIdeaList,
-      questionCategoryList,
+    // 重新加载知识点列表
+    await loadLists();
+  } catch (err) {
+    console.error("合并失败:", err);
+    ElMessage.error("合并失败");
+  } finally {
+    isMerging.value = false;
+  }
+};
 
-      // 新建内容输入
-      newKnowledgePoint,
-      newSubKnowledgePoint,
-      newSolutionIdea,
-      newQuestionCategory,
-      newUpdateKnowledgePoint,
-      newUpdateSolutionIdea,
-      newUpdateFormKnowledgePoint,
-      newUpdateFormSubKnowledgePoint,
-      newUpdateFormSolutionIdea,
+// ==================== 编辑知识点相关方法 ====================
+/**
+ * 编辑知识点
+ * @param {Object} knowledgePoint - 知识点对象
+ * @param {string} type - 类型：知识点或副知识点
+ */
+const editKnowledgePoint = (knowledgePoint, type = "知识点") => {
+  editingKnowledgePoint.value = knowledgePoint;
+  editingKnowledgePointName.value = knowledgePoint.name;
+  editingKnowledgePointType.value = type;
+  showEditKnowledgePointModal.value = true;
+};
 
-      // 选项操作方法
-      addOption,
-      removeOption,
-      addUpdateOption,
-      removeUpdateOption,
-      getOptionLabel,
+/**
+ * 更新知识点名称
+ */
+const updateKnowledgePointName = async () => {
+  if (!editingKnowledgePoint.value || !editingKnowledgePointName.value.trim()) {
+    cancelEditKnowledgePoint();
+    ElMessage.error("请输入知识点名称");
+    return;
+  }
 
-      // 答案索引
-      singleAnswerIndex,
-      updateSingleAnswerIndex,
+  try {
+    const response = await axios.post(`${API_BASE}/questions/updateKnowledgePointName`, {
+      id: editingKnowledgePoint.value.id,
+      name: editingKnowledgePointName.value.trim(),
+    });
+    if (response.data?.code === 409) {
+      cancelEditKnowledgePoint();
+      ElMessage.error("知识点已存在");
+      return;
+    }
 
-      // 模式状态
-      updateMode,
-      enterUpdateMode,
-      exitUpdateMode,
+    ElMessage.success(`${editingKnowledgePointType.value}名称更新成功`);
 
-      // 提交处理方法
-      handleSubmit,
-      handleUpdateSubmit,
+    // 重新加载列表
+    await loadLists();
 
-      // 图片处理方法
-      handleImageUpload,
-      handleUpdateImageUpload,
-      removeImage,
-      removeUpdateImage,
+    // 如果当前选中的知识点被编辑，更新选中状态
+    if (
+      selectedKnowledgePoint.value &&
+      selectedKnowledgePoint.value.id === editingKnowledgePoint.value.id
+    ) {
+      const updatedKnowledgePoint = knowledgePointList.value.find(
+        (kp) => kp.id === editingKnowledgePoint.value.id
+      );
+      if (updatedKnowledgePoint) {
+        selectedKnowledgePoint.value = updatedKnowledgePoint;
+        form.knowledge_point_id = updatedKnowledgePoint.id;
+        knowledgeSearch.value = updatedKnowledgePoint.name;
+      }
+    }
 
-      // 搜索关键词
-      knowledgeSearch,
-      subKnowledgeSearch,
-      solutionIdeaSearch,
-      questionCategorySearch,
+    // 如果更新表单中选中的知识点被编辑，更新选中状态
+    if (
+      selectedUpdateFormKnowledgePoint.value &&
+      selectedUpdateFormKnowledgePoint.value.id === editingKnowledgePoint.value.id
+    ) {
+      const updatedKnowledgePoint = knowledgePointList.value.find(
+        (kp) => kp.id === editingKnowledgePoint.value.id
+      );
+      if (updatedKnowledgePoint) {
+        selectedUpdateFormKnowledgePoint.value = updatedKnowledgePoint;
+        updateForm.knowledge_point_id = updatedKnowledgePoint.id;
+        updateFormKnowledgeSearch.value = updatedKnowledgePoint.name;
+      }
+    }
 
-      // 过滤列表
-      filteredKnowledgePoints,
-      filteredSubKnowledgePoints,
-      filteredSolutionIdeas,
-      filteredQuestionCategories,
+    cancelEditKnowledgePoint();
+  } catch (err) {
+    console.error("更新知识点名称失败:", err);
+    cancelEditKnowledgePoint();
+    ElMessage.error("更新失败");
+  }
+};
 
-      // 选中项列表
-      selectedSubKnowledgePoints,
-      selectedSolutionIdeas,
-      selectedQuestionCategory,
-
-      // 上传方法
-      uploadKnowledgePoint,
-      uploadSubKnowledgePoint,
-      uploadSolutionIdea,
-      uploadQuestionCategory,
-      uploadUpdateKnowledgePoint,
-      uploadUpdateSolutionIdea,
-      uploadUpdateFormKnowledgePoint,
-      uploadUpdateFormSubKnowledgePoint,
-      uploadUpdateFormSolutionIdea,
-
-      // 题目列表和检索
-      questionList,
-      findQuestions,
-      loadQuestionForUpdate,
-      cancelUpdate,
-
-      // 删除相关
-      confirmDelete,
-      cancelDelete,
-      deleteQuestion,
-
-      // 问题类别变更处理
-      handleQuestionCategoryChange,
-      handleUpdateQuestionCategoryChange,
-
-      // 计算属性
-      showSingleOptions,
-      showMultipleOptions,
-      showSubjectiveAnswer,
-      showUpdateSingleOptions,
-      showUpdateMultipleOptions,
-      showUpdateSubjectiveAnswer,
-
-      // 状态
-      submitting,
-      showUpdateForm,
-      selectedQuestion,
-      showDeleteConfirm,
-      questionToDelete,
-
-      // 辅助方法
-      getSchoolName,
-      getGradeName,
-      getSubjectName,
-      getKnowledgePointName,
-      getSolutionIdeaName,
-      getQuestionCategoryName,
-      getMarkingTypeName,
-
-      // 更新界面搜索关键词
-      updateKnowledgeSearch,
-      updateSubKnowledgeSearch,
-      updateSolutionIdeaSearch,
-      updateQuestionCategorySearch,
-      updateFormKnowledgeSearch,
-      updateFormSolutionIdeaSearch,
-      updateFormQuestionCategorySearch,
-      updateFormSubKnowledgeSearch,
-
-      // 更新界面过滤列表
-      filteredUpdateKnowledgePoints,
-      filteredUpdateSubKnowledgePoints,
-      filteredUpdateSolutionIdeas,
-      filteredUpdateQuestionCategories,
-      filteredUpdateFormKnowledgePoints,
-      filteredUpdateFormSolutionIdeas,
-      filteredUpdateFormQuestionCategories,
-      filteredUpdateFormSubKnowledgePoints,
-
-      // 过滤方法
-      filterKnowledgePoints,
-      filterSubKnowledgePoints,
-      filterSolutionIdeas,
-      filterQuestionCategories,
-      filterUpdateKnowledgePoints,
-      filterUpdateSubKnowledgePoints,
-      filterUpdateSolutionIdeas,
-      filterUpdateQuestionCategories,
-      filterUpdateFormKnowledgePoints,
-      filterUpdateFormSolutionIdeas,
-      filterUpdateFormQuestionCategories,
-      filterUpdateFormSubKnowledgePoints,
-      resetFilteredList,
-
-      // 选择方法
-      selectKnowledgePoint,
-      clearKnowledgePoint,
-      selectSolutionIdea,
-      removeSolutionIdea,
-      isSolutionIdeaSelected,
-      selectQuestionCategory,
-      clearQuestionCategory,
-      selectSubKnowledgePoint,
-      removeSubKnowledgePoint,
-      isSubKnowledgeSelected,
-      selectUpdateKnowledgePoint,
-      selectUpdateSubKnowledgePoint,
-      removeUpdateKnowledgePoint,
-      removeUpdateSubKnowledgePoint,
-      isUpdateKnowledgeSelected,
-      isUpdateSubKnowledgeSelected,
-      selectUpdateSolutionIdea,
-      removeUpdateSolutionIdea,
-      isUpdateSolutionIdeaSelected,
-      selectUpdateQuestionCategory,
-      removeUpdateQuestionCategory,
-      isUpdateQuestionCategorySelected,
-      clearUpdateQuestionCategory,
-      selectUpdateFormKnowledgePoint,
-      clearUpdateFormKnowledgePoint,
-      selectUpdateFormSolutionIdea,
-      removeUpdateFormSolutionIdea,
-      isUpdateFormSolutionIdeaSelected,
-      selectUpdateFormQuestionCategory,
-      clearUpdateFormQuestionCategory,
-      selectUpdateFormSubKnowledgePoint,
-      removeUpdateFormSubKnowledgePoint,
-      isUpdateFormSubKnowledgeSelected,
-
-      // 下拉框显示状态
-      showKnowledgeDropdown,
-      showSubKnowledgeDropdown,
-      showSolutionIdeaDropdown,
-      showQuestionCategoryDropdown,
-      showUpdateKnowledgeDropdown,
-      showUpdateSubKnowledgeDropdown,
-      showUpdateSolutionIdeaDropdown,
-      showUpdateQuestionCategoryDropdown,
-      showUpdateFormKnowledgeDropdown,
-      showUpdateFormSolutionIdeaDropdown,
-      showUpdateFormQuestionCategoryDropdown,
-      showUpdateFormSubKnowledgeDropdown,
-
-      // 下拉框失焦处理
-      onKnowledgeBlur,
-      onSubKnowledgeBlur,
-      onSolutionIdeaBlur,
-      onQuestionCategoryBlur,
-      onUpdateKnowledgeBlur,
-      onUpdateSubKnowledgeBlur,
-      onUpdateSolutionIdeaBlur,
-      onUpdateQuestionCategoryBlur,
-      onUpdateFormKnowledgeBlur,
-      onUpdateFormSolutionIdeaBlur,
-      onUpdateFormQuestionCategoryBlur,
-      onUpdateFormSubKnowledgeBlur,
-
-      // 选中的对象
-      selectedKnowledgePoint,
-      selectedUpdateFormKnowledgePoint,
-      selectedUpdateFormQuestionCategory,
-      selectedUpdateKnowledgePoints,
-      selectedUpdateSubKnowledgePoints,
-      selectedUpdateSolutionIdeas,
-      selectedUpdateQuestionCategories,
-      selectedUpdateFormSolutionIdeas,
-      selectedUpdateFormSubKnowledgePoints,
-
-      // 搜索状态
-      hasSearched,
-
-      // DOM引用
-      updateFormRef,
-
-      // 图片预览
-      previewImage,
-      closeImagePreview,
-      showImagePreview,
-      previewImageUrl,
-
-      //图片上传
-      handlePaste,
-      handleDrop,
-      insertImageMarkdown,
-
-      // 弹窗相关
-      showAlertModal,
-      alertModalTitle,
-      alertModalMessage,
-      showAlert,
-      silentFindQuestions,
-
-      // 新增预览功能相关
-      showPreviewModal,
-      previewMode,
-      showPreview,
-      showUpdatePreview,
-      closePreview,
-      confirmSubmit,
-      getPreviewSchoolName,
-      getPreviewGradeName,
-      getPreviewSubjectName,
-      getPreviewQuestionCategoryName,
-      getPreviewDifficultyLevel,
-      getPreviewMarkingType,
-      getPreviewKnowledgePointName,
-      getPreviewSubKnowledgePoints,
-      getPreviewSolutionIdeas,
-      getPreviewTitle,
-      getPreviewImageUrl,
-      getPreviewOptions,
-      showPreviewOptions,
-      isPreviewOptionCorrect,
-      showPreviewSubjectiveAnswer,
-      getPreviewAnswer,
-      getPreviewNotes,
-      getPreviewRemark,
-
-      // 分页相关
-      totalPages,
-      totalItems,
-      pageInput,
-      changePage,
-      goToPage,
-      goToFirstPage,
-      goToLastPage,
-
-      // 新增删除实体相关
-      showDeleteEntityConfirm,
-      deleteEntityType,
-      deleteEntityData,
-      dependentQuestions,
-      dependentQuestionsPageNum,
-      dependentQuestionsPageSize,
-      dependentQuestionsTotalPages,
-      dependentQuestionsTotalItems,
-      dependentQuestionsPageInput,
-      confirmDeleteKnowledgePoint,
-      confirmDeleteSubKnowledgePoint,
-      confirmDeleteSolutionIdea,
-      confirmDeleteQuestionCategory,
-      loadDependentQuestions,
-      changeDependentPage,
-      goToDependentFirstPage,
-      goToDependentLastPage,
-      goToDependentPage,
-      deleteDependentQuestion,
-      deleteAllDependentQuestions,
-      deleteEntity,
-      cancelDeleteEntity,
-
-      // 新增编辑知识点相关
-      showEditKnowledgePointModal,
-      editingKnowledgePoint,
-      editingKnowledgePointName,
-      editingKnowledgePointType,
-      editKnowledgePoint,
-      updateKnowledgePointName,
-      cancelEditKnowledgePoint,
-
-      // 新增合并知识点相关
-      showMergeKnowledgeModal,
-      mergeStep,
-      mergeKnowledgeSearch,
-      mergedKnowledgePointName,
-      selectedMergeKnowledgePoints,
-      selectedMergedKnowledgePoint,
-      showMergeKnowledgeDropdown,
-      showMergedKnowledgeDropdown,
-      filteredMergeKnowledgePoints,
-      filteredMergedKnowledgePoints,
-      affectedQuestions,
-      affectedQuestionsPageNum,
-      affectedQuestionsPageSize,
-      affectedQuestionsTotalPages,
-      affectedQuestionsTotalItems,
-      affectedQuestionsPageInput,
-      isMerging,
-      openMergeKnowledgeModal,
-      closeMergeKnowledgeModal,
-      filterMergeKnowledgePoints,
-      filterMergedKnowledgePoints,
-      selectMergeKnowledgePoint,
-      isMergeKnowledgeSelected,
-      removeMergeKnowledgePoint,
-      selectMergedKnowledgePoint,
-      clearMergedKnowledgePoint,
-      onMergeKnowledgeBlur,
-      onMergedKnowledgeBlur,
-      previewMerge,
-      confirmMerge,
-      changeAffectedPage,
-      goToAffectedFirstPage,
-      goToAffectedLastPage,
-      goToAffectedPage,
-      loadAffectedQuestions,
-
-      // Markdown 渲染函数
-      renderMarkdown,
-    };
-  },
+/**
+ * 取消编辑知识点
+ */
+const cancelEditKnowledgePoint = () => {
+  showEditKnowledgePointModal.value = false;
+  editingKnowledgePoint.value = null;
+  editingKnowledgePointName.value = "";
+  editingKnowledgePointType.value = "知识点";
 };
 </script>
 
@@ -6361,7 +5916,7 @@ export default {
 }
 
 .results-table {
-  min-width: 1000px; /* 最小宽度，确保表格内容完整显示 */
+  min-width: 1200px; /* 最小宽度 */
   width: 100%; /* 宽度100% */
   display: flex; /* 弹性布局 */
   flex-direction: column; /* 垂直方向 */
@@ -6722,49 +6277,6 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 阴影效果 */
 }
 
-.btn-close {
-  background-color: #f56c6c; /* 红色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 12px 24px; /* 内边距 */
-  border-radius: 6px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 16px; /* 字体大小 */
-  min-width: 100px; /* 最小宽度 */
-  transition: background-color 0.3s; /* 背景色过渡 */
-}
-
-.btn-close:hover {
-  background-color: #f78989; /* 悬停时更亮的红色 */
-}
-
-/* ==================== 统一弹窗提示样式 ==================== */
-.alert-modal-content {
-  background: white; /* 白色背景 */
-  padding: 40px; /* 内边距 */
-  border-radius: 12px; /* 大圆角 */
-  max-width: 500px; /* 最大宽度 */
-  width: 90%; /* 宽度90% */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
-  text-align: center; /* 文字居中 */
-  transform: scale(1.05); /* 轻微放大 */
-  animation: modalAppear 0.3s ease-out; /* 出现动画 */
-}
-
-.alert-modal-title {
-  margin-bottom: 20px; /* 底部外边距 */
-  color: #303133; /* 深灰色文字 */
-  font-size: 24px; /* 大字体 */
-  font-weight: 600; /* 粗体 */
-}
-
-.alert-modal-message {
-  margin-bottom: 0; /* 无底部外边距 */
-  color: #606266; /* 中灰色文字 */
-  font-size: 18px; /* 字体大小 */
-  line-height: 1.5; /* 行高 */
-}
-
 /* ==================== 题目预览模态框样式 ==================== */
 .preview-modal-overlay {
   z-index: 2000; /* 更高的z-index确保在最上层 */
@@ -6847,12 +6359,6 @@ export default {
   line-height: 1.6; /* 行高 */
   color: #303133; /* 深灰色文字 */
   overflow: auto; /* 垂直滚动 */
-}
-
-.preview-image {
-  margin-top: 15px; /* 顶部外边距 */
-  text-align: center; /* 文字居中 */
-  overflow-y: auto; /* 允许垂直滚动 */
 }
 
 .preview-img {
@@ -7247,6 +6753,46 @@ export default {
   color: #909399; /* 浅灰色文字 */
 }
 
+/* ==================== 难度多选样式 ==================== */
+.difficulty-multi-select {
+  margin-top: 5px;
+}
+
+.difficulty-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.difficulty-option {
+  padding: 6px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+  background-color: white;
+}
+
+.difficulty-option:hover {
+  border-color: #409eff;
+  background-color: #f0f9ff;
+}
+
+.difficulty-option.selected {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.difficulty-stars {
+  font-size: 14px;
+  font-weight: 500;
+}
+
 /* ==================== 无结果提示样式 ==================== */
 .no-results {
   text-align: center; /* 文字居中 */
@@ -7368,39 +6914,11 @@ export default {
 }
 
 /* ==================== 图片上传区域样式 ==================== */
-.image-upload-section {
-  margin-top: 15px; /* 顶部外边距 */
-}
-
-.upload-controls {
-  display: flex; /* 弹性布局 */
-  gap: 10px; /* 子元素间距 */
-  align-items: center; /* 垂直居中 */
-  margin-bottom: 10px; /* 底部外边距 */
-}
-
-.file-input {
-  display: none; /* 隐藏文件输入 */
-}
-
-.upload-tip {
-  font-size: 12px; /* 小字体 */
-  color: #909399; /* 浅灰色文字 */
-  font-style: italic; /* 斜体 */
-}
-
 .image-preview {
   display: flex; /* 弹性布局 */
   align-items: center; /* 垂直居中 */
   gap: 15px; /* 子元素间距 */
   margin-top: 10px; /* 顶部外边距 */
-}
-
-.preview-image {
-  max-width: 200px; /* 最大宽度 */
-  max-height: 150px; /* 最大高度 */
-  border: 1px solid #e4e7ed; /* 边框 */
-  border-radius: 4px; /* 圆角 */
 }
 
 /* ==================== 选项列表样式 ==================== */
