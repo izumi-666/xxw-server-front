@@ -38,3 +38,8 @@ export const getSchoolList = async () => {
 export const resetSchoolList = () => {
   schoolList.value = []
 }
+
+export {
+  schoolList,
+  loading,
+}

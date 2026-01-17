@@ -240,7 +240,12 @@ import { ref, reactive, computed, onMounted, watch } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { getSchoolList } from "../utils/schoolList";
+import { 
+  schoolList, 
+  loading as loadingSchoolList, 
+  getSchoolList, 
+  resetSchoolList 
+} from "../utils/schoolList";
 
 const router = useRouter();
 
@@ -282,13 +287,6 @@ const loading = ref(false);
 const showPassword = ref(false);
 const showForm = ref(false);
 const accountType = ref(""); // 'student' 或 'staff'
-
-const {
-  schoolList,
-  loadingSchoolList,
-  fetchSchoolList,
-  resetSchoolList
-} = getSchoolList();
 
 const roleList = ref([]); // 权限列表
 const loadingRoles = ref(false); // 加载权限列表状态
@@ -504,7 +502,7 @@ const showCreateForm = (type) => {
   resetForm();
   
   // 每次显示表单时获取学校列表（确保数据最新）
-  fetchSchoolList();
+  getSchoolList();
   
   // 如果权限列表为空，则获取权限列表
   if (!roleList.value.length) {
@@ -577,7 +575,7 @@ onMounted(() => {
   // 预加载权限列表（如果有创建权限）
   if (hasCreatePermission.value) {
     fetchRoleList();
-    fetchSchoolList();
+    getSchoolList();
   }
 });
 </script>

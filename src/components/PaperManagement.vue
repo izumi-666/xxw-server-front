@@ -40,56 +40,16 @@
         <!-- 科目筛选 -->
         <div class="criteria-item">
           <label class="criteria-label">科目</label>
-          <div class="multi-select-wrapper">
-            <div class="multi-select-trigger" @click="toggleSubjectDropdown">
-              <span class="placeholder" v-if="searchForm.subject_ids.length === 0">
-                请选择科目
-              </span>
-              <span class="selected-tags" v-else>
-                <span
-                  v-for="subject in selectedSubjects"
-                  :key="subject.id"
-                  class="selected-tag"
-                  @click.stop="removeSubject(subject.id)"
-                >
-                  {{ subject.name }}
-                  <span class="remove-icon">×</span>
-                </span>
-              </span>
-              <span class="dropdown-arrow">▼</span>
-            </div>
-
-            <div class="multi-select-dropdown" v-if="showSubjectDropdown">
-              <div class="search-input-container">
-                <input
-                  type="text"
-                  v-model="subjectSearch"
-                  placeholder="搜索科目..."
-                  class="search-input"
-                  @input="filterSubjects"
-                />
-              </div>
-              <div class="dropdown-options">
-                <div
-                  v-for="subject in filteredSubjects"
-                  :key="subject.id"
-                  class="dropdown-option"
-                  @click="toggleSubject(subject)"
-                >
-                  <span
-                    class="checkbox"
-                    :class="{ checked: isSubjectSelected(subject.id) }"
-                  >
-                    {{ isSubjectSelected(subject.id) ? "✓" : "" }}
-                  </span>
-                  <span class="option-text">{{ subject.name }}</span>
-                </div>
-                <div v-if="filteredSubjects.length === 0" class="no-options">
-                  无匹配选项
-                </div>
-              </div>
-            </div>
-          </div>
+          <select v-model="searchCriteria.subject_ids" class="form-select">
+            <option :value="null">全部</option>
+            <option
+              v-for="[id, name] in Object.entries(SUBJECT_MAP)"
+              :key="id"
+              :value="Number(id)"
+            >
+              {{ name }}
+            </option>
+          </select>
         </div>
 
         <!-- 年级筛选 -->
@@ -126,7 +86,7 @@
               </div>
               <div class="dropdown-options">
                 <div
-                  v-for="grade in filteredGrades"
+                  v-for="grade in filterGrades"
                   :key="grade.id"
                   class="dropdown-option"
                   @click="toggleGrade(grade)"
@@ -136,7 +96,7 @@
                   </span>
                   <span class="option-text">{{ grade.name }}</span>
                 </div>
-                <div v-if="filteredGrades.length === 0" class="no-options">
+                <div v-if="filterGrades.length === 0" class="no-options">
                   无匹配选项
                 </div>
               </div>
@@ -838,8 +798,12 @@
                   :class="{ 'input-error': !confirmForm.subject_id }"
                 >
                   <option value="" disabled>请选择科目</option>
-                  <option v-for="s in subjectList" :key="s.id" :value="s.id">
-                    {{ s.name }}
+                  <option
+                    v-for="[id, name] in Object.entries(SUBJECT_MAP)"
+                    :key="id"
+                    :value="Number(id)"
+                  >
+                    {{ name }}
                   </option>
                 </select>
                 <div class="form-hint" v-if="!confirmForm.subject_id">请选择科目</div>
@@ -1386,9 +1350,21 @@ import * as echarts from "echarts";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import html2pdf from "html2pdf.js";
+import {
+  getSubjectName,
+  initSubjectData,
+  SUBJECT_MAP,
+} from "../utils/subjectList";
+import { useGradeList } from "../utils/gradeList"
+
 
 const router = useRouter();
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
+const {
+  gradeList,
+  filterGrades,
+  loadGradeList,
+} = useGradeList()
 
 /* ==================== 权限相关 ==================== */
 const getUserPermissions = () => {
@@ -1425,8 +1401,6 @@ const hasAnyPaperPermission = computed(() => {
 
 /* ==================== 数据状态 ==================== */
 const paperList = ref([]);
-const subjectList = ref([]);
-const gradeList = ref([]);
 const previewVisible = ref(false);
 const previewPaperData = ref(null);
 const editVisible = ref(false);
@@ -1499,7 +1473,6 @@ const gradeSearch = ref("");
 const showSubjectDropdown = ref(false);
 const showGradeDropdown = ref(false);
 const filteredSubjects = ref([]);
-const filteredGrades = ref([]);
 
 /* ==================== 搜索相关 ==================== */
 const searchForm = ref({
@@ -1508,60 +1481,6 @@ const searchForm = ref({
   grade_ids: [],
 });
 
-const selectedSubjects = computed(() => {
-  return searchForm.value.subject_ids
-    .map((id) => subjectList.value.find((s) => s.id === id))
-    .filter(Boolean);
-});
-
-const selectedGrades = computed(() => {
-  return searchForm.value.grade_ids
-    .map((id) => gradeList.value.find((g) => g.id === id))
-    .filter(Boolean);
-});
-
-const toggleSubjectDropdown = () => {
-  showSubjectDropdown.value = !showSubjectDropdown.value;
-  if (showSubjectDropdown.value) {
-    filterSubjects();
-  }
-};
-
-const toggleGradeDropdown = () => {
-  showGradeDropdown.value = !showGradeDropdown.value;
-  if (showGradeDropdown.value) {
-    filterGrades();
-  }
-};
-
-const filterSubjects = () => {
-  if (!subjectSearch.value) {
-    filteredSubjects.value = subjectList.value;
-  } else {
-    filteredSubjects.value = subjectList.value.filter((subject) =>
-      subject.name.toLowerCase().includes(subjectSearch.value.toLowerCase())
-    );
-  }
-};
-
-const filterGrades = () => {
-  if (!gradeSearch.value) {
-    filteredGrades.value = gradeList.value;
-  } else {
-    filteredGrades.value = gradeList.value.filter((grade) =>
-      grade.name.toLowerCase().includes(gradeSearch.value.toLowerCase())
-    );
-  }
-};
-
-const toggleSubject = (subject) => {
-  const index = searchForm.value.subject_ids.indexOf(subject.id);
-  if (index > -1) {
-    searchForm.value.subject_ids.splice(index, 1);
-  } else {
-    searchForm.value.subject_ids.push(subject.id);
-  }
-};
 
 const toggleGrade = (grade) => {
   const index = searchForm.value.grade_ids.indexOf(grade.id);
@@ -1572,20 +1491,10 @@ const toggleGrade = (grade) => {
   }
 };
 
-const removeSubject = (id) => {
-  searchForm.value.subject_ids = searchForm.value.subject_ids.filter(
-    (subjectId) => subjectId !== id
-  );
-};
-
 const removeGrade = (id) => {
   searchForm.value.grade_ids = searchForm.value.grade_ids.filter(
     (gradeId) => gradeId !== id
   );
-};
-
-const isSubjectSelected = (id) => {
-  return searchForm.value.subject_ids.includes(id);
 };
 
 const isGradeSelected = (id) => {
@@ -2112,18 +2021,6 @@ const getOptionsArray = (options) => {
   return Object.values(options);
 };
 
-const getGradeName = (id) => {
-  if (id === null) return "-";
-  const grade = gradeList.value.find((g) => g.id === Number(id));
-  return grade ? grade.name : "-";
-};
-
-const getSubjectName = (id) => {
-  if (id === null) return "-";
-  const subject = subjectList.value.find((s) => s.id === Number(id));
-  return subject ? subject.name : "-";
-};
-
 const questionCategoryMap = ref({});
 
 const loadQuestionCategoryList = async () => {
@@ -2137,18 +2034,6 @@ const getQuestionCategoryName = (id) => {
   return questionCategoryMap.value[key] || `未定义题型(${id})`;
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
 /* ==================== 试卷管理相关方法 ==================== */
 const loadPapers = async () => {
   try {
@@ -2156,32 +2041,6 @@ const loadPapers = async () => {
     paperList.value = res.data.data || [];
   } catch (error) {
     console.error("加载试卷列表失败:", error);
-  }
-};
-
-const loadSubjectList = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/questions/getSubjectList`);
-    subjectList.value = Object.entries(res.data.data || {}).map(([id, name]) => ({
-      id: Number(id),
-      name,
-    }));
-    filteredSubjects.value = subjectList.value;
-  } catch (error) {
-    console.error("加载科目列表失败:", error);
-  }
-};
-
-const loadGradeList = async () => {
-  try {
-    const res = await axios.get(`${API_BASE}/questions/getGradeList`);
-    gradeList.value = Object.entries(res.data.data || {}).map(([id, name]) => ({
-      id: Number(id),
-      name,
-    }));
-    filteredGrades.value = gradeList.value;
-  } catch (error) {
-    console.error("加载年级列表失败:", error);
   }
 };
 
@@ -2200,8 +2059,8 @@ const searchPaper = async () => {
 const resetSearch = () => {
   searchForm.value = {
     name: "",
-    subject_idss: [],
-    grade_idss: [],
+    subject_ids: [],
+    grade_ids: [],
   };
   loadPapers();
 };
@@ -2239,10 +2098,10 @@ const loadPreviewPage = async (paper, page) => {
   const pageSize = 10;
   const startIndex = (page - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, paper.question_ids.length);
-  
+
   // 获取当前页的题目ID（保持原始顺序）
   const currentPageIds = paper.question_ids.slice(startIndex, endIndex);
-  
+
   // 获取题目详情
   const res = await axios.post(`${API_BASE}/questions/findQuestions`, {
     ids: currentPageIds,
@@ -2255,7 +2114,7 @@ const loadPreviewPage = async (paper, page) => {
 
   // 创建ID到题目的映射
   const questionMap = new Map();
-  backendQuestions.forEach(q => {
+  backendQuestions.forEach((q) => {
     questionMap.set(q.id, q);
   });
 
@@ -2263,17 +2122,19 @@ const loadPreviewPage = async (paper, page) => {
   const questions = currentPageIds.map((id, localIndex) => {
     const q = questionMap.get(id);
     const globalIndex = startIndex + localIndex + 1; // 计算全局题号
-    
-    return q ? {
-      ...q,
-      score: paper.scores?.[paper.question_ids.indexOf(id)],
-      globalIndex: globalIndex,
-    } : {
-      id,
-      title: `题目ID ${id}（数据加载失败）`,
-      score: paper.scores?.[paper.question_ids.indexOf(id)] || 0,
-      globalIndex: globalIndex,
-    };
+
+    return q
+      ? {
+          ...q,
+          score: paper.scores?.[paper.question_ids.indexOf(id)],
+          globalIndex: globalIndex,
+        }
+      : {
+          id,
+          title: `题目ID ${id}（数据加载失败）`,
+          score: paper.scores?.[paper.question_ids.indexOf(id)] || 0,
+          globalIndex: globalIndex,
+        };
   });
 
   previewPaperData.value = {
@@ -2460,57 +2321,57 @@ const openDownloadPreview = async (paper) => {
 const pdfContentRef = ref(null);
 
 const downloadPdf = async () => {
-  await nextTick()
+  await nextTick();
 
-  const element = pdfContentRef.value
+  const element = pdfContentRef.value;
 
   // 临时解除高度/滚动
   const oldStyle = {
     maxHeight: element.style.maxHeight,
     overflow: element.style.overflow,
-    height: element.style.height
-  }
+    height: element.style.height,
+  };
 
-  element.style.maxHeight = "none"
-  element.style.height = "auto"
-  element.style.overflow = "visible"
+  element.style.maxHeight = "none";
+  element.style.height = "auto";
+  element.style.overflow = "visible";
 
-  await nextTick()
+  await nextTick();
 
   await html2pdf()
-      .set({
-    margin: [15, 15, 15, 15],
-    filename: `${downloadPaperData.value.name}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      scrollY: 0,
-    },
-    jsPDF: {
-      unit: "mm",
-      format: "a4",
-      orientation: "portrait",
-    },
-    pagebreak: {
-      mode: ["css", "legacy"],
-      avoid: [
-        ".pdf-question-item",
-        ".pdf-question-content",
-        ".pdf-question-options",
-        ".pdf-question-image",
-      ],
-    },
-  })
-  .from(pdfContentRef.value)
-  .save();
+    .set({
+      margin: [15, 15, 15, 15],
+      filename: `${downloadPaperData.value.name}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        scrollY: 0,
+      },
+      jsPDF: {
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+      },
+      pagebreak: {
+        mode: ["css", "legacy"],
+        avoid: [
+          ".pdf-question-item",
+          ".pdf-question-content",
+          ".pdf-question-options",
+          ".pdf-question-image",
+        ],
+      },
+    })
+    .from(pdfContentRef.value)
+    .save();
   downloadVisible.value = false;
 
   // 还原样式
-  Object.assign(element.style, oldStyle)
-}
+  Object.assign(element.style, oldStyle);
+};
 
 const deletePaper = (paper) => {
   if (!hasDeletePermission.value) {
@@ -2541,9 +2402,9 @@ const handleImageError = (event) => {
 };
 
 /* ==================== 生命周期 ==================== */
-onMounted(() => {
+onMounted(async () => {
   loadPapers();
-  loadSubjectList();
+  await initSubjectData();
   loadGradeList();
   document.addEventListener("click", handleClickOutside);
   loadQuestionCategoryList();
@@ -3474,7 +3335,7 @@ onMounted(() => {
 
 .option-item {
   display: flex;
-  align-items: baseline; 
+  align-items: baseline;
   margin-bottom: 4px;
   padding: 6px;
   border-radius: 4px;

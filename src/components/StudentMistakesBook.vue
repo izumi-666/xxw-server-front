@@ -545,13 +545,20 @@ import {
 import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
 
+// 导入知识点工具函数
+import {
+  fetchKnowledgePointList,
+  getKnowledgePointNames,
+  getKnowledgePointName,
+} from "../utils/knowledgeList";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 // 初始化的科目映射（从API获取后会更新）
 const SUBJECT_MAP = ref({});
 
-// 知识点映射
-const KNOWLEDGE_POINT_MAP = ref({});
+// 知识点映射已移到 knowledgeUtils.js
+// const KNOWLEDGE_POINT_MAP = ref({}); // 已移除
 
 // 题型映射
 const getQuestionTypeInfo = (categoryId) => {
@@ -610,19 +617,6 @@ export default {
       dateRange: "",
       keyword: "",
     });
-
-    // 获取知识点列表
-    const fetchKnowledgePointList = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/questions/getKnowledgePointList`);
-        if (response.data && response.data.code === 200) {
-          KNOWLEDGE_POINT_MAP.value = response.data.data;
-        }
-      } catch (error) {
-        console.error("获取知识点列表失败:", error);
-        KNOWLEDGE_POINT_MAP.value = {};
-      }
-    };
 
     // 科目列表（用于筛选下拉框）
      const subjects = computed(() => {
@@ -777,14 +771,14 @@ export default {
               if (detail && detail.id) {
                 const detailIdStr = String(detail.id);
 
-                // 处理主知识点ID
+                // 处理主知识点ID - 使用导入的函数
                 if (detail.knowledge_point_id) {
                   detail.knowledgePoints = getKnowledgePointNames(
                     detail.knowledge_point_id
                   );
                 }
 
-                // 处理子知识点ID
+                // 处理子知识点ID - 使用导入的函数
                 if (detail.sub_knowledge_point_ids) {
                   detail.subKnowledgePoints = getKnowledgePointNames(
                     detail.sub_knowledge_point_ids
@@ -867,7 +861,7 @@ export default {
       loading.value = true;
 
       try {
-        // 先获取科目和知识点数据
+        // 先获取科目和知识点数据 - 使用导入的函数
         await Promise.all([fetchSubjectList(), fetchKnowledgePointList()]);
 
         // 获取错题数据
@@ -928,7 +922,7 @@ export default {
           }
 
           if (questionDetail) {
-            // 合并数据，包含子知识点
+            // 合并数据，包含子知识点 - 使用导入的函数
             Object.assign(mistake, questionDetail, {
               type: getQuestionType(questionDetail),
               subKnowledgePoints:
@@ -975,14 +969,14 @@ export default {
             questionDetails.find((item) => item.id === questionId) || null;
 
           if (questionDetail) {
-            // 处理知识点ID
+            // 处理知识点ID - 使用导入的函数
             if (questionDetail.knowledge_point_id) {
               questionDetail.knowledgePoints = getKnowledgePointNames(
                 questionDetail.knowledge_point_id
               );
             }
 
-            // 处理子知识点ID
+            // 处理子知识点ID - 使用导入的函数
             if (questionDetail.sub_knowledge_point_ids) {
               questionDetail.subKnowledgePoints = getKnowledgePointNames(
                 questionDetail.sub_knowledge_point_ids
@@ -1024,46 +1018,6 @@ export default {
       const accuracy = reviewed > 0 ? Math.round((reviewed / total) * 100) : 0;
 
       stats.value = { total, recent, reviewed, accuracy };
-    };
-
-    // 获取知识点名称
-    const getKnowledgePointNames = (knowledgePointIds) => {
-      if (!knowledgePointIds) return [];
-
-      // 处理数字类型的单个ID
-      if (typeof knowledgePointIds === "number") {
-        return [
-          KNOWLEDGE_POINT_MAP.value[knowledgePointIds] || `知识点${knowledgePointIds}`,
-        ];
-      }
-
-      // 处理字符串类型的ID
-      if (typeof knowledgePointIds === "string") {
-        // 如果是逗号分隔的字符串
-        if (knowledgePointIds.includes(",")) {
-          const ids = knowledgePointIds.split(",").map((id) => id.trim());
-          return ids.map((id) => KNOWLEDGE_POINT_MAP.value[id] || `知识点${id}`);
-        }
-        // 单个字符串ID
-        return [
-          KNOWLEDGE_POINT_MAP.value[knowledgePointIds] || `知识点${knowledgePointIds}`,
-        ];
-      }
-
-      // 处理数组类型的ID
-      if (Array.isArray(knowledgePointIds)) {
-        return knowledgePointIds.map(
-          (id) => KNOWLEDGE_POINT_MAP.value[id] || `知识点${id}`
-        );
-      }
-
-      return [];
-    };
-
-    // 获取单个知识点名称
-    const getKnowledgePointName = (knowledgePointId) => {
-      if (!knowledgePointId) return "";
-      return KNOWLEDGE_POINT_MAP.value[knowledgePointId] || `知识点${knowledgePointId}`;
     };
 
     const handleFilterChange = () => {

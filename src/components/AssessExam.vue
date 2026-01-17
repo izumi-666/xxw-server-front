@@ -321,7 +321,9 @@
               <h3>题目内容</h3>
               <div class="question-meta">
                 <span class="meta-item"
-                  >题型：{{ getQuestionCategoryText(currentQuestion.question_category_id) }}</span
+                  >题型：{{
+                    getQuestionCategoryText(currentQuestion.question_category_id)
+                  }}</span
                 >
                 <span class="meta-item difficulty">
                   难度：
@@ -534,12 +536,17 @@
               <h3>相关知识点</h3>
             </div>
             <div class="points-list">
+              <span :key="index" class="point-tag-primary">
+                {{ getKnowledgePointName(currentQuestion.knowledge_point_id) }}
+              </span>
               <span
-                v-for="pointId in currentQuestion.sub_knowledge_point_ids"
-                :key="pointId"
-                class="point-tag"
+                v-for="(pointName, index) in getKnowledgePointNames(
+                  currentQuestion.sub_knowledge_point_ids
+                )"
+                :key="index"
+                class="point-tag-sub"
               >
-                {{ getKnowledgePointName(pointId) }}
+                {{ pointName }}
               </span>
             </div>
           </div>
@@ -572,6 +579,11 @@ import axios from "axios";
 import { ElMessage } from "element-plus";
 import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
+import {
+  fetchKnowledgePointList,
+  getKnowledgePointName,
+  getKnowledgePointNames,
+} from "../utils/knowledgeList";
 
 const route = useRoute();
 const router = useRouter();
@@ -583,7 +595,6 @@ const examName = ref("");
 const loading = ref(false);
 const saving = ref(false);
 const gradingData = ref([]); // 批改数据
-const knowledgePoints = ref({}); // 知识点映射
 const totalComments = ref({}); // 总评语
 const showCommentModal = ref(false);
 const selectedStudentForComment = ref(-1);
@@ -984,11 +995,7 @@ const loadGradingDataFromAPI = async () => {
 // 加载知识点
 const loadKnowledgePoints = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/questions/getKnowledgePointList`);
-
-    if (res.data.code === 200 && res.data.data) {
-      knowledgePoints.value = res.data.data;
-    }
+    await fetchKnowledgePointList();
   } catch (error) {
     console.warn("加载知识点失败:", error);
   }
@@ -1038,11 +1045,6 @@ const getUserInfo = () => {
 
 // 难度
 const maxDifficulty = 5;
-
-// 获取知识点名称
-const getKnowledgePointName = (pointId) => {
-  return knowledgePoints.value[pointId] || `知识点${pointId}`;
-};
 
 // 获取题目分值 - 从学生数据的scores数组中获取
 const getQuestionScore = (questionIndex) => {
@@ -2358,7 +2360,16 @@ onMounted(() => {
   gap: 8px;
 }
 
-.point-tag {
+.point-tag-primary {
+  padding: 4px 8px;
+  background: #fef0f0;
+  color: #f56c6c;
+  border: 1px solid #e1f3d8;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.point-tag-sub {
   padding: 4px 8px;
   background: #f0f9eb;
   color: #67c23a;
