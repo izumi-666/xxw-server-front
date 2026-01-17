@@ -96,9 +96,7 @@
                   </span>
                   <span class="option-text">{{ grade.name }}</span>
                 </div>
-                <div v-if="filterGrades.length === 0" class="no-options">
-                  无匹配选项
-                </div>
+                <div v-if="filterGrades.length === 0" class="no-options">无匹配选项</div>
               </div>
             </div>
           </div>
@@ -248,8 +246,12 @@
                   <label class="criteria-label">科目</label>
                   <select v-model="searchCriteria.subject_ids" class="form-select">
                     <option :value="null">全部</option>
-                    <option v-for="sub in subjectList" :key="sub.id" :value="sub.id">
-                      {{ sub.name }}
+                    <option
+                      v-for="[id, name] in Object.entries(SUBJECT_MAP)"
+                      :key="id"
+                      :value="Number(id)"
+                    >
+                      {{ name }}
                     </option>
                   </select>
                 </div>
@@ -476,13 +478,13 @@
                     <span class="stat-label">试卷总分</span>
                     <span class="stat-value">{{ totalScore }}</span>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-label">选择题</span>
-                    <span class="stat-value">{{ getQuestionTypeCount("选择题") }}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">主观题</span>
-                    <span class="stat-value">{{ getQuestionTypeCount("主观题") }}</span>
+                  <div
+                    v-for="item in questionTypeStatistics"
+                    :key="item.type"
+                    class="stat-item"
+                  >
+                    <span class="stat-label">{{ item.type }}</span>
+                    <span class="stat-value">{{ item.count }}</span>
                   </div>
                 </div>
                 <!-- 题型分值分布图 -->
@@ -842,17 +844,13 @@
                   <div class="stat-label">试卷总分</div>
                 </div>
               </div>
-              <div class="stat-card">
-                <div class="stat-content">
-                  <div class="stat-value">{{ getQuestionTypeCount("选择题") }}</div>
-                  <div class="stat-label">选择题</div>
-                </div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-content">
-                  <div class="stat-value">{{ getQuestionTypeCount("主观题") }}</div>
-                  <div class="stat-label">主观题</div>
-                </div>
+              <div
+                v-for="item in questionTypeStatistics"
+                :key="item.type"
+                class="stat-item"
+              >
+                <span class="stat-label">{{ item.type }}</span>
+                <span class="stat-value">{{ item.count }}</span>
               </div>
             </div>
           </div>
@@ -1350,21 +1348,12 @@ import * as echarts from "echarts";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import html2pdf from "html2pdf.js";
-import {
-  getSubjectName,
-  initSubjectData,
-  SUBJECT_MAP,
-} from "../utils/subjectList";
-import { useGradeList } from "../utils/gradeList"
-
+import { getSubjectName, initSubjectData, SUBJECT_MAP } from "../utils/subjectList";
+import { useGradeList } from "../utils/gradeList";
 
 const router = useRouter();
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
-const {
-  gradeList,
-  filterGrades,
-  loadGradeList,
-} = useGradeList()
+const { gradeList, filterGrades, loadGradeList, getGradeName } = useGradeList();
 
 /* ==================== 权限相关 ==================== */
 const getUserPermissions = () => {
@@ -1481,6 +1470,16 @@ const searchForm = ref({
   grade_ids: [],
 });
 
+const toggleGradeDropdown = () => {
+  showGradeDropdown.value = !showGradeDropdown.value;
+  if (showGradeDropdown.value) {
+    filterGrades.value = gradeList.value; // 默认显示全部
+  }
+};
+
+const selectedGrades = computed(() => {
+  return gradeList.value.filter((grade) => searchForm.value.grade_ids.includes(grade.id));
+});
 
 const toggleGrade = (grade) => {
   const index = searchForm.value.grade_ids.indexOf(grade.id);
@@ -1517,6 +1516,26 @@ const isPreviewLoading = ref(false);
 const inputPage = ref(1);
 
 /* ==================== 计算属性 ==================== */
+const questionTypeStatistics = computed(() => {
+  const typeOrder = [
+    "单选题",
+    "多选题",
+    "判断题",
+    "填空题",
+    "计算题",
+    "解答题",
+    "证明题",
+    "作图题",
+  ];
+
+  return typeOrder
+    .map((type) => ({
+      type,
+      count: getTypeCount(type),
+    }))
+    .filter((item) => item.count > 0);
+});
+
 const totalScore = computed(() => {
   return selectedQuestions.value.reduce((sum, q) => {
     const score = Number(q.score) || 0;
@@ -1532,31 +1551,6 @@ const availableQuestionTypes = computed(() => {
   });
   return Array.from(types);
 });
-
-const getQuestionTypeCount = (type) => {
-  if (type === "选择题") {
-    return selectedQuestions.value.filter((q) => {
-      const categoryName = getQuestionCategoryName(q.question_category_id);
-      return (
-        categoryName === "单选题" ||
-        categoryName.includes("单选") ||
-        categoryName === "多选题" ||
-        categoryName.includes("多选")
-      );
-    }).length;
-  } else if (type === "主观题") {
-    return selectedQuestions.value.filter((q) => {
-      const categoryName = getQuestionCategoryName(q.question_category_id);
-      return !(
-        categoryName === "单选题" ||
-        categoryName.includes("单选") ||
-        categoryName === "多选题" ||
-        categoryName.includes("多选")
-      );
-    }).length;
-  }
-  return 0;
-};
 
 const getTypeCount = (type) => {
   return selectedQuestions.value.filter(

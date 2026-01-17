@@ -38,10 +38,28 @@ export function useGradeList() {
     }
   }
 
+  /**
+   * 获取年级名称
+   * @param {string|number} gradeId - 年级ID
+   * @returns {string} 年级名称
+   */
+  const getGradeName = (gradeId) => {
+    if (gradeId === undefined || gradeId === null) return '未知年级'
+    
+    // 将 gradeId 转换为数字进行比较
+    const id = Number(gradeId)
+    
+    // 在 gradeList 中查找对应的年级
+    const grade = gradeList.value.find(item => item.id === id)
+    
+    return grade ? grade.name : `年级ID: ${gradeId}`
+  }
+
   return {
     gradeList,
     filterGrades,
     loading,
     loadGradeList,
+    getGradeName
   }
 }

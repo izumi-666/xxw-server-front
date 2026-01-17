@@ -570,14 +570,14 @@
               <span class="stat-label">试卷总分</span>
               <span class="stat-value">{{ totalScore }}</span>
             </div>
-            <div class="stat-item">
-              <span class="stat-label">选择题</span>
-              <span class="stat-value">{{ getQuestionTypeCount("选择题") }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">主观题</span>
-              <span class="stat-value">{{ getQuestionTypeCount("主观题") }}</span>
-            </div>
+             <div
+                    v-for="item in questionTypeStatistics"
+                    :key="item.type"
+                    class="stat-item"
+                  >
+                    <span class="stat-label">{{ item.type }}</span>
+                    <span class="stat-value">{{ item.count }}</span>
+                  </div>
             <div class="stat-item">
               <span class="stat-label">平均难度</span>
               <span class="stat-value">{{ getAverageDifficulty.toFixed(1) }}星</span>
@@ -709,14 +709,6 @@
       <div class="image-preview-modal" @click.stop>
         <img :src="previewImageUrl" alt="预览" class="full-size-image" />
         <button @click="closeImagePreview" class="btn-close">关闭</button>
-      </div>
-    </div>
-
-    <!-- ==================== 统一弹窗提示 ==================== -->
-    <div v-if="showAlertModal" class="modal-overlay">
-      <div class="alert-modal-content">
-        <h3 class="alert-modal-title">{{ alertModalTitle }}</h3>
-        <p class="alert-modal-message">{{ alertModalMessage }}</p>
       </div>
     </div>
 
@@ -929,6 +921,7 @@ import { useRouter } from "vue-router";
 import * as echarts from "echarts";
 import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
+import { ElMessage, ElMessageBox } from "element-plus"; // 导入 ElMessage
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -999,10 +992,6 @@ export default {
     const filteredQuestionCategories = ref([]);
 
     // 弹窗状态
-    const showAlertModal = ref(false);
-    const alertModalTitle = ref("");
-    const alertModalMessage = ref("");
-    const alertModalTimer = ref(null);
     const showImagePreview = ref(false);
     const previewImageUrl = ref("");
 
@@ -1012,6 +1001,26 @@ export default {
     const contentOverflowing = ref({});
 
     // ==================== 计算属性 ====================
+    const questionTypeStatistics = computed(() => {
+  const typeOrder = [
+    "单选题",
+    "多选题",
+    "判断题",
+    "填空题",
+    "计算题",
+    "解答题",
+    "证明题",
+    "作图题",
+  ];
+
+  return typeOrder
+    .map((type) => ({
+      type,
+      count: getTypeCount(type),
+    }))
+    .filter((item) => item.count > 0);
+});
+
     const selectedKnowledgePoints = computed(() => {
       return searchCriteria.knowledge_point_ids
         .map((id) => knowledgePointList.value.find((k) => k.id === id))
@@ -1180,6 +1189,7 @@ export default {
           q.score = allQuestionsScore.value;
           q.scoreError = "";
         });
+        ElMessage.success("批量设置成功");
       } else if (batchScoreMode.value === "type") {
         selectedQuestions.value.forEach((q) => {
           const type = getQuestionCategoryText(q.question_category_id);
@@ -1188,6 +1198,7 @@ export default {
             q.scoreError = "";
           }
         });
+        ElMessage.success("按题型设置成功");
       } else if (batchScoreMode.value === "single") {
         const indices = getQuestionIndicesFromString(singleQuestionIndex.value);
         indices.forEach((index) => {
@@ -1196,9 +1207,9 @@ export default {
             selectedQuestions.value[index].scoreError = "";
           }
         });
+        ElMessage.success(`已设置 ${indices.length} 个题目的分值`);
       }
 
-      showAlert("设置成功", "分值已更新");
       closeBatchScoreModal();
     };
 
@@ -1253,7 +1264,7 @@ export default {
     // ==================== 试卷上传相关方法 ====================
     const uploadPaper = () => {
       if (selectedQuestions.value.length === 0) {
-        showAlert("上传失败", "试卷为空，无法上传");
+        ElMessage.error("试卷为空，无法上传");
         return;
       }
 
@@ -1263,7 +1274,7 @@ export default {
       );
 
       if (hasInvalidScores) {
-        showAlert("上传失败", "请先设置所有题目的分数");
+        ElMessage.warning("请先设置所有题目的分数");
         return;
       }
 
@@ -1296,12 +1307,12 @@ export default {
 
         await axios.post(`${API_BASE}/paper/uploadPaper`, payload);
 
-        showAlert("上传成功", "试卷已成功创建");
+        ElMessage.success("试卷上传成功");
         closeUploadModal();
         resetAfterUpload();
       } catch (err) {
         console.error(err);
-        showAlert("上传失败", err.response?.data?.message || "试卷上传失败");
+        ElMessage.error(err.response?.data?.message || "试卷上传失败");
       } finally {
         isUploading.value = false;
       }
@@ -1342,20 +1353,6 @@ export default {
     };
 
     // ==================== 其他方法 ====================
-    const showAlert = (title, message) => {
-      alertModalTitle.value = title;
-      alertModalMessage.value = message;
-      showAlertModal.value = true;
-
-      if (alertModalTimer.value) {
-        clearTimeout(alertModalTimer.value);
-      }
-
-      alertModalTimer.value = setTimeout(() => {
-        showAlertModal.value = false;
-      }, 1000);
-    };
-
     const previewImage = (url) => {
       previewImageUrl.value = url;
       showImagePreview.value = true;
@@ -1412,7 +1409,7 @@ export default {
           scoreError: "",
         };
         selectedQuestions.value.push(questionWithScore);
-        showAlert("添加成功", "题目已添加到试卷");
+        ElMessage.success("题目已添加到试卷");
       }
     };
 
@@ -1420,6 +1417,7 @@ export default {
       selectedQuestions.value = selectedQuestions.value.filter(
         (q) => q.id !== questionId
       );
+      ElMessage.success("题目已从试卷移除");
     };
 
     const moveQuestionUp = (index) => {
@@ -1427,6 +1425,7 @@ export default {
       const temp = selectedQuestions.value[index];
       selectedQuestions.value[index] = selectedQuestions.value[index - 1];
       selectedQuestions.value[index - 1] = temp;
+      ElMessage.success("题目顺序已调整");
     };
 
     const moveQuestionDown = (index) => {
@@ -1434,19 +1433,26 @@ export default {
       const temp = selectedQuestions.value[index];
       selectedQuestions.value[index] = selectedQuestions.value[index + 1];
       selectedQuestions.value[index + 1] = temp;
+      ElMessage.success("题目顺序已调整");
     };
 
     const clearPaper = () => {
-      selectedQuestions.value = [];
-      showAlert("清空成功", "试卷已清空");
+      ElMessageBox.confirm("确定要清空试卷吗？", "确认清空", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      }).then(() => {
+        selectedQuestions.value = [];
+        ElMessage.success("试卷已清空");
+      });
     };
 
     const exportPaper = () => {
       if (selectedQuestions.value.length === 0) {
-        showAlert("导出失败", "试卷为空，无法导出");
+        ElMessage.warning("试卷为空，无法导出");
         return;
       }
-      showAlert("导出成功", "试卷导出功能待实现");
+      ElMessage.success("试卷导出功能待实现");
     };
 
     const getQuestionTypeCount = (type) => {
@@ -1504,7 +1510,7 @@ export default {
       );
 
       if (questionsToAdd.length === 0) {
-        showAlert("提示", "没有可以添加的新题目");
+        ElMessage.info("没有可以添加的新题目");
         return;
       }
 
@@ -1516,7 +1522,7 @@ export default {
 
       selectedQuestions.value.push(...questionsWithScores);
 
-      showAlert("批量添加成功", `已添加 ${questionsToAdd.length} 个题目`);
+      ElMessage.success(`已添加 ${questionsToAdd.length} 个题目`);
       clearSelection();
     };
 
@@ -1588,6 +1594,7 @@ export default {
       questionList.value = [];
       hasSearched.value = false;
       clearSelection();
+      ElMessage.success("检索条件已重置");
     };
 
     const toggleQuestionCategoryDropdown = () => {
@@ -1794,7 +1801,7 @@ export default {
         filteredQuestionCategories.value = questionCategoryList.value;
       } catch (err) {
         console.error("获取列表失败:", err);
-        showAlert("加载失败", "获取列表失败");
+        ElMessage.error("获取列表失败");
       }
     };
 
@@ -1846,13 +1853,13 @@ export default {
         setTimeout(checkContentOverflow, 100);
 
         if (!questionList.value.length) {
-          showAlert("检索结果", "未找到符合条件的题目");
+          ElMessage.info("未找到符合条件的题目");
         } else {
-          showAlert("检索成功", `找到 ${totalItems.value} 条题目`);
+          ElMessage.success(`找到 ${totalItems.value} 条题目`);
         }
       } catch (err) {
         console.error("检索失败:", err);
-        showAlert("检索失败", "检索失败");
+        ElMessage.error("检索失败");
         questionList.value = [];
         hasSearched.value = true;
       }
@@ -1880,7 +1887,7 @@ export default {
       if (page >= 1 && page <= totalPages.value) {
         changePage(page);
       } else {
-        showAlert("输入错误", `请输入 1 到 ${totalPages.value} 之间的页码`);
+        ElMessage.warning(`请输入 1 到 ${totalPages.value} 之间的页码`);
       }
     };
 
@@ -1926,6 +1933,7 @@ export default {
         setTimeout(checkContentOverflow, 100);
       } catch (err) {
         console.error("检索失败:", err);
+        ElMessage.error("检索失败");
         questionList.value = [];
         hasSearched.value = true;
       }
@@ -2082,7 +2090,6 @@ export default {
       getAffectedQuestionCount,
       getTypeScoreTotal,
 
-      showAlert,
       previewImage,
       closeImagePreview,
       markdownToHtml,
@@ -2146,12 +2153,10 @@ export default {
       checkContentOverflow,
       handleQuestionCardClick,
 
-      showAlertModal,
-      alertModalTitle,
-      alertModalMessage,
       showImagePreview,
       previewImageUrl,
 
+      questionTypeStatistics,
       getTypeCount,
       applyBatchScores,
       closeBatchScoreModal,
@@ -3780,32 +3785,6 @@ export default {
   background-color: #f78989;
 }
 
-/* ==================== 统一弹窗提示样式 ==================== */
-.alert-modal-content {
-  background: white;
-  padding: 40px;
-  border-radius: 12px;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  animation: modalAppear 0.3s ease-out;
-}
-
-.alert-modal-title {
-  margin-bottom: 20px;
-  color: #303133;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.alert-modal-message {
-  margin-bottom: 0;
-  color: #606266;
-  font-size: 18px;
-  line-height: 1.5;
-}
-
 /* ==================== 响应式设计 ==================== */
 @media (max-width: 1200px) {
   .questions-grid {
@@ -3907,8 +3886,7 @@ export default {
     grid-template-columns: 1fr;
   }
 
-  .modal-content,
-  .alert-modal-content {
+  .modal-content {
     padding: 30px 20px;
   }
 
