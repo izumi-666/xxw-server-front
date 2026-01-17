@@ -258,6 +258,7 @@
         </div>
       </div>
     </div>
+    <router-view v-else></router-view>
   </div>
 </template>
 
@@ -266,6 +267,7 @@ import { ref, onMounted, computed, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { getBeijingTime } from "../utils/chinaTime";
 
 const router = useRouter();
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -344,7 +346,7 @@ const canTakeExam = (exam) => {
 
   // 已发布的考试且未过期
   if (exam.status === "PUBLISHED") {
-    const now = new Date();
+    const now = getBeijingTime();
     const startTime = new Date(exam.start_time);
     const endTime = new Date(calculateEndTime(exam));
 
@@ -353,7 +355,7 @@ const canTakeExam = (exam) => {
   
   // 考试正在进行中且未参加过
   if (exam.status === "ONGOING" && !exam.hasParticipated) {
-    const now = new Date();
+    const now = getBeijingTime();
     const endTime = new Date(calculateEndTime(exam));
     
     return now <= endTime;
@@ -555,7 +557,7 @@ const takeExam = async (exam) => {
 
 // 验证并进入考试
 const validateAndProceed = async (exam) => {
-  const now = new Date();
+  const now = getBeijingTime();
   const startTime = new Date(exam.start_time);
 
   if (now < startTime) {
@@ -587,7 +589,7 @@ const validateAndProceed = async (exam) => {
     const examHistoryId = res.data.data;
 
     router.push({
-      path: "/student/exam/take",
+      path: "/student/exammanagement/take",
       query: {
         examHistoryId: examHistoryId,
         paper_id: exam.paper_id,
@@ -607,7 +609,7 @@ const validateAndProceed = async (exam) => {
 const viewScore = (exam) => {
   const userInfo = getUserInfo();
   router.push({
-  path: "/student/exam/studentviewresults",
+  path: "/student/exammanagement/studentviewresults",
   query: {
     examId: exam.id,
     exam_name: exam.name,

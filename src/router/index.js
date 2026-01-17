@@ -7,6 +7,7 @@ import AssessExam from "../components/AssessExam.vue"; //批改考试
 import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
 import TakeExam from "../components/TakeExam.vue"; //学生参加考试
 import StudentViewResults from "../components/StudentViewResults.vue"; //学生查看考试结果
+import StudentMistakesBook from "../components/StudentMistakesBook.vue"; //学生错题本
 import TeacherHome from "../components/TeacherHome.vue";
 import StudentHome from "../components/StudentHome.vue";
 import VisitorHome from "../components/VisitorHome.vue";
@@ -18,44 +19,59 @@ import HomeworkManagement from "../components/HomeworkManagement.vue";
 const routes = [
   { path: "/", redirect: "/login" },
   { path: "/login", component: Login },
-  { path: "/student", 
-    component: StudentHome,  
+  {
+    path: "/student",
+    component: StudentHome,
     meta: { requiresAuth: true },
     children: [
       {
         path: "studentdashboard",
         name: "student-dashboard",
         component: StudentDashboard,
-        meta: { requiresAuth: true,
+        meta: {
+          requiresAuth: true,
           breadcrumb: ["首页"]
-         }
+        }
       },
       {
         path: "exammanagement",
         name: "student-exammanagement",
         component: ExamDashboard,
-        meta: { requiresAuth: true,
+        meta: {
+          requiresAuth: true,
           breadcrumb: ["考试中心"]
-         }
-      },
-        {
-      path: "exam/studentviewresults",
-      name: "student-view-results",
-      component: StudentViewResults,
-      meta: { requiresAuth: true,
-           breadcrumb: ["考试中心", "成绩预览"]
         }
-    },
+      },
       {
-  path: "exam/take",
-  name: "take-exam",
-  component: TakeExam,
-  meta: { requiresAuth: true,
-    breadcrumb: ["考试中心", "参加考试"]
-  }
-},
-    ]},
-  { path: "/visitor", component: VisitorHome,  meta: { requiresAuth: true },},
+        path: "exammanagement/studentviewresults",
+        name: "student-view-results",
+        component: StudentViewResults,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["考试中心", "成绩预览"]
+        }
+      },
+      {
+        path: "exammanagement/take",
+        name: "take-exam",
+        component: TakeExam,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["考试中心", "参加考试"]
+        }
+      },
+      {
+        path: "mistakesbook",
+        name: "student-mistakes-book",
+        component: StudentMistakesBook,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["自主学习", "错题本"]
+        }
+      },
+    ]
+  },
+  { path: "/visitor", component: VisitorHome, meta: { requiresAuth: true }, },
   {
     path: "/teacher",
     component: TeacherHome,
@@ -65,75 +81,85 @@ const routes = [
         path: "teacherdashboard",
         name: "teacher-dashboard",
         component: TeacherDashboard,
-        meta: { requiresAuth: true,
+        meta: {
+          requiresAuth: true,
           breadcrumb: ["首页"]
-         }
+        }
       },
       {
         path: "accountmanagement",
         name: "account-management",
         component: AccountManagement,
-        meta: { requiresAuth: true,
+        meta: {
+          requiresAuth: true,
           breadcrumb: ["学生管理", "账户管理"]
-         }
+        }
       },
       {
         path: "exammanagement",
         name: "exam-management",
         component: ExamManagement,
-        meta: { requiresAuth: true,
+        meta: {
+          requiresAuth: true,
           breadcrumb: ["班级课堂", "考试中心"]
-         }
-      },
-       {
-      path: "exammanagement/assessexam",
-      name: "assess-exam",
-      component: AssessExam,
-      meta: { requiresAuth: true,
-           breadcrumb: ["班级课堂", "考试中心", "批改考试"]
         }
-    },
+      },
+      {
+        path: "exammanagement/assessexam",
+        name: "assess-exam",
+        component: AssessExam,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["班级课堂", "考试中心", "批改考试"]
+        }
+      },
       {
         path: "upload",
         name: "question-bank",
         component: QuestionManager,
-        meta: { requiresAuth: true,
+        meta: {
+          requiresAuth: true,
           breadcrumb: ["教学管理", "题库录入"]
-         }
+        }
       },
       {
         path: "paper",
         name: "paper-management",
         component: PaperManagement,
-        meta: { requiresAuth: true,
-           breadcrumb: ["教学管理", "试卷管理"]
-        }
-      },
-       {
-        path: "homework",
-        name: "homework-management",
-        component: HomeworkManagement,
-        meta: { requiresAuth: true,
-           breadcrumb: ["教学管理", "课堂作业"]
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["教学管理", "试卷管理"]
         }
       },
       {
-      path: "paper/assemblequestion",
-      name: "assemble-questions",
-      component: () => import("../components/AssembleQuestions.vue"),
-      meta: { requiresAuth: true,
-           breadcrumb: ["教学管理", "试卷管理", "手动组卷"]
+        path: "homework",
+        name: "homework-management",
+        component: HomeworkManagement,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["教学管理", "课堂作业"]
         }
-    },
-       {
-      path: "paper/autoassemblequestion",
-      name: "auto-assemble-questions",
-      component: () => import("../components/AutoAssembleQuestions.vue"),
-      meta: { requiresAuth: true,
-           breadcrumb: ["教学管理", "试卷管理", "自动组卷"]
+      },
+      {
+        path: "paper/assemblequestion",
+        name: "assemble-questions",
+        component: () => import("../components/AssembleQuestions.vue"),
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["教学管理", "试卷管理", "手动组卷"]
         }
-    },
-]}]
+      },
+      {
+        path: "paper/autoassemblequestion",
+        name: "auto-assemble-questions",
+        component: () => import("../components/AutoAssembleQuestions.vue"),
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["教学管理", "试卷管理", "自动组卷"]
+        }
+      },
+    ]
+  }]
 
 const router = createRouter({
   history: createWebHistory(),

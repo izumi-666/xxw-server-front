@@ -333,10 +333,13 @@ const nextMonth = () => {
 <style scoped>
 /* ==================== 页面整体 ==================== */
 .dashboard {
-  background: linear-gradient(180deg, #f5f7fa 0%, #eef1f6 100%);
+  max-width: 2000px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  background-color: #f5f7fa;
   min-height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  padding: 12px;
+  color: #333;
 }
 
 /* ==================== 页面头部样式 ==================== */
@@ -356,7 +359,7 @@ const nextMonth = () => {
 .page-title {
   color: white;
   margin: 0;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 600;
   display: flex;
   align-items: center;

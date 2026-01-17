@@ -284,7 +284,7 @@
               <div class="question-header">
                 <span class="question-number">第{{ index + 1 }}题</span>
                 <span class="question-type">{{
-                  getQuestionType(item.question_category_id)
+                  getQuestionCategoryText(item.question_category_id)
                 }}</span>
                 <span class="question-score">({{ getQuestionScore(index) }}分)</span>
               </div>
@@ -321,7 +321,7 @@
               <h3>题目内容</h3>
               <div class="question-meta">
                 <span class="meta-item"
-                  >题型：{{ getQuestionType(currentQuestion.question_category_id) }}</span
+                  >题型：{{ getQuestionCategoryText(currentQuestion.question_category_id) }}</span
                 >
                 <span class="meta-item difficulty">
                   难度：
@@ -569,10 +569,9 @@
 import { ref, computed, onMounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
-import { marked } from "marked";
-import katex from "katex";
-import "katex/dist/katex.min.css";
 import { ElMessage } from "element-plus";
+import { getQuestionCategoryText } from "../utils/questionCategory";
+import { markdownToHtml } from "../utils/markdownUtils";
 
 const route = useRoute();
 const router = useRouter();
@@ -628,11 +627,6 @@ const markedCount = computed(() => {
 // 当前学生数据
 const currentStudentData = computed(() => {
   return gradingData.value[currentStudentIndex.value] || {};
-});
-
-// 当前学生是否已批改
-const isCurrentStudentMarked = computed(() => {
-  return isStudentMarked(currentStudentIndex.value);
 });
 
 // 当前学生名称
@@ -887,16 +881,6 @@ const isStudentMarked = (studentIndex) => {
   });
 };
 
-// 获取学生批改状态
-const getStudentMarkedStatus = (studentIndex) => {
-  return isStudentMarked(studentIndex) ? 1 : 0;
-};
-
-// 获取学生显示状态（已批改/未批改）
-const getStudentMarkedText = (studentIndex) => {
-  return isStudentMarked(studentIndex) ? "已批改" : "未批改";
-};
-
 // ==================== 数据加载 ====================
 // 加载考试名称
 const loadExamName = async () => {
@@ -1012,7 +996,6 @@ const loadKnowledgePoints = async () => {
 
 // ==================== 初始化 ====================
 // 初始化当前批改数据
-// 初始化当前批改数据
 const initializeCurrentGrading = () => {
   const answer = currentAnswer.value;
   const questionIndex = currentQuestionIndex.value;
@@ -1051,21 +1034,6 @@ const getUserInfo = () => {
     console.error("获取用户信息失败:", error);
     return null;
   }
-};
-
-// 获取题目类型
-const getQuestionType = (typeId) => {
-  const typeMap = {
-    1: "单选题",
-    2: "多选题",
-    3: "证明题",
-    4: "解答题",
-    5: "填空题",
-    6: "计算题",
-    7: "判断题",
-    8: "作图题",
-  };
-  return typeMap[typeId] || "未知题型";
 };
 
 // 难度
@@ -1177,44 +1145,6 @@ const getAnswerStatusText = (answer) => {
   }
 };
 
-/* ==================== Markdown渲染函数 ==================== */
-// 配置marked
-marked.setOptions({
-  breaks: true, // 转换换行符为<br>
-  gfm: true, // 使用GitHub风格的Markdown
-});
-
-// Markdown转HTML
-const markdownToHtml = (text) => {
-  if (!text) return "";
-
-  try {
-    let content = text;
-
-    // 块级公式 $$...$$
-    content = content.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) => {
-      return katex.renderToString(formula.trim(), {
-        displayMode: true,
-        throwOnError: false,
-      });
-    });
-
-    // 行内公式 $...$
-    content = content.replace(/\$([\s\S]+?)\$/g, (_, formula) => {
-      return katex.renderToString(formula.trim(), {
-        displayMode: false,
-        throwOnError: false,
-      });
-    });
-
-    // 直接返回 marked 结果
-    return marked(content);
-  } catch (err) {
-    console.error("Markdown 渲染失败:", err);
-    return text;
-  }
-};
-
 // ==================== 题目操作 ====================
 // 选择题目
 const selectQuestion = (index) => {
@@ -1242,11 +1172,12 @@ const saveCurrentGrading = () => {
   // 设置已批改状态
   answer.is_marked = 1;
 };
+
 const nextStudent = () => {
   if (currentStudentIndex.value < gradingData.value.length - 1) {
     selectStudent(currentStudentIndex.value + 1);
   } else {
-    alert("所有学生已批改完成");
+    ElMessage.success("所有学生已批改完成");
   }
 };
 
@@ -1278,7 +1209,6 @@ const handleGlobalEnter = (e) => {
   saveAndNext();
 };
 
-// 保存所有批改（一次性提交）
 // 保存所有批改（一次性提交）
 const saveAllGrading = async () => {
   saving.value = true;

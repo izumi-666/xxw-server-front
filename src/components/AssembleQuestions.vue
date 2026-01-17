@@ -360,7 +360,7 @@
 
                 <span class="question-id">ID: {{ q.id }}</span>
                 <span class="question-type">{{
-                  getQuestionCategoryName(q.question_category_id)
+                  getQuestionCategoryText(q.question_category_id)
                 }}</span>
                 <div class="difficulty-stars">
                   <span
@@ -398,7 +398,7 @@
                 class="question-text-container"
                 :class="{ expanded: expandedQuestions[q.id] }"
               >
-                <div class="question-text" v-html="renderMarkdown(q.title)"></div>
+                <div class="question-text" v-html="markdownToHtml(q.title)"></div>
                 <div
                   class="expand-overlay"
                   v-if="!expandedQuestions[q.id] && isContentOverflowing(q.id)"
@@ -430,10 +430,10 @@
               <div
                 v-if="
                   q.question_category_id &&
-                  (getQuestionCategoryName(q.question_category_id) === '单选题' ||
-                    getQuestionCategoryName(q.question_category_id).includes('单选') ||
-                    getQuestionCategoryName(q.question_category_id) === '多选题' ||
-                    getQuestionCategoryName(q.question_category_id).includes('多选'))
+                  (getQuestionCategoryText(q.question_category_id) === '单选题' ||
+                    getQuestionCategoryText(q.question_category_id).includes('单选') ||
+                    getQuestionCategoryText(q.question_category_id) === '多选题' ||
+                    getQuestionCategoryText(q.question_category_id).includes('多选'))
                 "
                 class="question-options"
               >
@@ -444,14 +444,14 @@
                   :class="{ correct: isOptionCorrect(q, index) }"
                 >
                   <span class="option-label">{{ getOptionLabel(index) }}.</span>
-                  <span class="option-text" v-html="renderMarkdown(option)"></span>
+                  <span class="option-text" v-html="markdownToHtml(option)"></span>
                 </div>
               </div>
 
               <!-- 主观题答案 -->
               <div v-else-if="q.answer" class="question-answer">
                 <div class="answer-label">参考答案：</div>
-                <div class="answer-text" v-html="renderMarkdown(q.answer)"></div>
+                <div class="answer-text" v-html="markdownToHtml(q.answer)"></div>
               </div>
             </div>
 
@@ -608,7 +608,7 @@
               <!-- 右侧：题目内容 -->
               <div class="question-content">
                 <!-- 题干 -->
-                <div class="question-text" v-html="renderMarkdown(q.title)"></div>
+                <div class="question-text" v-html="markdownToHtml(q.title)"></div>
 
                 <!-- 分值区域（题目下方） -->
                 <div class="score-area">
@@ -643,10 +643,10 @@
                 <div
                   v-if="
                     q.question_category_id &&
-                    (getQuestionCategoryName(q.question_category_id) === '单选题' ||
-                      getQuestionCategoryName(q.question_category_id).includes('单选') ||
-                      getQuestionCategoryName(q.question_category_id) === '多选题' ||
-                      getQuestionCategoryName(q.question_category_id).includes('多选'))
+                    (getQuestionCategoryText(q.question_category_id) === '单选题' ||
+                      getQuestionCategoryText(q.question_category_id).includes('单选') ||
+                      getQuestionCategoryText(q.question_category_id) === '多选题' ||
+                      getQuestionCategoryText(q.question_category_id).includes('多选'))
                   "
                   class="question-options"
                 >
@@ -656,14 +656,14 @@
                     class="option-item"
                   >
                     <span class="option-label">{{ getOptionLabel(optIndex) }}.</span>
-                    <span class="option-text" v-html="renderMarkdown(option)"></span>
+                    <span class="option-text" v-html="markdownToHtml(option)"></span>
                   </div>
                 </div>
 
                 <!-- 答案（试卷预览时显示） -->
                 <div v-if="q.answer" class="question-answer">
                   <div class="answer-label">参考答案：</div>
-                  <div class="answer-text" v-html="renderMarkdown(q.answer)"></div>
+                  <div class="answer-text" v-html="markdownToHtml(q.answer)"></div>
                 </div>
 
                 <div class="question-actions">
@@ -814,7 +814,7 @@
                 >
                   <span class="score-question-number">第{{ index + 1 }}题</span>
                   <span class="score-question-type">{{
-                    getQuestionCategoryName(q.question_category_id)
+                    getQuestionCategoryText(q.question_category_id)
                   }}</span>
                   <span class="score-question-value">{{ q.score }}分</span>
                 </div>
@@ -926,8 +926,9 @@
 import { reactive, ref, onMounted, computed, nextTick, watch } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
-import { marked } from "marked";
 import * as echarts from "echarts";
+import { getQuestionCategoryText } from "../utils/questionCategory";
+import { markdownToHtml } from "../utils/markdownUtils";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -1057,7 +1058,7 @@ export default {
       const distribution = {};
 
       selectedQuestions.value.forEach((q) => {
-        const type = getQuestionCategoryName(q.question_category_id);
+        const type = getQuestionCategoryText(q.question_category_id);
         const score = Number(q.score) || 0;
 
         if (!distribution[type]) {
@@ -1088,7 +1089,7 @@ export default {
     const availableQuestionTypes = computed(() => {
       const types = new Set();
       selectedQuestions.value.forEach((q) => {
-        const type = getQuestionCategoryName(q.question_category_id);
+        const type = getQuestionCategoryText(q.question_category_id);
         types.add(type);
       });
       return Array.from(types);
@@ -1121,7 +1122,7 @@ export default {
 
       let total = 0;
       selectedQuestions.value.forEach((q) => {
-        const type = getQuestionCategoryName(q.question_category_id);
+        const type = getQuestionCategoryText(q.question_category_id);
         const score = typeScores[type] || 0;
         total += score;
       });
@@ -1168,7 +1169,7 @@ export default {
     // 获取题型题目数量
     const getTypeCount = (type) => {
       return selectedQuestions.value.filter(
-        (q) => getQuestionCategoryName(q.question_category_id) === type
+        (q) => getQuestionCategoryText(q.question_category_id) === type
       ).length;
     };
 
@@ -1181,7 +1182,7 @@ export default {
         });
       } else if (batchScoreMode.value === "type") {
         selectedQuestions.value.forEach((q) => {
-          const type = getQuestionCategoryName(q.question_category_id);
+          const type = getQuestionCategoryText(q.question_category_id);
           if (typeScores[type] !== undefined) {
             q.score = typeScores[type];
             q.scoreError = "";
@@ -1247,35 +1248,6 @@ export default {
         if (question.score > 100) question.score = 100;
       }
       question.scoreError = "";
-    };
-
-    // ==================== Markdown 渲染函数 ====================
-    const renderMarkdown = (text) => {
-      if (!text) return "";
-
-      const processedText = text
-        .replace(/\$\$(.+?)\$\$/g, (match, formula) => {
-          try {
-            return katex.renderToString(formula, {
-              displayMode: true,
-              throwOnError: false,
-            });
-          } catch (error) {
-            return match;
-          }
-        })
-        .replace(/\$(.+?)\$/g, (match, formula) => {
-          try {
-            return katex.renderToString(formula, {
-              displayMode: false,
-              throwOnError: false,
-            });
-          } catch (error) {
-            return match;
-          }
-        });
-
-      return marked(processedText);
     };
 
     // ==================== 试卷上传相关方法 ====================
@@ -1411,7 +1383,7 @@ export default {
 
     const isOptionCorrect = (question, index) => {
       const optionLabel = getOptionLabel(index);
-      const questionCategoryName = getQuestionCategoryName(question.question_category_id);
+      const questionCategoryName = getQuestionCategoryText(question.question_category_id);
 
       if (questionCategoryName === "单选题" || questionCategoryName.includes("单选")) {
         return question.answer === optionLabel;
@@ -1480,7 +1452,7 @@ export default {
     const getQuestionTypeCount = (type) => {
       if (type === "选择题") {
         return selectedQuestions.value.filter((q) => {
-          const categoryName = getQuestionCategoryName(q.question_category_id);
+          const categoryName = getQuestionCategoryText(q.question_category_id);
           return (
             categoryName === "单选题" ||
             categoryName.includes("单选") ||
@@ -1490,7 +1462,7 @@ export default {
         }).length;
       } else if (type === "主观题") {
         return selectedQuestions.value.filter((q) => {
-          const categoryName = getQuestionCategoryName(q.question_category_id);
+          const categoryName = getQuestionCategoryText(q.question_category_id);
           return !(
             categoryName === "单选题" ||
             categoryName.includes("单选") ||
@@ -1989,12 +1961,6 @@ export default {
       return item ? item.name : "-";
     };
 
-    const getQuestionCategoryName = (id) => {
-      if (id === null) return "-";
-      const item = questionCategoryList.value.find((c) => c.id === Number(id));
-      return item ? item.name : "-";
-    };
-
     const goBack = () => {
       router.go(-1);
     };
@@ -2119,7 +2085,7 @@ export default {
       showAlert,
       previewImage,
       closeImagePreview,
-      renderMarkdown,
+      markdownToHtml,
       getOptionLabel,
       getOptionsArray,
       isOptionCorrect,
@@ -2169,7 +2135,7 @@ export default {
       getSubjectName,
       getKnowledgePointName,
       getSolutionIdeaName,
-      getQuestionCategoryName,
+      getQuestionCategoryText,
 
       isBatchSelected,
       toggleBatchSelection,

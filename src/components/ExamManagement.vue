@@ -514,6 +514,7 @@ import { ref, onMounted, computed, watch, onBeforeUnmount } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { getBeijingTime } from "../utils/chinaTime";
 
 const router = useRouter();
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -567,7 +568,7 @@ const formatDateTimeForBackend = (datetimeLocalStr) => {
 
 // 时间选择不可用当前时间之前的时间
 const minStartTime = computed(() => {
-  const now = new Date();
+  const now = getBeijingTime();
   const pad = (n) => (n < 10 ? "0" + n : n);
 
   return (

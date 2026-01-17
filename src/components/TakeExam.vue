@@ -116,7 +116,7 @@
               >
             </div>
             <div class="question-type">
-              {{ getQuestionTypeText(currentQuestion.question_category_id) }}
+              {{ getQuestionCategoryText(currentQuestion.question_category_id) }}
             </div>
           </div>
 
@@ -399,10 +399,11 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { marked } from "marked";
-import katex from "katex";
-import "katex/dist/katex.min.css";
 import { onBeforeRouteLeave } from "vue-router";
+import { getBeijingTime } from "../utils/chinaTime";
+import { getQuestionCategoryText } from "../utils/questionCategory";
+import  ImageUploadTool  from "../utils/imageUpload";
+import { markdownToHtml } from "../utils/markdownUtils";
 
 const route = useRoute();
 const router = useRouter();
@@ -467,12 +468,6 @@ const insertFormula = (formula) => {
   });
 
   ElMessage.info(`已插入公式: ${formula.label}`);
-};
-
-/* ==================== 图床配置 ==================== */
-const IMAGE_BED_CONFIG = {
-  apiUrl: "https://xxwpic.flito.art/api/index.php", // 图床API地址
-  token: "1c17b11693cb5ec63859b091c5b9c1b2", // 图床API令牌
 };
 
 /* ==================== 数据状态 ==================== */
@@ -669,40 +664,6 @@ const getCurrentStudent = () => {
   return localStorage.getItem("userName") || "unknown_student";
 };
 
-/* ==================== 图片上传功能 ==================== */
-/**
- * 上传图片到图床
- * @param {File} file - 图片文件
- * @returns {Promise<string>} 图片URL
- */
-const uploadToImageBed = async (file) => {
-  try {
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("token", IMAGE_BED_CONFIG.token);
-
-    const response = await fetch(IMAGE_BED_CONFIG.apiUrl, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error(`上传失败: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if (result.code === 200 && result.result === "success") {
-      return result.url; // 返回图片URL
-    } else {
-      throw new Error("图床返回错误");
-    }
-  } catch (error) {
-    console.error("图片上传失败:", error);
-    throw new Error("图片上传失败，请重试");
-  }
-};
-
 // 触发图片上传
 const triggerImageUpload = () => {
   if (!currentQuestion.value) return;
@@ -723,27 +684,13 @@ const handleImageUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  // 验证文件类型
-  if (!file.type.startsWith("image/")) {
-    ElMessage.error("请选择图片文件");
-    event.target.value = "";
-    return;
-  }
-
-  // 验证文件大小（5MB限制）
-  if (file.size > 5 * 1024 * 1024) {
-    ElMessage.error("图片大小不能超过5MB");
-    event.target.value = "";
-    return;
-  }
-
   isUploading.value = true;
 
   try {
     ElMessage.info("图片正在上传...");
 
     // 上传图片到图床
-    const imageUrl = await uploadToImageBed(file);
+    const imageUrl = await ImageUploadTool.uploadImage(file);
 
     // 将图片URL保存到当前题目
     userImages.value[currentQuestion.value.id] = imageUrl;
@@ -922,44 +869,6 @@ const loadQuestions = async () => {
   }
 };
 
-/* ==================== Markdown渲染函数 ==================== */
-// 配置marked
-marked.setOptions({
-  breaks: true, // 转换换行符为<br>
-  gfm: true, // 使用GitHub风格的Markdown
-});
-
-// Markdown转HTML
-const markdownToHtml = (text) => {
-  if (!text) return "";
-
-  try {
-    let content = text;
-
-    // 块级公式 $$...$$
-    content = content.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) => {
-      return katex.renderToString(formula.trim(), {
-        displayMode: true,
-        throwOnError: false,
-      });
-    });
-
-    // 行内公式 $...$
-    content = content.replace(/\$([\s\S]+?)\$/g, (_, formula) => {
-      return katex.renderToString(formula.trim(), {
-        displayMode: false,
-        throwOnError: false,
-      });
-    });
-
-    // 直接返回 marked 结果
-    return marked(content);
-  } catch (err) {
-    console.error("Markdown 渲染失败:", err);
-    return text;
-  }
-};
-
 /* ==================== 计时器相关 ==================== */
 // 初始化考试计时器
 const initExamTimer = () => {
@@ -969,7 +878,7 @@ const initExamTimer = () => {
   if (examInfo.value.start_time) {
     // 计算已用时间
     const startTime = new Date(examInfo.value.start_time);
-    const now = new Date();
+    const now = getBeijingTime();
     const elapsedSeconds = Math.floor((now - startTime) / 1000);
 
     remainingTime.value = Math.max(examDurationSeconds.value - elapsedSeconds, 0);
@@ -1257,21 +1166,6 @@ const handleVisibilityChange = () => {
   }
 };
 
-/* ==================== 工具函数 ==================== */
-// 获取题目类型文本
-const getQuestionTypeText = (markingType) => {
-  const typeMap = {
-    1: "单选题",
-    2: "多选题",
-    3: "证明题",
-    4: "解答题",
-    5: "填空题",
-    6: "计算题",
-    7: "判断题",
-    8: "作图题",
-  };
-  return typeMap[markingType] || "未知题型";
-};
 </script>
 
 <style scoped>

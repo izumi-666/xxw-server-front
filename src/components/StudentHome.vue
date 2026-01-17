@@ -72,7 +72,7 @@
             <el-icon><Calendar /></el-icon>
             <span>自主练题</span>
           </el-menu-item>
-          <el-menu-item index="mistakes-book">
+          <el-menu-item index="student-mistakes-book">
             <el-icon><EditPen /></el-icon>
             <span>错题本</span>
           </el-menu-item>
@@ -97,14 +97,11 @@
     <div class="main-content" :class="{ 'content-expanded': isCollapsed }">
       <!-- 顶部栏 -->
       <div class="top-bar">
-        <div class="breadcrumb">
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item>{{ currentModule }}</el-breadcrumb-item>
-            <el-breadcrumb-item v-if="currentPage">
-              {{ currentPage }}
-            </el-breadcrumb-item>
-          </el-breadcrumb>
-        </div>
+        <el-breadcrumb separator="/">
+          <el-breadcrumb-item v-for="(item, index) in breadcrumbs" :key="index">
+            {{ item }}
+          </el-breadcrumb-item>
+        </el-breadcrumb>
 
         <div class="top-bar-actions">
           <!-- <el-button type="text" @click="showNotifications">
@@ -166,12 +163,16 @@
 export default {
   name: "StudentHome",
 
+  computed: {
+    breadcrumbs() {
+      return this.$route.meta?.breadcrumb || [];
+    },
+  },
+
   data() {
     return {
       isCollapsed: false,
       activeMenu: "student-dashboard",
-      currentModule: "首页",
-      currentPage: "仪表板",
       userName: localStorage.getItem("userName") || "学生",
       // notificationCount: 2,
       showNotificationDrawer: false,
@@ -207,56 +208,13 @@ export default {
       this.activeMenu = index;
 
       const routes = {
-        "student-dashboard": {
-          path: "/student/studentdashboard",
-          module: "首页",
-          page: "仪表板",
-        },
-        // "self-analysis": {
-        //   path: "/student/self/analysis",
-        //   module: "自我分析",
-        //   page: "数据分析",
-        // },
-        "exam-management": {
-          path: "/student/exammanagement",
-          module: "考试中心",
-        },
-        // homework: {
-        //   path: "/student/homework",
-        //   module: "课后作业",
-        //   page: "作业列表",
-        // },
-        // "online-class": {
-        //   path: "/student/online/class",
-        //   module: "线上课堂",
-        //   page: "课程直播",
-        // },
-        // "learning-resources": {
-        //   path: "/student/self/study/resources",
-        //   module: "自主学习",
-        //   page: "学习资源",
-        // },
-        // "study-plan": {
-        //   path: "/student/self/study/plan",
-        //   module: "自主学习",
-        //   page: "学习计划",
-        // },
-        // "mistakes-book": {
-        //   path: "/student/self/study/mistakes",
-        //   module: "自主学习",
-        //   page: "错题本",
-        // },
-        // "student-settings": {
-        //   path: "/student/settings",
-        //   module: "设置",
-        //   page: "个人设置",
-        // },
+        "student-dashboard": "/student/studentdashboard",
+        "exam-management": "/student/exammanagement",
+        "student-mistakes-book": "/student/mistakesbook",
       };
 
       if (routes[index]) {
-        this.currentModule = routes[index].module;
-        this.currentPage = routes[index].page;
-        this.$router.push(routes[index].path);
+        this.$router.push(routes[index]);
       }
     },
 

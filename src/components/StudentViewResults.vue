@@ -238,7 +238,7 @@
                     <tbody>
                       <tr v-for="(q, index) in questionDetails" :key="index">
                         <td>第{{ index + 1 }}题</td>
-                        <td>{{ getQuestionType(q.question_category_id) }}</td>
+                        <td>{{ getQuestionCategoryText(q.question_category_id) }}</td>
                         <td>
                           <span class="difficulty-stars">
                             <span
@@ -335,7 +335,7 @@
               <h3>题目内容</h3>
               <div class="question-meta">
                 <span class="meta-item"
-                  >题型：{{ getQuestionType(currentQuestion.question_category_id) }}</span
+                  >题型：{{ getQuestionCategoryText(currentQuestion.question_category_id) }}</span
                 >
                 <span class="meta-item difficulty">
                   难度：
@@ -553,11 +553,10 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
-import { marked } from "marked";
-import katex from "katex";
-import "katex/dist/katex.min.css";
 import { ElMessage } from "element-plus";
 import Chart from "chart.js/auto";
+import { getQuestionCategoryText } from "../utils/questionCategory"; 
+import { markdownToHtml } from "../utils/markdownUtils";
 
 const route = useRoute();
 const router = useRouter();
@@ -627,31 +626,21 @@ const totalQuestions = computed(() => {
 const totalScore = computed(() => {
   // 优先使用examHistory中的总分
   if (examHistory.value && examHistory.value.total_score !== undefined) {
-    console.log(
-      "使用examHistory总分:",
-      examHistory.value.total_score,
-      "examHistory数据:",
-      examHistory.value
-    );
     return examHistory.value.total_score;
   }
 
   // 如果examHistory没有，尝试使用resultData中的total_score
   if (resultData.value && resultData.value.total_score !== undefined) {
-    console.log("使用resultData总分:", resultData.value.total_score);
     return resultData.value.total_score;
   }
 
   // 如果都没有，返回0
-  console.log("未找到总分，返回0");
   return 0;
 });
 
 // 满分 - 从scores数组计算
 const maxScore = computed(() => {
   if (!resultData.value?.scores || resultData.value.scores.length === 0) {
-    console.log("没有scores数组，从题目计算满分");
-
     // 如果没有scores数组，就从questions中的分值计算
     if (resultData.value?.questions) {
       const total = resultData.value.questions.reduce((sum, question) => {
@@ -663,14 +652,12 @@ const maxScore = computed(() => {
             5)
         );
       }, 0);
-      console.log("从题目计算出的满分:", total);
       return total;
     }
     return 0;
   }
 
   const total = resultData.value.scores.reduce((sum, score) => sum + score, 0);
-  console.log("从scores数组计算的满分:", total, "scores:", resultData.value.scores);
   return total;
 });
 
@@ -695,7 +682,6 @@ const accuracy = computed(() => {
   if (maxScore.value === 0) return 0;
 
   const percentage = Math.round((actualScore / maxScore.value) * 100);
-  console.log(`正确率: ${actualScore}/${maxScore.value} = ${percentage}%`);
   return percentage;
 });
 
@@ -741,7 +727,7 @@ const questionTypeStats = computed(() => {
   const stats = {};
   resultData.value.questions.forEach((question, index) => {
     const typeId = question.question_category_id;
-    const typeName = getQuestionType(typeId);
+    const typeName = getQuestionCategoryText(typeId);
     const score = resultData.value.answer_records[index]?.score || 0;
     const fullScore = getQuestionScore(index);
 
@@ -1319,13 +1305,9 @@ const loadExamHistory = async () => {
       throw new Error("用户信息获取失败");
     }
 
-    console.log("加载考试历史记录，学生:", userInfo.account, "考试ID:", examId.value);
-
     const res = await axios.get(
       `${API_BASE}/exam/getExamHistoryByStudent/${userInfo.account}`
     );
-
-    console.log("考试历史记录API响应:", res.data);
 
     if (res.data.code === 200 && res.data.data) {
       // 查找当前考试的历史记录
@@ -1335,9 +1317,6 @@ const loadExamHistory = async () => {
 
       if (history) {
         examHistory.value = history;
-        console.log("找到考试历史记录:", history);
-        console.log("总分字段total_score:", history.total_score);
-        console.log("是否已批改is_marked:", history.is_marked);
 
         return {
           graded: history.is_marked === 1,
@@ -1367,19 +1346,12 @@ const loadResultData = async () => {
       throw new Error("用户信息获取失败");
     }
 
-    console.log("=== 开始加载考试结果 ===");
-    console.log("考试ID:", examId.value, "学生:", userInfo.account);
-
     // 1. 先加载考试历史记录
     const historyResult = await loadExamHistory();
 
-    console.log("考试历史记录结果:", historyResult);
-
     if (!historyResult.graded) {
-      console.log("试卷尚未批改");
 
       if (historyResult.history) {
-        console.log("找到历史记录但未批改:", historyResult.history);
         ElMessage.info("试卷正在批改中，请稍后再查看结果");
       } else {
         ElMessage.warning("未找到您的考试记录");
@@ -1391,14 +1363,10 @@ const loadResultData = async () => {
     }
 
     // 2. 试卷已批改，获取详细结果
-    console.log("试卷已批改，获取详细答题记录");
     const resultRes = await axios.get(`${API_BASE}/exam/getAnswerRecord/${examId.value}`);
-
-    console.log("答题记录API响应:", resultRes.data);
 
     if (resultRes.data.code === 200 && resultRes.data.data) {
       const allRecords = resultRes.data.data;
-      console.log("所有记录数量:", allRecords.length);
 
       // 查找当前学生的记录
       const currentStudentRecord = allRecords.find((record) => {
@@ -1409,20 +1377,6 @@ const loadResultData = async () => {
       });
 
       if (currentStudentRecord) {
-        console.log("找到学生答题记录:", currentStudentRecord);
-
-        // 计算每道题的学生得分总和（用于验证）
-        let calculatedTotalScore = 0;
-        if (currentStudentRecord.answer_records) {
-          calculatedTotalScore = currentStudentRecord.answer_records.reduce(
-            (sum, record) => {
-              return sum + (record.score || 0);
-            },
-            0
-          );
-          console.log("从答题记录计算的得分总和:", calculatedTotalScore);
-        }
-
         // 构建结果数据
         resultData.value = {
           ...currentStudentRecord,
@@ -1431,12 +1385,6 @@ const loadResultData = async () => {
           examiner: historyResult.history?.examiner || "未指定",
           report_json: historyResult.history?.report_json || "无",
         };
-
-        console.log("最终结果数据:");
-        console.log("- 使用的总分:", resultData.value.total_score);
-        console.log("- 计算的总分:", calculatedTotalScore);
-        console.log("- 批改老师:", resultData.value.examiner);
-        console.log("- 总评语:", resultData.value.report_json);
 
         // 格式化选择题选项
         if (resultData.value.questions) {
@@ -1463,13 +1411,10 @@ const loadResultData = async () => {
 
         // 调试信息：显示所有题目的得分
         if (resultData.value.answer_records) {
-          console.log("=== 题目得分详情 ===");
           resultData.value.answer_records.forEach((record, index) => {
-            console.log(`第${index + 1}题: 得分 ${record.score || 0}`);
           });
         }
       } else {
-        console.log("未找到该学生的详细答题记录");
         ElMessage.warning("未找到您的详细答题记录");
       }
     }
@@ -1505,21 +1450,6 @@ const getUserInfo = () => {
   }
 };
 
-// 获取题目类型
-const getQuestionType = (typeId) => {
-  const typeMap = {
-    1: "单选题",
-    2: "多选题",
-    3: "证明题",
-    4: "解答题",
-    5: "填空题",
-    6: "计算题",
-    7: "判断题",
-    8: "作图题",
-  };
-  return typeMap[typeId] || "未知题型";
-};
-
 // 获取知识点名称
 const getKnowledgePointName = (pointId) => {
   return knowledgePoints.value[pointId] || `知识点${pointId}`;
@@ -1545,7 +1475,6 @@ const getQuestionScore = (questionIndex) => {
 const getStudentScore = (questionIndex) => {
   const answer = resultData.value?.answer_records?.[questionIndex];
   const score = answer?.score || 0;
-  console.log(`第${questionIndex + 1}题得分:`, score);
   return score;
 };
 
@@ -1612,35 +1541,6 @@ const formatDate = (dateString) => {
   } catch (error) {
     console.error("日期格式化失败:", error);
     return dateString;
-  }
-};
-
-/* ==================== Markdown渲染函数 ==================== */
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-});
-
-const markdownToHtml = (text) => {
-  if (!text) return "";
-  try {
-    let content = text;
-    content = content.replace(/\$\$([\s\S]+?)\$\$/g, (_, formula) => {
-      return katex.renderToString(formula.trim(), {
-        displayMode: true,
-        throwOnError: false,
-      });
-    });
-    content = content.replace(/\$([\s\S]+?)\$/g, (_, formula) => {
-      return katex.renderToString(formula.trim(), {
-        displayMode: false,
-        throwOnError: false,
-      });
-    });
-    return marked(content);
-  } catch (err) {
-    console.error("Markdown 渲染失败:", err);
-    return text;
   }
 };
 

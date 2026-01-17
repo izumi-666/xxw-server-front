@@ -240,6 +240,7 @@ import { ref, reactive, computed, onMounted, watch } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
+import { getSchoolList } from "../utils/schoolList";
 
 const router = useRouter();
 
@@ -281,8 +282,14 @@ const loading = ref(false);
 const showPassword = ref(false);
 const showForm = ref(false);
 const accountType = ref(""); // 'student' 或 'staff'
-const schoolList = ref([]); // 学校列表
-const loadingSchoolList = ref(false); // 加载学校列表状态
+
+const {
+  schoolList,
+  loadingSchoolList,
+  fetchSchoolList,
+  resetSchoolList
+} = getSchoolList();
+
 const roleList = ref([]); // 权限列表
 const loadingRoles = ref(false); // 加载权限列表状态
 
@@ -369,25 +376,6 @@ const fetchRoleList = async () => {
     ElMessage.error("获取权限列表失败，请稍后重试");
   } finally {
     loadingRoles.value = false;
-  }
-};
-
-// 获取学校列表
-const fetchSchoolList = async () => {
-  loadingSchoolList.value = true;
-  try {
-    const res = await axios.get(`${API_BASE}/questions/getSchoolList`);
-
-    schoolList.value = Object.entries(res.data.data || {}).map(([id, name]) => ({
-      id: Number(id),
-      name,
-    }));
-  } catch (error) {
-    console.error("获取学校列表失败:", error);
-    schoolList.value = [];
-    ElMessage.error("获取学校列表失败，请稍后重试");
-  } finally {
-    loadingSchoolList.value = false;
   }
 };
 
@@ -528,6 +516,7 @@ const closeForm = () => {
   showForm.value = false;
   accountType.value = "";
   resetForm();
+  resetSchoolList();
 };
 
 const resetForm = () => {
