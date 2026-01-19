@@ -72,6 +72,10 @@
             <el-icon><Calendar /></el-icon>
             <span>自主练题</span>
           </el-menu-item>
+          <el-menu-item index="self-assessment">
+            <el-icon><Document /></el-icon>
+            <span>自我评测</span>
+          </el-menu-item>
           <el-menu-item index="student-mistakes-book">
             <el-icon><EditPen /></el-icon>
             <span>错题本</span>
@@ -211,6 +215,7 @@ export default {
         "student-dashboard": "/student/studentdashboard",
         "exam-management": "/student/exammanagement",
         "student-mistakes-book": "/student/mistakesbook",
+        "self-assessment": "/student/selfassessment"
       };
 
       if (routes[index]) {

@@ -335,7 +335,9 @@
               <h3>题目内容</h3>
               <div class="question-meta">
                 <span class="meta-item"
-                  >题型：{{ getQuestionCategoryText(currentQuestion.question_category_id) }}</span
+                  >题型：{{
+                    getQuestionCategoryText(currentQuestion.question_category_id)
+                  }}</span
                 >
                 <span class="meta-item difficulty">
                   难度：
@@ -481,20 +483,30 @@
           <!-- 知识点 -->
           <div
             v-if="
-              currentQuestion.sub_knowledge_point_ids &&
-              currentQuestion.sub_knowledge_point_ids.length > 0
+              currentQuestion.knowledge_point_id ||
+              (currentQuestion.sub_knowledge_point_ids &&
+                currentQuestion.sub_knowledge_point_ids.length > 0)
             "
             class="knowledge-points"
           >
             <div class="section-header">
               <h3>相关知识点</h3>
             </div>
+
             <div class="points-list">
+              <!-- 主知识点（红色标签） -->
               <span
-                v-for="pointId in currentQuestion.sub_knowledge_point_ids"
+                v-if="currentQuestion.knowledge_point_id"
+                class="point-tag main-point"
+              >
+                {{ getKnowledgePointName(currentQuestion.knowledge_point_id) }}
+              </span>
+
+              <!-- 副知识点（绿色标签） -->
+              <span
+                v-for="pointId in currentQuestion.sub_knowledge_point_ids || []"
                 :key="pointId"
-                class="point-tag"
-                :class="getKnowledgePointClass(pointId)"
+                class="point-tag sub-point"
               >
                 {{ getKnowledgePointName(pointId) }}
               </span>
@@ -555,8 +567,9 @@ import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { ElMessage } from "element-plus";
 import Chart from "chart.js/auto";
-import { getQuestionCategoryText } from "../utils/questionCategory"; 
+import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
+import { getKnowledgePointName, fetchKnowledgePointList } from "../utils/knowledgeList";
 
 const route = useRoute();
 const router = useRouter();
@@ -848,16 +861,16 @@ const initCurrentTabChart = () => {
   try {
     // 根据当前活跃标签初始化对应图表
     switch (activeChartTab.value) {
-      case 'overall':
+      case "overall":
         if (!chartInstances.overallScore) createOverallScoreChart();
         break;
-      case 'type':
+      case "type":
         if (!chartInstances.typeScore) createTypeAnalysisCharts();
         break;
-      case 'difficulty':
+      case "difficulty":
         if (!chartInstances.difficultyScore) createDifficultyAnalysisCharts();
         break;
-      case 'details':
+      case "details":
         if (!chartInstances.questionScore) createQuestionScoreChart();
         break;
     }
@@ -1236,13 +1249,13 @@ const getScoreRateClass = (rate) => {
 watch(activeChartTab, (newTab, oldTab) => {
   // 销毁旧标签的图表（可选）
   switch (oldTab) {
-    case 'overall':
+    case "overall":
       if (chartInstances.overallScore) {
         chartInstances.overallScore.destroy();
         chartInstances.overallScore = null;
       }
       break;
-    case 'type':
+    case "type":
       if (chartInstances.typeScore) {
         chartInstances.typeScore.destroy();
         chartInstances.typeScore = null;
@@ -1252,7 +1265,7 @@ watch(activeChartTab, (newTab, oldTab) => {
         chartInstances.typeDistribution = null;
       }
       break;
-    case 'difficulty':
+    case "difficulty":
       if (chartInstances.difficultyScore) {
         chartInstances.difficultyScore.destroy();
         chartInstances.difficultyScore = null;
@@ -1262,14 +1275,14 @@ watch(activeChartTab, (newTab, oldTab) => {
         chartInstances.difficultyDistribution = null;
       }
       break;
-    case 'details':
+    case "details":
       if (chartInstances.questionScore) {
         chartInstances.questionScore.destroy();
         chartInstances.questionScore = null;
       }
       break;
   }
-  
+
   // 延迟初始化新标签的图表
   nextTick(() => {
     setTimeout(() => {
@@ -1346,11 +1359,13 @@ const loadResultData = async () => {
       throw new Error("用户信息获取失败");
     }
 
-    // 1. 先加载考试历史记录
+    // 加载知识点映射
+    await loadKnowledgePoints();
+
+    // 加载考试历史记录
     const historyResult = await loadExamHistory();
 
     if (!historyResult.graded) {
-
       if (historyResult.history) {
         ElMessage.info("试卷正在批改中，请稍后再查看结果");
       } else {
@@ -1362,7 +1377,7 @@ const loadResultData = async () => {
       return;
     }
 
-    // 2. 试卷已批改，获取详细结果
+    // 试卷已批改，获取详细结果
     const resultRes = await axios.get(`${API_BASE}/exam/getAnswerRecord/${examId.value}`);
 
     if (resultRes.data.code === 200 && resultRes.data.data) {
@@ -1411,8 +1426,7 @@ const loadResultData = async () => {
 
         // 调试信息：显示所有题目的得分
         if (resultData.value.answer_records) {
-          resultData.value.answer_records.forEach((record, index) => {
-          });
+          resultData.value.answer_records.forEach((record, index) => {});
         }
       } else {
         ElMessage.warning("未找到您的详细答题记录");
@@ -1429,12 +1443,10 @@ const loadResultData = async () => {
 // 加载知识点
 const loadKnowledgePoints = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/questions/getKnowledgePointList`);
-    if (res.data.code === 200 && res.data.data) {
-      knowledgePoints.value = res.data.data;
-    }
+    // 使用工具函数获取知识点映射
+    await fetchKnowledgePointList();
   } catch (error) {
-    console.warn("加载知识点失败:", error);
+    console.error("加载知识点失败:", error);
   }
 };
 
@@ -1448,19 +1460,6 @@ const getUserInfo = () => {
     console.error("获取用户信息失败:", error);
     return null;
   }
-};
-
-// 获取知识点名称
-const getKnowledgePointName = (pointId) => {
-  return knowledgePoints.value[pointId] || `知识点${pointId}`;
-};
-
-// 获取知识点类名（用于标记掌握情况）
-const getKnowledgePointClass = (pointId) => {
-  const percentage = getScorePercentage(currentQuestionIndex.value);
-  if (percentage >= 80) return "point-mastered";
-  else if (percentage >= 60) return "point-partial";
-  else return "point-weak";
 };
 
 // 获取题目分值
@@ -1550,7 +1549,7 @@ const selectQuestion = (index) => {
 };
 
 const goBack = () => {
-  router.back();
+  router.push('/student/exammanagement');
 };
 
 // ==================== 生命周期 ====================
@@ -2103,10 +2102,27 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+/* ==================== 知识点展示样式 ==================== */
 .points-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* 知识点分组 */
+.knowledge-point-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.point-label {
+  font-size: 12px;
+  color: #909399;
+  font-weight: 600;
+  min-width: 24px;
 }
 
 .point-tag {
@@ -2115,24 +2131,35 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 500;
   display: inline-block;
+  transition: all 0.3s;
 }
 
-.point-mastered {
-  background: #f0f9eb;
-  color: #67c23a;
-  border: 1px solid #e1f3d8;
-}
-
-.point-partial {
-  background: #fdf6ec;
-  color: #e6a23c;
-  border: 1px solid #faecd8;
-}
-
-.point-weak {
+/* 主知识点样式（红色） */
+.point-tag.main-point {
   background: #fef0f0;
   color: #f56c6c;
   border: 1px solid #fde2e2;
+  box-shadow: 0 1px 3px rgba(245, 108, 108, 0.1);
+}
+
+.point-tag.main-point:hover {
+  background: #fde2e2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(245, 108, 108, 0.2);
+}
+
+/* 副知识点样式（绿色） */
+.point-tag.sub-point {
+  background: #f0f9eb;
+  color: #67c23a;
+  border: 1px solid #e1f3d8;
+  box-shadow: 0 1px 3px rgba(103, 194, 58, 0.1);
+}
+
+.point-tag.sub-point:hover {
+  background: #e1f3d8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(103, 194, 58, 0.2);
 }
 
 .mistake-summary .summary-content {
@@ -2240,7 +2267,7 @@ onMounted(() => {
 }
 
 .not-graded-content .btn-primary::before {
-  content: '⟳';
+  content: "⟳";
   font-size: 18px;
   font-weight: bold;
 }
@@ -2252,32 +2279,32 @@ onMounted(() => {
     min-height: 400px;
     padding: 20px;
   }
-  
+
   .loading-content,
   .not-graded-content {
     padding: 40px 20px;
     margin: 0 20px;
   }
-  
+
   .loading-spinner {
     width: 50px;
     height: 50px;
   }
-  
+
   .not-graded-content svg {
     width: 80px;
     height: 80px;
   }
-  
+
   .not-graded-content h3 {
     font-size: 22px;
   }
-  
+
   .not-graded-content p {
     font-size: 15px;
     padding: 0 10px;
   }
-  
+
   .not-graded-content .btn-primary {
     padding: 10px 24px;
     font-size: 15px;
@@ -2291,20 +2318,20 @@ onMounted(() => {
     padding: 30px 16px;
     gap: 16px;
   }
-  
+
   .not-graded-content svg {
     width: 70px;
     height: 70px;
   }
-  
+
   .not-graded-content h3 {
     font-size: 20px;
   }
-  
+
   .not-graded-content p {
     font-size: 14px;
   }
-  
+
   .not-graded-content .btn-primary {
     padding: 10px 20px;
     font-size: 14px;
