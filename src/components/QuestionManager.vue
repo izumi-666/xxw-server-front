@@ -2282,6 +2282,9 @@ const filteredMergeKnowledgePoints = ref([]); // 过滤后的合并知识点列�
 const filteredMergedKnowledgePoints = ref([]); // 过滤后的合并后知识点列表
 const affectedQuestions = ref([]); // 受影响的题目列表
 const affectedQuestionsTotalItems = ref(0); // 受影响题目总条目数
+const affectedQuestionsTotalPages = ref(1);
+const affectedQuestionsPageNum = ref(1);
+const affectedQuestionsPageInput = ref(1);
 const isMerging = ref(false); // 合并操作进行中状态
 
 // ==================== 编辑知识点相关状态 ====================
