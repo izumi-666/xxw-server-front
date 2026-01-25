@@ -83,6 +83,11 @@
           <span>题库录入</span>
         </el-menu-item>
 
+        <el-menu-item index="knowledgepoint-management">
+          <el-icon><Document /></el-icon>
+          <span>知识点管理</span>
+        </el-menu-item>
+
         <el-menu-item index="settings">
           <el-icon><Setting /></el-icon>
           <span>个人设置</span>
@@ -248,6 +253,11 @@ export default {
           page: "题库管理",
         },
         // settings: { path: "/teacher/settings", module: "个人设置", page: "账户设置" },
+        "knowledgepoint-management": {
+          path: "/teacher/knowledgepointmanagement",
+          module: "知识点管理",
+          page: "知识点管理",
+        },
       };
 
       if (routes[index]) {

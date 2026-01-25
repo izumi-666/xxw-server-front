@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import Login from "../Login.vue";
 import QuestionManager from "../components/QuestionManager.vue";
 import PaperManagement from "../components/PaperManagement.vue";
-import ExamManagement from "../components/ExamManagement.vue"; //教师用
+import ExamManagement from "../components/ExamManagement.vue"; //考试管理(教师用)
+import KnowledgePointManagement from "../components/KnowledgePointManagement.vue";//知识点管理
 import AssessExam from "../components/AssessExam.vue"; //批改考试
 import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
 import TakeExam from "../components/TakeExam.vue"; //学生参加考试
@@ -131,6 +132,15 @@ const routes = [
         meta: {
           requiresAuth: true,
           breadcrumb: ["班级课堂", "考试中心", "批改考试"]
+        }
+      },
+      {
+        path: "knowledgepointmanagement",
+        name: "knowledge-point-management",
+        component: KnowledgePointManagement,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["教学管理", "知识点管理"]
         }
       },
       {
