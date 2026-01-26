@@ -498,21 +498,21 @@ const canSaveUpdatedName = computed(() => {
 // 按sort_order排序的知识点树
 const sortedKnowledgeTree = computed(() => {
   const sortTree = (nodes) => {
-    if (!nodes || !nodes.length) return [];
+    if (!nodes || !nodes.length) return nodes;
 
-    // 先对当前层级排序
-    const sortedNodes = [...nodes].sort((a, b) => {
-      // 确保sort_order是数字类型
+    nodes.sort((a, b) => {
       const orderA = Number(a.sort_order) || 0;
       const orderB = Number(b.sort_order) || 0;
       return orderA - orderB;
     });
 
-    // 递归对子节点排序
-    return sortedNodes.map((node) => ({
-      ...node,
-      children: node.children ? sortTree(node.children) : [],
-    }));
+    nodes.forEach(node => {
+      if (node.children?.length) {
+        sortTree(node.children);
+      }
+    });
+
+    return nodes;
   };
 
   return sortTree(KnowledgePointTree.value);

@@ -2641,9 +2641,9 @@ const getPreviewKnowledgePointName = () => {
   // 根据当前模式选择正确的知识点树数据
   let treeData = [];
   if (previewMode.value === "upload") {
-    treeData = knowledgeTreeData.value;
+    treeData = sortedKnowledgeTreeData.value; // 改为排序后的数据
   } else {
-    treeData = updateFormKnowledgeTreeData.value;
+    treeData = sortedUpdateFormKnowledgeTreeData.value; // 改为排序后的数据
   }
 
   // 递归在树中查找节点
@@ -2674,9 +2674,9 @@ const getPreviewSubKnowledgePoints = () => {
   // 根据当前模式选择正确的知识点树数据
   let treeData = [];
   if (previewMode.value === "upload") {
-    treeData = subKnowledgeTreeData.value;
+    treeData = sortedSubKnowledgeTreeData.value; // 改为排序后的数据
   } else {
-    treeData = updateFormSubKnowledgeTreeData.value;
+    treeData = sortedUpdateFormSubKnowledgeTreeData.value; // 改为排序后的数据
   }
 
   // 递归在树中查找多个节点
@@ -3520,15 +3520,17 @@ const filterUpdateFormQuestionCategories = () => {
 };
 
 /**
- * 过滤更新表单副知识点列表
+ * 过滤更新表单副知识点树
  */
-const filterUpdateFormSubKnowledgePoints = () => {
+const filterUpdateFormSubKnowledgeTree = () => {
   if (!updateFormSubKnowledgeSearch.value) {
-    filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value;
+    updateFormSubKnowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalUpdateFormSubKnowledgeTreeData.value)));
   } else {
-    filteredUpdateFormSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-      kp.name.toLowerCase().includes(updateFormSubKnowledgeSearch.value.toLowerCase())
+    const filtered = filterTreeByKeyword(
+      JSON.parse(JSON.stringify(originalUpdateFormSubKnowledgeTreeData.value)),
+      updateFormSubKnowledgeSearch.value
     );
+    updateFormSubKnowledgeTreeData.value = sortTreeByOrder(filtered);
   }
 };
 
@@ -3828,6 +3830,75 @@ const loadLists = async () => {
 
 // ==================== 知识点树相关方法 ====================
 /**
+ * 按 sort_order 排序知识点树
+ * @param {Array} nodes - 知识点树节点数组
+ * @returns {Array} 排序后的节点数组
+ */
+const sortTreeByOrder = (nodes) => {
+  if (!nodes || !nodes.length) return nodes;
+
+  // 对当前层级的节点按 sort_order 排序
+  const sortedNodes = nodes.sort((a, b) => {
+    const orderA = Number(a.sort_order) || 0;
+    const orderB = Number(b.sort_order) || 0;
+    return orderA - orderB;
+  });
+
+  // 递归排序子节点
+  sortedNodes.forEach((node) => {
+    if (node.children && node.children.length) {
+      node.children = sortTreeByOrder(node.children);
+    }
+  });
+
+  return sortedNodes;
+};
+
+// ==================== 按 sort_order 排序的知识点树计算属性 ====================
+
+/**
+ * 按 sort_order 排序的上传知识点树
+ */
+const sortedKnowledgeTreeData = computed(() => {
+  return sortTreeByOrder(JSON.parse(JSON.stringify(knowledgeTreeData.value)));
+});
+
+/**
+ * 按 sort_order 排序的上传副知识点树
+ */
+const sortedSubKnowledgeTreeData = computed(() => {
+  return sortTreeByOrder(JSON.parse(JSON.stringify(subKnowledgeTreeData.value)));
+});
+
+/**
+ * 按 sort_order 排序的更新界面知识点树
+ */
+const sortedUpdateKnowledgeTreeData = computed(() => {
+  return sortTreeByOrder(JSON.parse(JSON.stringify(updateKnowledgeTreeData.value)));
+});
+
+/**
+ * 按 sort_order 排序的更新界面副知识点树
+ */
+const sortedUpdateSubKnowledgeTreeData = computed(() => {
+  return sortTreeByOrder(JSON.parse(JSON.stringify(updateSubKnowledgeTreeData.value)));
+});
+
+/**
+ * 按 sort_order 排序的更新表单知识点树
+ */
+const sortedUpdateFormKnowledgeTreeData = computed(() => {
+  return sortTreeByOrder(JSON.parse(JSON.stringify(updateFormKnowledgeTreeData.value)));
+});
+
+/**
+ * 按 sort_order 排序的更新表单副知识点树
+ */
+const sortedUpdateFormSubKnowledgeTreeData = computed(() => {
+  return sortTreeByOrder(JSON.parse(JSON.stringify(updateFormSubKnowledgeTreeData.value)));
+});
+
+/**
  * 加载知识点树数据
  * @param {string} type - 类型：'upload', 'uploadSub', 'update', 'updateForm', 'updateFormSub'
  * @param {number} subjectId - 科目ID
@@ -3858,14 +3929,22 @@ const loadKnowledgeTree = async (type, subjectId, gradeId) => {
     const res = await axios.get(url);
     const data = res.data.data || [];
 
-    // 修改这里：默认所有节点都展开
+    // 添加展开属性，并按 sort_order 排序
     const addExpandedProperty = (nodes) => {
-      return nodes.map((node) => {
+      // 首先对当前层级的节点按 sort_order 排序
+      const sortedNodes = nodes.sort((a, b) => {
+        const orderA = Number(a.sort_order) || 0;
+        const orderB = Number(b.sort_order) || 0;
+        return orderA - orderB;
+      });
+
+      return sortedNodes.map((node) => {
         const newNode = {
           ...node,
           expanded: true, // 默认展开所有节点
         };
         if (node.children && node.children.length) {
+          // 递归处理子节点
           newNode.children = addExpandedProperty(node.children);
         }
         return newNode;
@@ -3927,7 +4006,7 @@ const loadKnowledgeTree = async (type, subjectId, gradeId) => {
  * @returns {Array} 过滤后的节点数组
  */
 const filterTreeByKeyword = (nodes, keyword) => {
-  if (!keyword) return nodes;
+  if (!keyword) return sortTreeByOrder(nodes);
 
   const filtered = [];
 
@@ -3950,7 +4029,8 @@ const filterTreeByKeyword = (nodes, keyword) => {
     }
   });
 
-  return filtered;
+  // 过滤后按 sort_order 排序
+  return sortTreeByOrder(filtered);
 };
 
 // ==================== 上传界面的知识点树方法 ====================
@@ -3993,12 +4073,13 @@ watch(
  */
 const filterKnowledgeTree = () => {
   if (!knowledgeSearch.value) {
-    knowledgeTreeData.value = JSON.parse(JSON.stringify(originalKnowledgeTreeData.value));
+    knowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalKnowledgeTreeData.value)));
   } else {
-    knowledgeTreeData.value = filterTreeByKeyword(
+    const filtered = filterTreeByKeyword(
       JSON.parse(JSON.stringify(originalKnowledgeTreeData.value)),
       knowledgeSearch.value
     );
+    knowledgeTreeData.value = sortTreeByOrder(filtered);
   }
 };
 
@@ -4007,14 +4088,13 @@ const filterKnowledgeTree = () => {
  */
 const filterSubKnowledgeTree = () => {
   if (!subKnowledgeSearch.value) {
-    subKnowledgeTreeData.value = JSON.parse(
-      JSON.stringify(originalSubKnowledgeTreeData.value)
-    );
+    subKnowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalSubKnowledgeTreeData.value)));
   } else {
-    subKnowledgeTreeData.value = filterTreeByKeyword(
+    const filtered = filterTreeByKeyword(
       JSON.parse(JSON.stringify(originalSubKnowledgeTreeData.value)),
       subKnowledgeSearch.value
     );
+    subKnowledgeTreeData.value = sortTreeByOrder(filtered);
   }
 };
 
@@ -4023,7 +4103,7 @@ const filterSubKnowledgeTree = () => {
  */
 const clearKnowledgeSearch = () => {
   knowledgeSearch.value = "";
-  filterKnowledgeTree();
+  filterKnowledgeTree(); // 这会重新排序
 };
 
 /**
@@ -4031,7 +4111,7 @@ const clearKnowledgeSearch = () => {
  */
 const clearSubKnowledgeSearch = () => {
   subKnowledgeSearch.value = "";
-  filterSubKnowledgeTree();
+  filterSubKnowledgeTree(); // 这会重新排序
 };
 
 /**
@@ -4104,14 +4184,13 @@ watch(
  */
 const filterUpdateKnowledgeTree = () => {
   if (!updateKnowledgeSearch.value) {
-    updateKnowledgeTreeData.value = JSON.parse(
-      JSON.stringify(originalUpdateKnowledgeTreeData.value)
-    );
+    updateKnowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalUpdateKnowledgeTreeData.value)));
   } else {
-    updateKnowledgeTreeData.value = filterTreeByKeyword(
+    const filtered = filterTreeByKeyword(
       JSON.parse(JSON.stringify(originalUpdateKnowledgeTreeData.value)),
       updateKnowledgeSearch.value
     );
+    updateKnowledgeTreeData.value = sortTreeByOrder(filtered);
   }
 };
 
@@ -4159,9 +4238,16 @@ const loadUpdateSubKnowledgeTree = async (subjectId, gradeId) => {
     const res = await axios.get(url);
     const data = res.data.data || [];
 
-    // 添加展开属性
+    // 添加展开属性，并按 sort_order 排序
     const addExpandedProperty = (nodes) => {
-      return nodes.map((node) => {
+      // 首先对当前层级的节点按 sort_order 排序
+      const sortedNodes = nodes.sort((a, b) => {
+        const orderA = Number(a.sort_order) || 0;
+        const orderB = Number(b.sort_order) || 0;
+        return orderA - orderB;
+      });
+
+      return sortedNodes.map((node) => {
         const newNode = {
           ...node,
           expanded: true,
@@ -4189,14 +4275,13 @@ const loadUpdateSubKnowledgeTree = async (subjectId, gradeId) => {
  */
 const filterUpdateSubKnowledgeTree = () => {
   if (!updateSubKnowledgeSearch.value) {
-    updateSubKnowledgeTreeData.value = JSON.parse(
-      JSON.stringify(originalUpdateSubKnowledgeTreeData.value)
-    );
+    updateSubKnowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalUpdateSubKnowledgeTreeData.value)));
   } else {
-    updateSubKnowledgeTreeData.value = filterTreeByKeyword(
+    const filtered = filterTreeByKeyword(
       JSON.parse(JSON.stringify(originalUpdateSubKnowledgeTreeData.value)),
       updateSubKnowledgeSearch.value
     );
+    updateSubKnowledgeTreeData.value = sortTreeByOrder(filtered);
   }
 };
 
@@ -4238,35 +4323,20 @@ watch(
   }
 );
 
+
+
 /**
  * 过滤更新表单知识点树
  */
 const filterUpdateFormKnowledgeTree = () => {
   if (!updateFormKnowledgeSearch.value) {
-    updateFormKnowledgeTreeData.value = JSON.parse(
-      JSON.stringify(originalUpdateFormKnowledgeTreeData.value)
-    );
+    updateFormKnowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalUpdateFormKnowledgeTreeData.value)));
   } else {
-    updateFormKnowledgeTreeData.value = filterTreeByKeyword(
+    const filtered = filterTreeByKeyword(
       JSON.parse(JSON.stringify(originalUpdateFormKnowledgeTreeData.value)),
       updateFormKnowledgeSearch.value
     );
-  }
-};
-
-/**
- * 过滤更新表单副知识点树
- */
-const filterUpdateFormSubKnowledgeTree = () => {
-  if (!updateFormSubKnowledgeSearch.value) {
-    updateFormSubKnowledgeTreeData.value = JSON.parse(
-      JSON.stringify(originalUpdateFormSubKnowledgeTreeData.value)
-    );
-  } else {
-    updateFormSubKnowledgeTreeData.value = filterTreeByKeyword(
-      JSON.parse(JSON.stringify(originalUpdateFormSubKnowledgeTreeData.value)),
-      updateFormSubKnowledgeSearch.value
-    );
+    updateFormKnowledgeTreeData.value = sortTreeByOrder(filtered);
   }
 };
 
@@ -5240,7 +5310,7 @@ const selectedSubKnowledgePoints = computed(() => {
   };
 
   return form.sub_knowledge_point_ids
-    .map((id) => findNodeById(subKnowledgeTreeData.value, id))
+    .map((id) => findNodeById(sortedSubKnowledgeTreeData.value, id)) // 改为排序后的数据
     .filter(Boolean);
 });
 
@@ -5254,7 +5324,7 @@ const selectedSolutionIdeas = computed(() => {
 });
 
 /**
- * 清除知识点搜索
+ * 清除更新界面知识点搜索
  */
 const clearUpdateKnowledgeSearch = () => {
   updateKnowledgeSearch.value = "";
@@ -5280,7 +5350,7 @@ const selectedUpdateKnowledgePoints = computed(() => {
   };
 
   return searchCriteria.knowledge_point_ids
-    .map((id) => findNodeById(updateKnowledgeTreeData.value, id))
+    .map((id) => findNodeById(sortedUpdateKnowledgeTreeData.value, id))
     .filter(Boolean);
 });
 
