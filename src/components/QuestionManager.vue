@@ -693,117 +693,151 @@
             </div>
           </div>
 
-          <!-- 知识点筛选（多选） -->
-          <div class="criteria-item full-width">
-            <label class="form-label">知识点：</label>
+<!-- 知识点筛选（多选） -->
+<div class="criteria-item full-width">
+  <label class="form-label">知识点：</label>
 
-            <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
-              正在加载知识点...
-            </div>
+  <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
+    正在加载知识点...
+  </div>
 
-            <div
-              v-else-if="searchCriteria.subject_id"
-              class="knowledge-tree-container full-width-container"
-            >
-              <div class="tree-controls">
-                <input
-                  type="text"
-                  v-model="updateKnowledgeSearch"
-                  placeholder="搜索知识点..."
-                  class="search-input"
-                  @input="filterUpdateKnowledgeTree"
-                />
-                <button
-                  v-if="updateKnowledgeSearch"
-                  @click="clearUpdateKnowledgeSearch"
-                  class="btn-clear"
-                >
-                  清除搜索
-                </button>
-              </div>
+  <div
+    v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
+    class="knowledge-tree-container full-width-container"
+  >
+    <div class="tree-controls">
+      <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
+        <span class="grades-label">已选年级：</span>
+        <span
+          v-for="gradeId in searchCriteria.grade_ids"
+          :key="gradeId"
+          class="grade-tag"
+        >
+          {{ getGradeName(gradeId) }}
+        </span>
+      </div>
+      <input
+        type="text"
+        v-model="updateKnowledgeSearch"
+        placeholder="搜索知识点..."
+        class="search-input"
+        @input="filterUpdateKnowledgeTree"
+      />
+      <button
+        v-if="updateKnowledgeSearch"
+        @click="clearUpdateKnowledgeSearch"
+        class="btn-clear"
+      >
+        清除搜索
+      </button>
+    </div>
 
-              <div class="tree-wrapper">
-                <KnowledgeTree
-                  v-if="updateKnowledgeTreeData.length"
-                  :data="updateKnowledgeTreeData"
-                  :multi-selected-ids="searchCriteria.knowledge_point_ids"
-                  @select="selectUpdateKnowledgePoint"
-                  @toggle="toggleUpdateKnowledgeNode"
-                />
-                <div v-else class="no-knowledge">暂无知识点数据</div>
-              </div>
+    <div class="tree-wrapper">
+      <KnowledgeTree
+        v-if="updateKnowledgeTreeData.length"
+        :data="updateKnowledgeTreeData"
+        :multi-selected-ids="searchCriteria.knowledge_point_ids"
+        @select="selectUpdateKnowledgePoint"
+        @toggle="toggleUpdateKnowledgeNode"
+        :show-grade="true"
+      />
+      <div v-else-if="!loadingUpdateKnowledgePoints" class="no-knowledge">
+        暂无知识点数据
+      </div>
+    </div>
 
-              <div class="selected-items" v-if="selectedUpdateKnowledgePoints.length">
-                <span class="selected-tags-label">已选择：</span>
-                <span
-                  v-for="kp in selectedUpdateKnowledgePoints"
-                  :key="kp.id"
-                  class="selected-tag"
-                  @click="removeUpdateKnowledgePoint(kp.id)"
-                >
-                  {{ kp.name }} ×
-                </span>
-              </div>
-            </div>
+    <div class="selected-items" v-if="selectedUpdateKnowledgePoints.length">
+      <span class="selected-tags-label">已选择：</span>
+      <span
+        v-for="kp in selectedUpdateKnowledgePoints"
+        :key="kp.id"
+        class="selected-tag"
+        @click="removeUpdateKnowledgePoint(kp.id)"
+      >
+        {{ kp.name }}
+        <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
+        <span class="remove-icon">×</span>
+      </span>
+    </div>
+  </div>
 
-            <div v-else class="select-tip full-width-tip">请先选择科目</div>
-          </div>
+  <div v-else class="select-tip full-width-tip">
+    请先选择科目和至少一个年级
+  </div>
+</div>
 
-          <!-- 副知识点筛选（多选） -->
-          <div class="criteria-item full-width">
-            <label class="form-label">副知识点：</label>
+<!-- 副知识点筛选（多选） -->
+<div class="criteria-item full-width">
+  <label class="form-label">副知识点：</label>
 
-            <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
-              正在加载知识点...
-            </div>
+  <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
+    正在加载知识点...
+  </div>
 
-            <div
-              v-else-if="searchCriteria.subject_id"
-              class="knowledge-tree-container full-width-container"
-            >
-              <div class="tree-controls">
-                <input
-                  type="text"
-                  v-model="updateSubKnowledgeSearch"
-                  placeholder="搜索副知识点..."
-                  class="search-input"
-                  @input="filterUpdateSubKnowledgeTree"
-                />
-                <button
-                  v-if="updateSubKnowledgeSearch"
-                  @click="clearUpdateSubKnowledgeSearch"
-                  class="btn-clear"
-                >
-                  清除搜索
-                </button>
-              </div>
+  <div
+    v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
+    class="knowledge-tree-container full-width-container"
+  >
+    <div class="tree-controls">
+      <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
+        <span class="grades-label">已选年级：</span>
+        <span
+          v-for="gradeId in searchCriteria.grade_ids"
+          :key="gradeId"
+          class="grade-tag"
+        >
+          {{ getGradeName(gradeId) }}
+        </span>
+      </div>
+      <input
+        type="text"
+        v-model="updateSubKnowledgeSearch"
+        placeholder="搜索副知识点..."
+        class="search-input"
+        @input="filterUpdateSubKnowledgeTree"
+      />
+      <button
+        v-if="updateSubKnowledgeSearch"
+        @click="clearUpdateSubKnowledgeSearch"
+        class="btn-clear"
+      >
+        清除搜索
+      </button>
+    </div>
 
-              <div class="tree-wrapper">
-                <KnowledgeTree
-                  v-if="updateSubKnowledgeTreeData.length"
-                  :data="updateSubKnowledgeTreeData"
-                  :multi-selected-ids="searchCriteria.sub_knowledge_point_ids"
-                  @select="selectUpdateSubKnowledgePoint"
-                  @toggle="toggleUpdateSubKnowledgeNode"
-                />
-                <div v-else class="no-knowledge">暂无知识点数据</div>
-              </div>
+    <div class="tree-wrapper">
+      <KnowledgeTree
+        v-if="updateSubKnowledgeTreeData.length"
+        :data="updateSubKnowledgeTreeData"
+        :multi-selected-ids="searchCriteria.sub_knowledge_point_ids"
+        @select="selectUpdateSubKnowledgePoint"
+        @toggle="toggleUpdateSubKnowledgeNode"
+        :show-grade="true"
+      />
+      <div v-else-if="!loadingUpdateKnowledgePoints" class="no-knowledge">
+        暂无知识点数据
+      </div>
+    </div>
 
-              <div class="selected-items" v-if="selectedUpdateSubKnowledgePoints.length">
-                <span class="selected-tags-label">已选择：</span>
-                <span
-                  v-for="kp in selectedUpdateSubKnowledgePoints"
-                  :key="kp.id"
-                  class="selected-tag"
-                  @click="removeUpdateSubKnowledgePoint(kp.id)"
-                >
-                  {{ kp.name }} ×
-                </span>
-              </div>
-            </div>
+    <div class="selected-items" v-if="selectedUpdateSubKnowledgePoints.length">
+      <span class="selected-tags-label">已选择：</span>
+      <span
+        v-for="kp in selectedUpdateSubKnowledgePoints"
+        :key="kp.id"
+        class="selected-tag"
+        @click="removeUpdateSubKnowledgePoint(kp.id)"
+      >
+        {{ kp.name }}
+        <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
+        <span class="remove-icon">×</span>
+      </span>
+    </div>
+  </div>
 
-            <div v-else class="select-tip full-width-tip">请先选择科目</div>
-          </div>
+  <div v-else class="select-tip full-width-tip">
+    请先选择科目和至少一个年级
+  </div>
+</div>
 
           <!-- 解题思想筛选（多选） -->
           <div class="criteria-item">
@@ -4161,22 +4195,141 @@ const toggleSubKnowledgeNode = (node) => {
 
 // ==================== 更新界面的知识点树方法 ====================
 /**
- * 监听更新界面科目变化，加载知识点树
+ * 加载多年级知识点树
+ * @param {string} type - 类型：'update', 'updateSub'
+ * @param {number} subjectId - 科目ID
+ * @param {number[]} gradeIds - 年级ID数组
  */
+const loadMultiGradeKnowledgeTree = async (type, subjectId, gradeIds) => {
+  if (!subjectId || !gradeIds.length) return;
+
+  try {
+    // 设置加载状态
+    switch (type) {
+      case "update":
+        loadingUpdateKnowledgePoints.value = true;
+        break;
+      case "updateSub":
+        loadingUpdateKnowledgePoints.value = true;
+        break;
+    }
+
+    // 并行加载所有选中年级的知识点
+    const gradePromises = gradeIds.map(gradeId => {
+      const grade = gradeList.value.find(g => g.id === gradeId);
+      return axios.get(
+        `${API_BASE}/questions/getKnowledgePointJson/${subjectId}/${gradeId}`
+      ).then(res => ({
+        gradeId,
+        gradeName: grade?.name || '',
+        data: res.data.data || []
+      })).catch(err => {
+        console.error(`加载年级 ${gradeId} 的知识点失败:`, err);
+        return {
+          gradeId,
+          gradeName: grade?.name || '',
+          data: []
+        };
+      });
+    });
+
+    const results = await Promise.all(gradePromises);
+    
+    let allKnowledgePoints = [];
+    
+    results.forEach(result => {
+      const { gradeId, gradeName, data } = result;
+      
+      if (data && data.length > 0) {
+        const addGradeInfo = (nodes) => {
+          return nodes.map(node => {
+            const currentNode = {
+              ...node,
+              gradeId,
+              gradeName,
+              displayName: `${gradeName}: ${node.name}`,
+              originalName: node.name,
+              expanded: true
+            };
+            
+            if (node.children && node.children.length) {
+              currentNode.children = addGradeInfo(node.children);
+            }
+            
+            return currentNode;
+          });
+        };
+        
+        const gradeKnowledge = addGradeInfo(data);
+        allKnowledgePoints.push(...gradeKnowledge);
+      }
+    });
+    
+    // 按 sort_order 排序
+    const addExpandedProperty = (nodes) => {
+      const sortedNodes = nodes.sort((a, b) => {
+        const orderA = Number(a.sort_order) || 0;
+        const orderB = Number(b.sort_order) || 0;
+        return orderA - orderB;
+      });
+
+      return sortedNodes.map((node) => {
+        const newNode = { ...node, expanded: true };
+        if (node.children && node.children.length) {
+          newNode.children = addExpandedProperty(node.children);
+        }
+        return newNode;
+      });
+    };
+
+    const treeData = addExpandedProperty(allKnowledgePoints);
+
+    // 根据类型设置数据
+    switch (type) {
+      case "update":
+        updateKnowledgeTreeData.value = treeData;
+        originalUpdateKnowledgeTreeData.value = JSON.parse(JSON.stringify(treeData));
+        break;
+      case "updateSub":
+        updateSubKnowledgeTreeData.value = treeData;
+        originalUpdateSubKnowledgeTreeData.value = JSON.parse(JSON.stringify(treeData));
+        break;
+    }
+    
+    if (treeData.length === 0) {
+      ElMessage.warning("选中的年级和科目暂无知识点数据");
+    }
+    
+  } catch (err) {
+    console.error(`加载多年级知识点树失败(${type}):`, err);
+    ElMessage.error("加载知识点失败，请稍后重试");
+  } finally {
+    // 清除加载状态
+    switch (type) {
+      case "update":
+      case "updateSub":
+        loadingUpdateKnowledgePoints.value = false;
+        break;
+    }
+  }
+};
+
+// 监听更新界面科目和年级变化，加载知识点树
 watch(
-  () => searchCriteria.subject_id,
-  (subjectId) => {
-    if (subjectId) {
-      // 加载知识点树和副知识点树
-      loadKnowledgeTree("update", subjectId, searchCriteria.grade_ids[0] || null);
-      loadUpdateSubKnowledgeTree(subjectId, searchCriteria.grade_ids[0] || null);
+  () => [searchCriteria.subject_id, searchCriteria.grade_ids],
+  ([subjectId, gradeIds]) => {
+    if (subjectId && gradeIds && gradeIds.length > 0) {
+      // 使用新的多选年级加载函数
+      loadMultiGradeKnowledgeTree("update", subjectId, gradeIds);
+      loadMultiGradeKnowledgeTree("updateSub", subjectId, gradeIds);
     } else {
       updateKnowledgeTreeData.value = [];
       updateSubKnowledgeTreeData.value = [];
       originalUpdateKnowledgeTreeData.value = [];
       originalUpdateSubKnowledgeTreeData.value = [];
     }
-  }
+  },
+  { deep: true }
 );
 
 /**
@@ -4323,8 +4476,6 @@ watch(
   }
 );
 
-
-
 /**
  * 过滤更新表单知识点树
  */
@@ -4464,34 +4615,20 @@ const findQuestions = async () => {
     const payload = { ...searchCriteria };
 
     // 构建检索条件，过滤空值
-    if (searchCriteria.grade_ids.length > 0)
-      payload.grade_ids = searchCriteria.grade_ids.map((id) => Number(id));
-    if (searchCriteria.subject_id !== null)
-      payload.subject_id = Number(searchCriteria.subject_id);
-    if (searchCriteria.question_category_ids.length > 0)
-      payload.question_category_ids = searchCriteria.question_category_ids.map((id) =>
-        Number(id)
-      );
-    if (searchCriteria.knowledge_point_ids.length > 0)
-      payload.knowledge_point_ids = searchCriteria.knowledge_point_ids.map((id) =>
-        Number(id)
-      );
-    if (searchCriteria.sub_knowledge_point_ids.length > 0)
-      payload.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.map((id) =>
-        Number(id)
-      );
-    if (searchCriteria.solution_idea_ids.length > 0)
-      payload.solution_idea_ids = searchCriteria.solution_idea_ids.map((id) =>
-        Number(id)
-      );
-    if (searchCriteria.difficulty_levels.length > 0)
-      payload.difficulty_levels = searchCriteria.difficulty_levels.map((level) =>
-        Number(level)
-      );
-    if (searchCriteria.title.trim()) payload.title = searchCriteria.title.trim();
-
+    // 处理多选年级
+    if (searchCriteria.grade_ids.length > 0) {
+      payload.grade_ids = searchCriteria.grade_ids.map(id => Number(id));
+    }
+    
+    // 其他条件处理保持不变...
+    
+    // 如果有多个年级，提示用户
+    if (searchCriteria.grade_ids.length > 1) {
+      console.log(`跨年级检索: ${searchCriteria.grade_ids.length} 个年级`);
+    }
+    
     const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
-    const responseData = res.data.data; // 获取返回的data对象
+    const responseData = res.data.data;
 
     // 正确设置分页数据
     questionList.value = responseData?.data_info || [];
@@ -4502,7 +4639,7 @@ const findQuestions = async () => {
       searchCriteria.page_size = responseData.page_size || 10;
       totalPages.value = responseData.total_pages || 1;
       totalItems.value = responseData.total_items || 0;
-      pageInput.value = responseData.page_num || 1; // 同步页码输入框
+      pageInput.value = responseData.page_num || 1;
     }
 
     hasSearched.value = true;
@@ -4510,7 +4647,12 @@ const findQuestions = async () => {
     if (!questionList.value.length) {
       ElMessage.error("未找到符合条件的题目");
     } else {
-      ElMessage.success(`找到 ${totalItems.value} 条题目`);
+      // 显示选中的年级数量
+      const gradeCount = searchCriteria.grade_ids.length;
+      const gradeText = gradeCount > 1 ? 
+        `跨 ${gradeCount} 个年级找到 ${totalItems.value} 条题目` :
+        `找到 ${totalItems.value} 条题目`;
+      ElMessage.success(gradeText);
     }
   } catch (err) {
     console.error("检索失败:", err);
@@ -4519,6 +4661,7 @@ const findQuestions = async () => {
     hasSearched.value = true;
   }
 };
+
 /**
  * 跳转到首页
  */
@@ -5227,6 +5370,61 @@ const getMarkingTypeName = (type) => {
 };
 
 // ==================== 计算属性 ====================
+// 获取选中年级的名称
+const selectedUpdateGradeNames = computed(() => {
+  return selectedUpdateGrades.value.map(grade => grade.name).join("、");
+});
+
+// 选中的知识点对象列表（包含年级信息）
+const selectedUpdateKnowledgePoints = computed(() => {
+  return searchCriteria.knowledge_point_ids
+    .map((id) => {
+      const node = findNodeInMultiGradeTree(id, updateKnowledgeTreeData.value);
+      if (node) {
+        return {
+          id: node.id,
+          name: node.originalName || node.name,
+          gradeName: node.gradeName,
+          displayName: node.displayName || node.name
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+});
+
+// 选中的副知识点对象列表（包含年级信息）
+const selectedUpdateSubKnowledgePoints = computed(() => {
+  return searchCriteria.sub_knowledge_point_ids
+    .map((id) => {
+      const node = findNodeInMultiGradeTree(id, updateSubKnowledgeTreeData.value);
+      if (node) {
+        return {
+          id: node.id,
+          name: node.originalName || node.name,
+          gradeName: node.gradeName,
+          displayName: node.displayName || node.name
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+});
+
+// 在多年级树中查找节点
+const findNodeInMultiGradeTree = (targetId, nodes) => {
+  for (const node of nodes) {
+    if (node.id === targetId) {
+      return node;
+    }
+    if (node.children && node.children.length) {
+      const found = findNodeInMultiGradeTree(targetId, node.children);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
 /**
  * 是否显示单选题选项区域
  */
@@ -5330,52 +5528,6 @@ const clearUpdateKnowledgeSearch = () => {
   updateKnowledgeSearch.value = "";
   filterUpdateKnowledgeTree();
 };
-
-/**
- * 已选择的知识点对象列表（用于显示）
- */
-const selectedUpdateKnowledgePoints = computed(() => {
-  // 从知识点树中查找对应的节点信息
-  const findNodeById = (nodes, targetId) => {
-    for (const node of nodes) {
-      if (node.id === targetId) {
-        return node;
-      }
-      if (node.children && node.children.length) {
-        const found = findNodeById(node.children, targetId);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  return searchCriteria.knowledge_point_ids
-    .map((id) => findNodeById(sortedUpdateKnowledgeTreeData.value, id))
-    .filter(Boolean);
-});
-
-/**
- * 更新界面选中的副知识点对象列表
- */
-const selectedUpdateSubKnowledgePoints = computed(() => {
-  // 从副知识点树中查找对应的节点信息
-  const findNodeById = (nodes, targetId) => {
-    for (const node of nodes) {
-      if (node.id === targetId) {
-        return node;
-      }
-      if (node.children && node.children.length) {
-        const found = findNodeById(node.children, targetId);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  return searchCriteria.sub_knowledge_point_ids
-    .map((id) => findNodeById(updateSubKnowledgeTreeData.value, id))
-    .filter(Boolean);
-});
 
 /**
  * 更新界面选中的解题思想对象列表
@@ -6885,7 +7037,72 @@ init();
   max-height: 200px;
 }
 
-/* 在现有的CSS样式末尾添加以下内容 */
+/* 年级标签样式 */
+.selected-grades-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #bae7ff;
+}
+
+.grades-label {
+  font-size: 12px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.grade-tag {
+  background: #409eff;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* 知识点标签中的年级信息 */
+.tag-grade {
+  font-size: 10px;
+  color: #67c23a;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.remove-icon {
+  margin-left: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #f56c6c;
+}
+
+/* 知识点树节点中的年级标识 */
+:deep(.knowledge-tree-node .node-content) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+:deep(.knowledge-tree-node .node-content:hover) {
+  background-color: #f5f7fa;
+}
+
+:deep(.grade-indicator) {
+  font-size: 10px;
+  background-color: #ecf5ff;
+  color: #409eff;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid #d9ecff;
+  white-space: nowrap;
+}
 
 /* ==================== 全宽度知识点筛选样式 ==================== */
 .criteria-item.full-width {

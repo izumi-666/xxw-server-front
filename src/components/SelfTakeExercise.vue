@@ -3,7 +3,7 @@
     <!-- 评测头部信息 -->
     <div class="assessment-header card">
       <div class="assessment-header-content">
-        <h1 class="assessment-title">{{ formatExamName(assessmentInfo.exam_name) || "自我评测" }}</h1>
+        <h1 class="assessment-title">{{ formatExamName(assessmentInfo.exam_name) || "自我练习" }}</h1>
         <div class="assessment-meta">
           <div class="meta-item">
             <span class="meta-label">开始时间：</span>
@@ -326,7 +326,7 @@
 
             <div class="result-actions">
               <button class="btn-view-report" @click="viewAssessmentReport">查看详细报告</button>
-              <button class="btn-return" @click="returnToSelfAssessment">返回评测列表</button>
+              <button class="btn-return" @click="returnToSelfExercise">返回评测列表</button>
             </div>
           </div>
         </div>
@@ -1015,10 +1015,10 @@ const viewAssessmentReport = () => {
   });
 };
 
-const returnToSelfAssessment = () => {
+const returnToSelfExercise = () => {
   const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
   router.push({
-    path: "/student/selfassessment",
+    path: "/student/selfexercise",
     query: {
       examId: assessmentInfo.value.exam_id,
       exam_name: assessmentInfo.value.exam_name,

@@ -65,12 +65,12 @@
             <span>自主学习</span>
           </template>
           <el-menu-item index="learning-resources">
-            <el-icon><Reading /></el-icon>
+            <el-icon><Folder /></el-icon>
             <span>学习资源</span>
           </el-menu-item>
-          <el-menu-item index="self-learning">
-            <el-icon><Calendar /></el-icon>
-            <span>自主练题</span>
+          <el-menu-item index="self-exercise">
+            <el-icon><Reading /></el-icon>
+            <span>自主练习</span>
           </el-menu-item>
           <el-menu-item index="self-assessment">
             <el-icon><Document /></el-icon>
@@ -215,7 +215,8 @@ export default {
         "student-dashboard": "/student/studentdashboard",
         "exam-management": "/student/exammanagement",
         "student-mistakes-book": "/student/mistakesbook",
-        "self-assessment": "/student/selfassessment"
+        "self-assessment": "/student/selfassessment",
+        "self-exercise": "/student/selfexercise",
       };
 
       if (routes[index]) {

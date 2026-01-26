@@ -112,7 +112,7 @@ import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import { ElMessage, ElMessageBox } from "element-plus";
 
-/* ==================== 权限相关（与你现有逻辑完全一致） ==================== */
+/* ==================== 权限相关 ==================== */
 const getUserPermissions = () => {
   try {
     const permissionsStr = localStorage.getItem("userPermissions");

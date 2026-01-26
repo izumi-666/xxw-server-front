@@ -10,7 +10,9 @@ import TakeExam from "../components/TakeExam.vue"; //学生参加考试
 import StudentViewResults from "../components/StudentViewResults.vue"; //学生查看考试结果
 import StudentMistakesBook from "../components/StudentMistakesBook.vue"; //学生错题本
 import SelfAssessment from "../components/SelfAssessment.vue"; //学生自我评测
-import SelfTakeExam from "../components/SelfTakeExam.vue"; 
+import SelfTakeExam from "../components/SelfTakeExercise.vue"; // 学生自我评测参加考试
+import SelfExercise from "../components/SelfExercise.vue"; //学生自我练习
+import SelfTakeExercise from "../components/SelfTakeExercise.vue"; //学生自我练习参加考试
 import TeacherHome from "../components/TeacherHome.vue";
 import StudentHome from "../components/StudentHome.vue";
 import VisitorHome from "../components/VisitorHome.vue";
@@ -88,6 +90,24 @@ const routes = [
         meta: {
           requiresAuth: true,
           breadcrumb: ["自主学习", "自我评测" , "评测考试"]
+        }
+      },
+       {
+        path: "selfexercise",
+        name: "self-exercise",
+        component: SelfExercise,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["自主学习", "自我练习"]
+        }
+      },
+      {
+        path: "selfexercise/selftakeexercise",
+        name: "self-take-exercise",
+        component: SelfTakeExercise,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["自主学习", "自我练习" , "练习测试"]
         }
       },
     ]

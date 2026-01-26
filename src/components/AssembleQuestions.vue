@@ -133,15 +133,6 @@
     </div>
 
     <div class="multi-select-dropdown" v-if="showDifficultyDropdown">
-      <div class="search-input-container">
-        <input
-          type="text"
-          v-model="difficultySearch"
-          placeholder="搜索难度..."
-          class="search-input"
-          @input="filterDifficulties"
-        />
-      </div>
       <div class="dropdown-options">
         <div
           v-for="diff in filteredDifficulties"
@@ -1077,7 +1068,6 @@ const subKnowledgeSearch = ref("");
 const solutionIdeaSearch = ref("");
 const questionCategorySearch = ref("");
 const gradeSearch = ref("");
-const difficultySearch = ref("");
 
 // 下拉框显示状态
 const showGradeDropdown = ref(false);
@@ -1668,7 +1658,6 @@ const clearSearchCriteria = () => {
   solutionIdeaSearch.value = "";
   questionCategorySearch.value = "";
   gradeSearch.value = "";
-  difficultySearch.value = "";
 
   questionList.value = [];
   hasSearched.value = false;
@@ -1714,19 +1703,6 @@ const isGradeSelected = (id) => {
 
 const toggleDifficultyDropdown = () => {
   showDifficultyDropdown.value = !showDifficultyDropdown.value;
-  if (showDifficultyDropdown.value) {
-    filterDifficulties();
-  }
-};
-
-const filterDifficulties = () => {
-  if (!difficultySearch.value) {
-    filteredDifficulties.value = difficultyList.value;
-  } else {
-    filteredDifficulties.value = difficultyList.value.filter(diff =>
-      diff.name.includes(difficultySearch.value)
-    );
-  }
 };
 
 const toggleDifficulty = (diff) => {
