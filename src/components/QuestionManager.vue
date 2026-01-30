@@ -2354,7 +2354,6 @@ const deleteDependentQuestion = async (question) => {
     }
   } catch (err) {
     if (err === "cancel" || err === "close") {
-      console.log("用户取消删除");
     } else {
       console.error("删除题目失败:", err);
       ElMessage.error("删除题目失败");
@@ -4078,21 +4077,15 @@ watch(
     // 获取旧值，如果没有旧值则使用空数组
     const [oldSubjectId, oldGradeId] = oldValues || [null, null];
 
-    console.log(
-      `科目/年级变化: 科目 ${oldSubjectId} -> ${subjectId}, 年级 ${oldGradeId} -> ${gradeId}`
-    );
-
     // 当科目或年级发生变化时，立即加载知识点树
     if (subjectId && gradeId) {
       // 只有当两个值都存在时才加载
       if (subjectId !== oldSubjectId || gradeId !== oldGradeId) {
-        console.log(`触发知识点树加载: 科目 ${subjectId}, 年级 ${gradeId}`);
         loadKnowledgeTree("upload", subjectId, gradeId);
         loadKnowledgeTree("uploadSub", subjectId, gradeId);
       }
     } else {
       // 如果科目或年级被清空，则清空知识点树
-      console.log(`清空知识点树: 科目 ${subjectId}, 年级 ${gradeId}`);
       knowledgeTreeData.value = [];
       subKnowledgeTreeData.value = [];
       originalKnowledgeTreeData.value = [];
@@ -4621,11 +4614,6 @@ const findQuestions = async () => {
     }
     
     // 其他条件处理保持不变...
-    
-    // 如果有多个年级，提示用户
-    if (searchCriteria.grade_ids.length > 1) {
-      console.log(`跨年级检索: ${searchCriteria.grade_ids.length} 个年级`);
-    }
     
     const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
     const responseData = res.data.data;
@@ -7067,7 +7055,7 @@ init();
 /* 知识点标签中的年级信息 */
 .tag-grade {
   font-size: 10px;
-  color: #67c23a;
+  color: #d65601;
   margin-left: 4px;
   font-weight: 500;
 }

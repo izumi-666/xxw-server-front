@@ -16,60 +16,19 @@
         </div>
 
         <div class="config-form">
-          <!-- 年级选择（多选） -->
+          <!-- 年级选择（单选） -->
           <div class="form-group">
             <label class="form-label">选择年级</label>
-            <div class="multi-select-wrapper">
-              <div class="multi-select-trigger" @click="toggleGradeDropdown">
-                <span class="placeholder" v-if="selectedGrades.length === 0">
-                  请选择年级
-                </span>
-                <span class="selected-tags" v-else>
-                  <span
-                    v-for="grade in selectedGrades"
-                    :key="grade.id"
-                    class="selected-tag"
-                    @click.stop="removeGrade(grade.id)"
-                  >
-                    {{ grade.name }}
-                    <span class="remove-icon">×</span>
-                  </span>
-                </span>
-                <span class="dropdown-arrow">▼</span>
-              </div>
-
-              <div class="multi-select-dropdown" v-if="showGradeDropdown">
-                <div class="search-input-container">
-                  <input
-                    type="text"
-                    v-model="gradeSearch"
-                    placeholder="搜索年级..."
-                    class="search-input"
-                    @input="filterGrades"
-                  />
-                </div>
-                <div class="dropdown-options">
-                  <div
-                    v-for="grade in filteredGrades"
-                    :key="grade.id"
-                    class="dropdown-option"
-                    @click="toggleGrade(grade)"
-                  >
-                    <span
-                      class="checkbox"
-                      :class="{ checked: isGradeSelected(grade.id) }"
-                    >
-                      {{ isGradeSelected(grade.id) ? "✓" : "" }}
-                    </span>
-                    <span class="option-text">{{ grade.name }}</span>
-                  </div>
-                  <div v-if="filteredGrades.length === 0" class="no-options">
-                    无匹配选项
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="form-hint">可选多个年级进行评估</div>
+            <select
+              v-model="selectedGradeId"
+              class="form-select"
+              @change="onGradeChange"
+            >
+              <option :value="null">请选择年级</option>
+              <option v-for="grade in gradeList" :key="grade.id" :value="grade.id">
+                {{ grade.name }}
+              </option>
+            </select>
           </div>
 
           <!-- 科目选择（单选） -->
@@ -87,57 +46,11 @@
             </select>
           </div>
 
-<!-- 难度筛选 -->
-          <div class="criteria-item">
-  <label class="criteria-label">难度</label>
-  <div class="multi-select-wrapper">
-    <div class="multi-select-trigger" @click="toggleDifficultyDropdown">
-      <span class="placeholder" v-if="selectedDifficulties.length === 0">
-        选择难度
-      </span>
-      <span class="selected-tags" v-else>
-        <span
-          v-for="diff in selectedDifficulties"
-          :key="diff.value"
-          class="selected-tag"
-          @click.stop="removeDifficulty(diff.value)"
-        >
-          {{ diff.name }}
-          <span class="remove-icon">×</span>
-        </span>
-      </span>
-      <span class="dropdown-arrow">▼</span>
-    </div>
-
-    <div class="multi-select-dropdown" v-if="showDifficultyDropdown">
-      <div class="dropdown-options">
-        <div
-          v-for="diff in filteredDifficulties"
-          :key="diff.value"
-          class="dropdown-option"
-          @click="toggleDifficulty(diff)"
-        >
-          <span
-            class="checkbox"
-            :class="{ checked: isDifficultySelected(diff.value) }"
-          >
-            {{ isDifficultySelected(diff.value) ? "✓" : "" }}
-          </span>
-          <span class="option-text">{{ diff.name }}</span>
-        </div>
-        <div v-if="filteredDifficulties.length === 0" class="no-options">
-          无匹配选项
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
           <!-- 知识点选择（多选） -->
           <div class="form-group">
             <label class="form-label">选择知识点</label>
             <div class="current-selection-hint" v-if="hasSelectedGradeAndSubject">
-              当前：{{ selectedSubjectName }} · {{ selectedGradeNames }}
+              当前：{{ selectedSubjectName }} · {{ selectedGradeName }}
             </div>
             <div class="multi-select-wrapper">
               <div class="multi-select-trigger" @click="toggleKnowledgeDropdown" :disabled="!canLoadKnowledgePoints">
@@ -175,7 +88,7 @@
                     <button @click="expandAllKnowledge" class="btn-small">展开所有</button>
                     <button @click="collapseAllKnowledge" class="btn-small">收起所有</button>
                     <span class="tree-info">
-                      共 {{ flattenedKnowledgePoints.length }} 个知识点（{{ selectedGradeNames }}）
+                      共 {{ flattenedKnowledgePoints.length }} 个知识点（{{ selectedGradeName }}）
                     </span>
                   </div>
                   
@@ -184,7 +97,7 @@
                       :data="sortedKnowledgeTree"
                       :multi-selected-ids="selectedKnowledgeIds"
                       @select="toggleKnowledgeSelection"
-                      :show-grade="true"
+                      :show-grade="false"
                       @toggle="onToggleNode"
                     />
                   </div>
@@ -207,6 +120,50 @@
             <div class="form-hint" v-else>
               请先选择年级和科目以加载知识点
             </div>
+          </div>
+
+          <!-- 难度筛选（多选） -->
+          <div class="form-group">
+            <label class="form-label">难度</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleDifficultyDropdown">
+                <span class="placeholder" v-if="selectedDifficulties.length === 0">
+                  选择难度
+                </span>
+                <span class="selected-tags" v-else>
+                  <span
+                    v-for="diff in selectedDifficulties"
+                    :key="diff.value"
+                    class="selected-tag"
+                    @click.stop="removeDifficulty(diff.value)"
+                  >
+                    {{ diff.name }}
+                    <span class="remove-icon">×</span>
+                  </span>
+                </span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
+
+              <div class="multi-select-dropdown" v-if="showDifficultyDropdown">
+                <div class="dropdown-options">
+                  <div
+                    v-for="diff in difficultyList"
+                    :key="diff.value"
+                    class="dropdown-option"
+                    @click="toggleDifficulty(diff)"
+                  >
+                    <span
+                      class="checkbox"
+                      :class="{ checked: isDifficultySelected(diff.value) }"
+                    >
+                      {{ isDifficultySelected(diff.value) ? "✓" : "" }}
+                    </span>
+                    <span class="option-text">{{ diff.name }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="form-hint">可多选难度等级</div>
           </div>
 
           <!-- 当前学生信息（只读） -->
@@ -259,16 +216,14 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 const router = useRouter();
 
 // ==================== 状态管理 ====================
-const { gradeList, filterGrades: filterGradeOptions, loadGradeList } = useGradeList();
-const selectedGrades = ref([]);
+const { gradeList, loadGradeList } = useGradeList();
+const selectedGradeId = ref(null);
 const selectedSubjectId = ref(null);
 const studentInfo = ref("");
 
 // 下拉框状态
-const showGradeDropdown = ref(false);
 const showKnowledgeDropdown = ref(false);
 const showDifficultyDropdown = ref(false);
-const gradeSearch = ref("");
 const knowledgeSearch = ref("");
 
 // 难度等级列表
@@ -280,10 +235,8 @@ const difficultyList = ref([
   { value: 5, name: '⭐⭐⭐⭐⭐' }
 ]);
 
-// 过滤后的列表（修复：添加这3个变量）
-const filteredGrades = ref([]);
-const filteredDifficulties = ref([]);
-const filteredKnowledgeTree = ref([]); // 用于知识点搜索过滤
+// 过滤后的列表
+const filteredKnowledgeTree = ref([]);
 
 // 难度选择相关状态
 const selectedDifficulties = ref([]);
@@ -296,8 +249,8 @@ const isLoading = ref(false);
 
 // ==================== 监听器 ====================
 // 添加对年级和科目变化的监听
-watch([selectedGrades, selectedSubjectId], ([grades, subjectId]) => {
-  if (grades.length > 0 && subjectId !== null) {
+watch([selectedGradeId, selectedSubjectId], ([gradeId, subjectId]) => {
+  if (gradeId !== null && subjectId !== null) {
     selectedKnowledgePoints.value = [];
     knowledgeTreeData.value = [];
     showKnowledgeDropdown.value = false;
@@ -320,11 +273,11 @@ const loadCurrentStudent = () => {
 };
 
 const canLoadKnowledgePoints = computed(() => {
-  return selectedGrades.value.length > 0 && selectedSubjectId.value !== null;
+  return selectedGradeId.value !== null && selectedSubjectId.value !== null;
 });
 
 const hasSelectedGradeAndSubject = computed(() => {
-  return selectedGrades.value.length > 0 && selectedSubjectId.value !== null;
+  return selectedGradeId.value !== null && selectedSubjectId.value !== null;
 });
 
 const knowledgePlaceholder = computed(() => {
@@ -385,8 +338,9 @@ const flattenedKnowledgePoints = computed(() => {
   return flatten(sourceData);
 });
 
-const selectedGradeNames = computed(() => {
-  return selectedGrades.value.map(grade => grade.name).join("、");
+const selectedGradeName = computed(() => {
+  const grade = gradeList.value.find(g => g.id === selectedGradeId.value);
+  return grade ? grade.name : '';
 });
 
 const selectedSubjectName = computed(() => {
@@ -395,7 +349,7 @@ const selectedSubjectName = computed(() => {
 
 const canstartExcise = computed(() => {
   return (
-    selectedGrades.value.length > 0 &&
+    selectedGradeId.value !== null &&
     selectedSubjectId.value !== null &&
     selectedKnowledgePoints.value.length > 0 &&
     selectedDifficulties.value.length > 0 &&
@@ -404,39 +358,8 @@ const canstartExcise = computed(() => {
 });
 
 // ==================== 方法 ====================
-const toggleGradeDropdown = () => {
-  showGradeDropdown.value = !showGradeDropdown.value;
-  if (showGradeDropdown.value) {
-    filterGrades();
-  }
-};
-
-const filterGrades = () => {
-  if (!gradeSearch.value) {
-    filteredGrades.value = [...gradeList.value];
-  } else {
-    filteredGrades.value = gradeList.value.filter((grade) =>
-      grade.name.toLowerCase().includes(gradeSearch.value.toLowerCase())
-    );
-  }
-};
-
-const toggleGrade = (grade) => {
-  const index = selectedGrades.value.findIndex((g) => g.id === grade.id);
-  if (index > -1) {
-    selectedGrades.value.splice(index, 1);
-  } else {
-    selectedGrades.value.push(grade);
-  }
-  gradeSearch.value = "";
-};
-
-const removeGrade = (id) => {
-  selectedGrades.value = selectedGrades.value.filter((g) => g.id !== id);
-};
-
-const isGradeSelected = (id) => {
-  return selectedGrades.value.some((g) => g.id === id);
+const onGradeChange = () => {
+  // 切换年级时知识点会自动由watch监听器处理
 };
 
 // 难度选择相关方法
@@ -494,11 +417,9 @@ const filterKnowledgePoints = (searchTerm = null) => {
     nodes.forEach(node => {
       const name = node.displayName || node.name || '';
       const originalName = node.originalName || '';
-      const gradeName = node.gradeName || '';
       
       const isMatch = name.toLowerCase().includes(searchText) ||
-                     originalName.toLowerCase().includes(searchText) ||
-                     gradeName.toLowerCase().includes(searchText);
+                     originalName.toLowerCase().includes(searchText);
       
       // 如果有子节点，先过滤子节点
       let filteredChildren = [];
@@ -531,8 +452,6 @@ const toggleKnowledgeSelection = (knowledge) => {
     selectedKnowledgePoints.value.push({
       id: knowledge.id,
       name: knowledge.displayName || knowledge.name,
-      gradeId: knowledge.gradeId,
-      gradeName: knowledge.gradeName,
       originalName: knowledge.originalName || knowledge.name
     });
   }
@@ -590,7 +509,7 @@ const onToggleNode = (knowledge) => {
   setChildrenExpanded(knowledge, knowledge.expanded);
 };
 
-// 加载知识点树（支持多年级）
+// 加载知识点树
 const loadKnowledgePoints = async () => {
   if (!canLoadKnowledgePoints.value) return;
 
@@ -599,64 +518,41 @@ const loadKnowledgePoints = async () => {
   filteredKnowledgeTree.value = []; // 清空过滤结果
   
   try {
-    const gradeIds = selectedGrades.value.map(grade => grade.id);
+    const gradeId = selectedGradeId.value;
     const subjectId = selectedSubjectId.value;
+    const grade = gradeList.value.find(g => g.id === gradeId);
     
-    const gradePromises = gradeIds.map(gradeId => {
-      const grade = selectedGrades.value.find(g => g.id === gradeId);
-      return axios.get(
-        `${API_BASE}/questions/getKnowledgePointJson/${subjectId}/${gradeId}`
-      ).then(res => ({
-        gradeId,
-        gradeName: grade?.name || '',
-        data: res.data
-      })).catch(err => {
-        console.error(`加载年级 ${gradeId} 的知识点失败:`, err);
-        return {
-          gradeId,
-          gradeName: grade?.name || '',
-          data: { code: 500, message: '加载失败', data: [] }
-        };
-      });
-    });
+    const response = await axios.get(
+      `${API_BASE}/questions/getKnowledgePointJson/${subjectId}/${gradeId}`
+    );
 
-    const results = await Promise.all(gradePromises);
+    const data = response.data;
     
-    const allKnowledgePoints = [];
-    
-    results.forEach(result => {
-      const { gradeId, gradeName, data } = result;
+    if (data.code === 200 && data.data && data.data.length > 0) {
+      const addGradeInfo = (nodes) => {
+        return nodes.map(node => {
+          const currentNode = {
+            ...node,
+            gradeId,
+            gradeName: grade?.name || '',
+            displayName: node.name,
+            originalName: node.name,
+            expanded: true
+          };
+          
+          if (node.children && node.children.length) {
+            currentNode.children = addGradeInfo(node.children);
+          }
+          
+          return currentNode;
+        });
+      };
       
-      if (data.code === 200 && data.data && data.data.length > 0) {
-        const addGradeInfo = (nodes) => {
-          return nodes.map(node => {
-            const currentNode = {
-              ...node,
-              gradeId,
-              gradeName,
-              displayName: `${gradeName}: ${node.name}`,
-              originalName: node.name,
-              expanded: true
-            };
-            
-            if (node.children && node.children.length) {
-              currentNode.children = addGradeInfo(node.children);
-            }
-            
-            return currentNode;
-          });
-        };
-        
-        const gradeKnowledge = addGradeInfo(data.data || []);
-        allKnowledgePoints.push(...gradeKnowledge);
-      }
-    });
-    
-    if (allKnowledgePoints.length > 0) {
-      knowledgeTreeData.value = allKnowledgePoints;
+      const gradeKnowledge = addGradeInfo(data.data || []);
+      knowledgeTreeData.value = gradeKnowledge;
       filteredKnowledgeTree.value = sortedKnowledgeTree.value; // 初始时显示全部
     } else {
-      ElMessage.warning("选中的年级和科目暂无知识点数据");
+      ElMessage.warning("该年级和科目暂无知识点数据");
       knowledgeTreeData.value = [];
       filteredKnowledgeTree.value = [];
     }
@@ -686,9 +582,9 @@ const startExcise = async () => {
       `${API_BASE}/learning/selfExercise`,
       {
         subject_id: selectedSubjectId.value,
-        grade_id: selectedGrades.value.id,
+        grade_id: selectedGradeId.value,
         knowledge_point_ids: selectedKnowledgePoints.value.map(kp => kp.id),
-        difficulty_levels: selectedDifficulties.value.map(d => d.value), // 添加难度参数
+        difficulty_levels: selectedDifficulties.value.map(d => d.value),
         student: studentInfo.value,
       },
       { headers: { "Content-Type": "application/json" } }
@@ -711,10 +607,9 @@ const startExcise = async () => {
       "current_assessment",
       JSON.stringify({
         ...assessmentData,
-        subject_name:
-          SUBJECT_MAP[selectedSubjectId.value] || selectedSubjectId.value,
-        grade_name: selectedGrades.value.name,
-        difficulty_names: selectedDifficulties.value.map(d => d.name).join(", "), // 保存难度名称
+        subject_name: SUBJECT_MAP[selectedSubjectId.value] || selectedSubjectId.value,
+        grade_name: selectedGradeName.value,
+        difficulty_names: selectedDifficulties.value.map(d => d.name).join(", "),
         knowledge_point_names: selectedKnowledgePoints.value.map(kp => kp.originalName || kp.name).join(", "),
       })
     );
@@ -725,7 +620,7 @@ const startExcise = async () => {
         exam_history_id: assessmentData.exam_history_id,
         exam_id: assessmentData.exam_id,
         subject_name: SUBJECT_MAP[selectedSubjectId.value],
-        grade_name: selectedGrades.value.name,
+        grade_name: selectedGradeName.value,
         difficulty_names: selectedDifficulties.value.map(d => d.name).join(", "),
         knowledge_point_names: selectedKnowledgePoints.value.map(kp => kp.originalName || kp.name).join(", "),
       },
@@ -742,20 +637,18 @@ const startExcise = async () => {
 
 // 重置表单
 const resetForm = () => {
-  selectedGrades.value = [];
+  selectedGradeId.value = null;
   selectedSubjectId.value = null;
   selectedDifficulties.value = [];
   selectedKnowledgePoints.value = [];
   knowledgeTreeData.value = [];
   filteredKnowledgeTree.value = [];
-  gradeSearch.value = "";
   knowledgeSearch.value = "";
 };
 
 // 点击外部关闭下拉框
 const handleClickOutside = (event) => {
   if (!event.target.closest(".multi-select-wrapper")) {
-    showGradeDropdown.value = false;
     showKnowledgeDropdown.value = false;
     showDifficultyDropdown.value = false;
   }
@@ -766,9 +659,6 @@ onMounted(() => {
   loadGradeList();
   initSubjectData();
   loadCurrentStudent();
-  // 初始化过滤列表
-  filteredGrades.value = [...gradeList.value];
-  filteredDifficulties.value = [...difficultyList.value];
   document.addEventListener("click", handleClickOutside);
 });
 </script>
@@ -1042,28 +932,6 @@ onMounted(() => {
   color: #303133;
 }
 
-/* 难度星星样式 */
-.difficulty-stars {
-  display: flex;
-  gap: 2px;
-  margin-right: 8px;
-}
-
-.difficulty-stars .star {
-  font-size: 12px;
-  opacity: 0.3;
-  color: #e6a23c;
-}
-
-.difficulty-stars .star.active {
-  opacity: 1;
-}
-
-.difficulty-text {
-  font-size: 13px;
-  color: #606266;
-}
-
 .no-options {
   padding: 12px;
   text-align: center;
@@ -1218,16 +1086,6 @@ onMounted(() => {
   background-color: #f5f7fa;
 }
 
-:deep(.grade-tag) {
-  font-size: 10px;
-  background-color: #ecf5ff;
-  color: #409eff;
-  padding: 2px 6px;
-  border-radius: 10px;
-  border: 1px solid #d9ecff;
-  white-space: nowrap;
-}
-
 .loading-options {
   padding: 20px;
   text-align: center;
@@ -1357,11 +1215,6 @@ onMounted(() => {
   .dropdown-option {
     flex-direction: column;
     align-items: flex-start;
-  }
-  
-  .difficulty-stars {
-    margin-right: 0;
-    margin-bottom: 4px;
   }
 }
 </style>

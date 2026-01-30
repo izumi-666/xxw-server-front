@@ -897,7 +897,6 @@ const autoSaveAnswers = async () => {
       const response = await axios.post(`${API_BASE}/exam/autosaveAnswer`, saveData);
       
       if (response.data.code === 200) {
-        console.log("答案自动保存成功");
       } else {
         console.warn("答案自动保存失败:", response.data.message);
       }
@@ -992,8 +991,6 @@ const getGradingResult = async () => {
           autoMarkings: userRecord.auto_markings || [],
           scores: userRecord.scores || []
         };
-        
-        console.log("批改结果处理完成:", gradingResult.value);
       }
     }
   } catch (error) {
