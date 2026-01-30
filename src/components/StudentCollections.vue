@@ -1,12 +1,12 @@
 <template>
-  <div class="mistakes-book">
+  <div class="collections-book">
     <!-- 页面标题和操作栏 -->
     <div class="page-header">
       <div class="header-left">
-        <h2 class="page-title">错题本</h2>
+        <h2 class="page-title">收藏题目</h2>
       </div>
       <div class="header-actions">
-        <el-button type="primary" @click="fetchMistakes" :loading="loading">
+        <el-button type="primary" @click="fetchCollections" :loading="loading">
           <el-icon><Refresh /></el-icon>刷新
         </el-button>
       </div>
@@ -36,7 +36,7 @@
 
         <el-col :span="6">
           <div class="filter-item">
-            <label>错题类型：</label>
+            <label>题目类型：</label>
             <el-select
               v-model="filters.type"
               placeholder="全部类型"
@@ -57,7 +57,7 @@
 
         <el-col :span="6">
           <div class="filter-item">
-            <label>时间范围：</label>
+            <label>收藏时间：</label>
             <el-date-picker
               v-model="filters.dateRange"
               type="daterange"
@@ -97,11 +97,11 @@
         <el-col :span="6">
           <div class="stat-card total">
             <div class="stat-icon">
-              <el-icon><Document /></el-icon>
+              <el-icon><Star /></el-icon>
             </div>
             <div class="stat-content">
               <div class="stat-value">{{ stats.total }}</div>
-              <div class="stat-label">总错题数</div>
+              <div class="stat-label">收藏总数</div>
             </div>
           </div>
         </el-col>
@@ -119,39 +119,39 @@
         </el-col>
 
         <el-col :span="6">
-          <div class="stat-card reviewed">
+          <div class="stat-card subject">
             <div class="stat-icon">
-              <el-icon><Check /></el-icon>
+              <el-icon><Notebook /></el-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ stats.reviewed }}</div>
-              <div class="stat-label">已复习</div>
+              <div class="stat-value">{{ stats.subjectCount }}</div>
+              <div class="stat-label">涉及科目</div>
             </div>
           </div>
         </el-col>
 
         <el-col :span="6">
-          <div class="stat-card accuracy">
+          <div class="stat-card type">
             <div class="stat-icon">
-              <el-icon><TrendCharts /></el-icon>
+              <el-icon><Collection /></el-icon>
             </div>
             <div class="stat-content">
-              <div class="stat-value">{{ stats.accuracy }}%</div>
-              <div class="stat-label">复习正确率</div>
+              <div class="stat-value">{{ stats.typeCount }}</div>
+              <div class="stat-label">题目类型</div>
             </div>
           </div>
         </el-col>
       </el-row>
     </div>
 
-    <!-- 错题列表 -->
-    <div class="mistakes-list">
+    <!-- 收藏题目列表 -->
+    <div class="collections-list">
       <el-table
-        :data="filteredMistakes"
+        :data="filteredCollections"
         v-loading="loading"
         @row-click="handleRowClick"
         style="width: 100%"
-        row-class-name="mistake-row"
+        row-class-name="collection-row"
       >
         <!-- 科目列 -->
         <el-table-column
@@ -198,91 +198,70 @@
           </template>
         </el-table-column>
 
-        <!-- 错误次数列 -->
+        <!-- 难度列 -->
         <el-table-column
-          prop="errorCount"
-          label="错误次数"
-          width="110"
+          prop="difficulty"
+          label="难度"
+          width="120"
           align="center"
           header-align="center"
         >
           <template #default="{ row }">
-            <span class="error-count">{{ row.wrong_count || 1 }}</span>
+            <el-rate
+              v-model="row.difficulty_level"
+              :max="5"
+              disabled
+              text-color="#ff9900"
+              size="small"
+            />
           </template>
         </el-table-column>
 
-        <!-- 上次错误时间列 -->
+        <!-- 收藏时间列 -->
         <el-table-column
-          prop="lastErrorTime"
-          label="上次错误时间"
+          prop="collection_time"
+          label="收藏时间"
           width="160"
           align="center"
           header-align="center"
         >
           <template #default="{ row }">
-            {{ formatDate(row.last_wrong_time) }}
-          </template>
-        </el-table-column>
-
-        <!-- 状态列 -->
-        <el-table-column
-          prop="status"
-          label="状态"
-          width="110"
-          align="center"
-          header-align="center"
-        >
-          <template #default="{ row }">
-            <el-tag
-              :type="row.status === 'reviewed' ? 'success' : 'warning'"
-              size="small"
-            >
-              {{ row.status === "reviewed" ? "已复习" : "待复习" }}
-            </el-tag>
+            {{ formatDate(row.collection_time || row.created_at) }}
           </template>
         </el-table-column>
 
         <!-- 操作列 -->
         <el-table-column
           label="操作"
-          width="180"
+          width="220"
           fixed="right"
           align="center"
           header-align="center"
         >
           <template #default="{ row }">
             <el-button-group>
-              <!-- 收藏按钮 -->
+              <!-- 取消收藏按钮 -->
               <el-button
-                :type="row.is_collected ? 'danger' : 'info'"
+                type="danger"
                 size="small"
-                @click.stop="toggleCollect(row)"
+                @click.stop="cancelCollect(row)"
                 :loading="row.collectLoading"
               >
-                <el-icon>
-                  <StarFilled v-if="row.is_collected" />
-                  <Star v-else />
-                </el-icon>
+                <el-icon><Star /></el-icon>
               </el-button>
               
-              <!-- 查看按钮 -->
-              <el-button type="primary" size="small" @click.stop="reviewMistake(row)">
+              <!-- 查看详情按钮 -->
+              <el-button type="primary" size="small" @click.stop="viewDetail(row)">
                 <el-icon><View /></el-icon>
               </el-button>
               
-              <!-- 标记为已复习按钮 -->
+              <!-- 练习按钮 -->
               <el-button
                 type="success"
                 size="small"
-                @click.stop="markAsReviewed(row)"
-                v-if="row.status !== 'reviewed'"
+                @click.stop="practiceQuestion(row)"
               >
-                <el-icon><Check /></el-icon>
-              </el-button>
-              
-              <!-- 删除按钮 -->
-              <el-button type="danger" size="small" @click.stop="deleteMistake(row)">
-                <el-icon><Delete /></el-icon>
+                <el-icon><EditPen /></el-icon>
               </el-button>
             </el-button-group>
           </template>
@@ -303,24 +282,24 @@
       />
     </div>
 
-    <!-- 错题详情对话框 -->
+    <!-- 题目详情对话框 -->
     <el-dialog
       v-model="showDetailDialog"
-      :title="currentMistake ? `错题详情 - ${getSubjectName(currentMistake.subject_id)}` : '错题详情'"
+      :title="currentQuestion ? `题目详情 - ${getSubjectName(currentQuestion.subject_id)}` : '题目详情'"
       width="70%"
     >
-      <div v-if="currentMistake" class="mistake-detail">
+      <div v-if="currentQuestion" class="question-detail">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="科目">{{
-            getSubjectName(currentMistake.subject_id)
+            getSubjectName(currentQuestion.subject_id)
           }}</el-descriptions-item>
           <el-descriptions-item label="题型">{{
-            getQuestionType(currentMistake).name
+            getQuestionType(currentQuestion).name
           }}</el-descriptions-item>
           <el-descriptions-item label="知识点">
-            <div v-if="currentMistake.knowledgePoints && currentMistake.knowledgePoints.length > 0">
+            <div v-if="currentQuestion.knowledgePoints && currentQuestion.knowledgePoints.length > 0">
               <el-tag
-                v-for="(point, index) in currentMistake.knowledgePoints"
+                v-for="(point, index) in currentQuestion.knowledgePoints"
                 :key="index"
                 type="info"
                 size="small"
@@ -333,9 +312,9 @@
           </el-descriptions-item>
 
           <el-descriptions-item label="子知识点">
-            <div v-if="currentMistake.subKnowledgePoints && currentMistake.subKnowledgePoints.length > 0">
+            <div v-if="currentQuestion.subKnowledgePoints && currentQuestion.subKnowledgePoints.length > 0">
               <el-tag
-                v-for="(point, index) in currentMistake.subKnowledgePoints"
+                v-for="(point, index) in currentQuestion.subKnowledgePoints"
                 :key="index"
                 type="warning"
                 size="small"
@@ -346,43 +325,32 @@
             </div>
             <span v-else class="no-knowledge-points">暂无子知识点</span>
           </el-descriptions-item>
+          
           <el-descriptions-item label="难度">
             <el-rate
-              v-model="currentMistake.difficulty_level"
+              v-model="currentQuestion.difficulty_level"
               :max="5"
               disabled
-              show-score
               text-color="#ff9900"
-              score-template="{value} 星"
             />
           </el-descriptions-item>
-          <el-descriptions-item label="错误次数">{{
-            currentMistake.wrong_count || 1
+          
+          <el-descriptions-item label="收藏时间">{{
+            formatDate(currentQuestion.collection_time || currentQuestion.created_at)
           }}</el-descriptions-item>
-          <el-descriptions-item label="首次错误时间">{{
-            formatDate(currentMistake.first_wrong_time)
-          }}</el-descriptions-item>
-          <el-descriptions-item label="最后错误时间">{{
-            formatDate(currentMistake.last_wrong_time)
-          }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="currentMistake.status === 'reviewed' ? 'success' : 'warning'">
-              {{ currentMistake.status === "reviewed" ? "已复习" : "待复习" }}
-            </el-tag>
-          </el-descriptions-item>
         </el-descriptions>
 
         <div class="detail-section">
           <h3>题目内容</h3>
           <div class="content-box">
             <div
-              v-html="markdownToHtml(currentMistake.title || '暂无题目内容')"
+              v-html="markdownToHtml(currentQuestion.title || '暂无题目内容')"
               class="markdown-content"
             ></div>
-            <div v-if="currentMistake.img_url" class="question-image">
+            <div v-if="currentQuestion.img_url" class="question-image">
               <el-image
-                :src="currentMistake.img_url"
-                :preview-src-list="[currentMistake.img_url]"
+                :src="currentQuestion.img_url"
+                :preview-src-list="[currentQuestion.img_url]"
                 fit="contain"
                 style="max-width: 100%; max-height: 300px"
               />
@@ -390,43 +358,43 @@
           </div>
         </div>
 
-        <div v-if="hasOptions(currentMistake)" class="detail-section">
+        <div v-if="hasOptions(currentQuestion)" class="detail-section">
           <h3>选项</h3>
           <div class="content-box options-container">
-            <div v-if="currentMistake.options?.option_A" class="option-item">
+            <div v-if="currentQuestion.options?.option_A" class="option-item">
               <span class="option-label">A.</span>
               <span
                 class="option-content"
-                v-html="markdownToHtml(currentMistake.options.option_A)"
+                v-html="markdownToHtml(currentQuestion.options.option_A)"
               ></span>
             </div>
-            <div v-if="currentMistake.options?.option_B" class="option-item">
+            <div v-if="currentQuestion.options?.option_B" class="option-item">
               <span class="option-label">B.</span>
               <span
                 class="option-content"
-                v-html="markdownToHtml(currentMistake.options.option_B)"
+                v-html="markdownToHtml(currentQuestion.options.option_B)"
               ></span>
             </div>
-            <div v-if="currentMistake.options?.option_C" class="option-item">
+            <div v-if="currentQuestion.options?.option_C" class="option-item">
               <span class="option-label">C.</span>
               <span
                 class="option-content"
-                v-html="markdownToHtml(currentMistake.options.option_C)"
+                v-html="markdownToHtml(currentQuestion.options.option_C)"
               ></span>
             </div>
-            <div v-if="currentMistake.options?.option_D" class="option-item">
+            <div v-if="currentQuestion.options?.option_D" class="option-item">
               <span class="option-label">D.</span>
               <span
                 class="option-content"
-                v-html="markdownToHtml(currentMistake.options.option_D)"
+                v-html="markdownToHtml(currentQuestion.options.option_D)"
               ></span>
             </div>
           </div>
         </div>
 
-        <div class="detail-section" v-if="currentMistake.answer">
+        <div class="detail-section" v-if="currentQuestion.answer">
           <div class="section-header">
-            <h3>正确答案</h3>
+            <h3>答案</h3>
             <el-button
               type="text"
               @click="showAnswer = !showAnswer"
@@ -441,32 +409,12 @@
           </div>
           <el-collapse-transition>
             <div v-show="showAnswer" class="content-box markdown-content">
-              <div v-html="markdownToHtml(currentMistake.answer)"></div>
+              <div v-html="markdownToHtml(currentQuestion.answer)"></div>
             </div>
           </el-collapse-transition>
         </div>
 
-        <div class="detail-section" v-if="currentMistake.last_answer">
-          <h3>你的答案</h3>
-          <div class="content-box">
-            <span
-              :class="{
-                'wrong-answer': currentMistake.last_answer !== currentMistake.answer,
-              }"
-            >
-              <span v-html="markdownToHtml(currentMistake.last_answer)"></span>
-            </span>
-            <el-tag
-              v-if="currentMistake.answer && currentMistake.last_answer"
-              :type="currentMistake.last_answer === currentMistake.answer ? 'success' : 'danger'"
-              size="small"
-            >
-              {{ currentMistake.last_answer === currentMistake.answer ? "正确" : "错误" }}
-            </el-tag>
-          </div>
-        </div>
-
-        <div class="detail-section" v-if="currentMistake.notes">
+        <div class="detail-section" v-if="currentQuestion.notes">
           <div class="section-header">
             <h3>解析</h3>
             <el-button
@@ -484,13 +432,13 @@
           <el-collapse-transition>
             <div v-show="showAnalysis" class="content-box">
               <div
-                v-html="markdownToHtml(currentMistake.notes)"
+                v-html="markdownToHtml(currentQuestion.notes)"
                 class="markdown-content"
               ></div>
-              <div v-if="currentMistake.notes_img_url" class="notes-image">
+              <div v-if="currentQuestion.notes_img_url" class="notes-image">
                 <el-image
-                  :src="currentMistake.notes_img_url"
-                  :preview-src-list="[currentMistake.notes_img_url]"
+                  :src="currentQuestion.notes_img_url"
+                  :preview-src-list="[currentQuestion.notes_img_url]"
                   fit="contain"
                   style="max-width: 100%; max-height: 300px; margin-top: 10px"
                 />
@@ -499,31 +447,28 @@
           </el-collapse-transition>
         </div>
 
-        <div class="detail-section" v-if="currentMistake.remark">
+        <div class="detail-section" v-if="currentQuestion.remark">
           <h3>备注</h3>
-          <div class="content-box" v-html="markdownToHtml(currentMistake.remark)"></div>
+          <div class="content-box" v-html="markdownToHtml(currentQuestion.remark)"></div>
         </div>
 
         <!-- 详情页操作按钮 -->
         <div class="detail-actions">
           <el-button
-            :type="currentMistake?.is_collected ? 'danger' : 'info'"
-            @click="toggleCollect(currentMistake)"
-            :loading="currentMistake?.collectLoading"
+            type="danger"
+            @click="cancelCollect(currentQuestion)"
+            :loading="currentQuestion?.collectLoading"
           >
-            <el-icon>
-              <StarFilled v-if="currentMistake?.is_collected" />
-              <Star v-else />
-            </el-icon>
-            {{ currentMistake?.is_collected ? '取消收藏' : '收藏题目' }}
+            <el-icon><Star /></el-icon>
+            取消收藏
           </el-button>
           
           <el-button
-            type="primary"
-            @click="handleReviewed"
-            v-if="currentMistake && currentMistake.status !== 'reviewed'"
+            type="success"
+            @click="practiceQuestion(currentQuestion)"
           >
-            标记为已复习
+            <el-icon><EditPen /></el-icon>
+            开始练习
           </el-button>
           
           <el-button @click="showDetailDialog = false">关闭</el-button>
@@ -541,14 +486,14 @@ import axios from "axios";
 import {
   Refresh,
   Search,
-  Document,
-  Calendar,
-  Check,
-  TrendCharts,
-  View,
-  Delete,
   Star,
-  StarFilled
+  Calendar,
+  Notebook,
+  Collection,
+  View,
+  DocumentAdd,
+  EditPen,
+  Delete
 } from "@element-plus/icons-vue";
 import { getAllSubjects, getSubjectName } from "../utils/subjectList";
 import { getQuestionCategoryText } from "../utils/questionCategory";
@@ -581,27 +526,27 @@ const getQuestionTypeInfo = (categoryId) => {
 };
 
 export default {
-  name: "MistakesBook",
+  name: "CollectionsBook",
   components: {
     Refresh,
     Search,
-    Document,
+    Star,
     Calendar,
-    Check,
-    TrendCharts,
+    Notebook,
+    Collection,
     View,
+    DocumentAdd,
+    EditPen,
     Delete,
     ArrowDown,
-    ArrowUp,
-    Star,
-    StarFilled
+    ArrowUp
   },
   setup() {
     // 状态管理
-    const mistakes = ref([]);
+    const collections = ref([]);
     const loading = ref(false);
     const showDetailDialog = ref(false);
-    const currentMistake = ref(null);
+    const currentQuestion = ref(null);
     const questionDetailsLoaded = ref(new Set());
     const showAnswer = ref(false);
     const showAnalysis = ref(false);
@@ -626,20 +571,20 @@ export default {
     const stats = ref({
       total: 0,
       recent: 0,
-      reviewed: 0,
-      accuracy: 0,
+      subjectCount: 0,
+      typeCount: 0,
     });
 
     // 计算属性
     const subjects = computed(() => getAllSubjects());
     
-    const filteredMistakes = computed(() => {
-      let result = [...mistakes.value];
+    const filteredCollections = computed(() => {
+      let result = [...collections.value];
 
-      // 按最新错误时间排序
+      // 按最新收藏时间排序
       result.sort((a, b) => {
-        const dateA = new Date(a.last_wrong_time).getTime();
-        const dateB = new Date(b.last_wrong_time).getTime();
+        const dateA = new Date(a.collection_time || a.created_at).getTime();
+        const dateB = new Date(b.collection_time || b.created_at).getTime();
         return dateB - dateA;
       });
 
@@ -674,7 +619,7 @@ export default {
       if (filters.value.dateRange && filters.value.dateRange.length === 2) {
         const [start, end] = filters.value.dateRange;
         result = result.filter((item) => {
-          const date = new Date(item.last_wrong_time);
+          const date = new Date(item.collection_time || item.created_at);
           return date >= start && date <= end;
         });
       }
@@ -698,272 +643,245 @@ export default {
       return getQuestionTypeInfo(0);
     };
 
-    // 用题目详情丰富错题信息
-const enrichMistakeWithDetail = (mistake, detail) => {
-  return {
-    ...mistake,
-    ...detail,
-    type: getQuestionType(detail),
-    status: mistake.status || "pending",
-    last_answer: mistake.last_answer || detail.last_answer || "未作答",
-    knowledgePoints: getKnowledgePointNames(detail.knowledge_point_id || mistake.knowledge_point_id),
-    subKnowledgePoints: getKnowledgePointNames(
-      detail.sub_knowledge_point_ids || mistake.sub_knowledge_point_ids
-    ) || [],
-    // 保留原有的收藏状态
-    is_collected: mistake.is_collected || false,
-    collectLoading: false
-  };
-};
+    // 用题目详情丰富收藏信息
+    const enrichCollectionWithDetail = (collection, detail) => {
+      return {
+        ...collection,
+        ...detail,
+        type: getQuestionType(detail),
+        is_collected: true,
+        collectLoading: false,
+        knowledgePoints: getKnowledgePointNames(detail.knowledge_point_id || collection.knowledge_point_id),
+        subKnowledgePoints: getKnowledgePointNames(
+          detail.sub_knowledge_point_ids || collection.sub_knowledge_point_ids
+        ) || [],
+      };
+    };
 
     // 批量获取题目详情
-const fetchAllQuestionDetails = async (mistakeItems) => {
-  mistakeItems.sort((a, b) => {
-    const dateA = new Date(a.last_wrong_time).getTime();
-    const dateB = new Date(b.last_wrong_time).getTime();
-    return dateB - dateA;
-  });
-
-  // 注意：这里不再调用 fetchCollectionStatus，因为已经在 fetchMistakes 中调用过了
-
-  const questionIds = mistakeItems.map((item) => item.question_id).filter((id) => id);
-  if (questionIds.length === 0) return mistakeItems;
-
-  // 计算需要请求的ID
-  const cachedIds = [];
-  const needFetchIds = [];
-
-  questionIds.forEach((id) => {
-    const idStr = String(id);
-    if (questionDetailsLoaded.value.has(idStr) || questionCache.has(idStr)) {
-      cachedIds.push(idStr);
-    } else {
-      needFetchIds.push(id);
-    }
-  });
-
-  // 创建ID到详情的映射
-  const questionMap = {};
-
-  // 处理已缓存的数据
-  cachedIds.forEach((idStr) => {
-    const cachedDetail = questionCache.get(idStr);
-    if (cachedDetail) {
-      questionMap[idStr] = cachedDetail;
-    }
-  });
-
-  // 获取需要请求的题目详情
-  if (needFetchIds.length > 0) {
-    try {
-      const response = await axios.post(
-        `${API_BASE}/questions/findQuestionById`,
-        needFetchIds,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data?.code === 200) {
-        const questionDetails = response.data.data || [];
-        questionDetails.forEach((detail) => {
-          if (detail?.id) {
-            const detailIdStr = String(detail.id);
-
-            // 处理知识点信息
-            if (detail.knowledge_point_id) {
-              detail.knowledgePoints = getKnowledgePointNames(detail.knowledge_point_id);
-            }
-            if (detail.sub_knowledge_point_ids) {
-              detail.subKnowledgePoints = getKnowledgePointNames(detail.sub_knowledge_point_ids);
-            } else {
-              detail.subKnowledgePoints = [];
-            }
-
-            questionCache.set(detailIdStr, detail);
-            questionDetailsLoaded.value.add(detailIdStr);
-            questionMap[detailIdStr] = detail;
-          }
-        });
-      }
-    } catch (error) {
-      console.error("API请求错误:", error.response?.data || error.message);
-    }
-  }
-
-  // 合并数据
-  return mistakeItems.map((item) => {
-    const itemIdStr = String(item.question_id);
-    const questionDetail = questionMap[itemIdStr];
-
-    if (questionDetail) {
-      return enrichMistakeWithDetail(item, questionDetail);
-    }
-
-    // 如果没有获取到详情，返回基础信息
-    return {
-      ...item,
-      type: getQuestionType(item),
-      status: item.status || "pending",
-      last_answer: item.last_answer || "未作答",
-      knowledgePoints: item.knowledge_points_id ? getKnowledgePointNames(item.knowledge_points_id) : [],
-      subKnowledgePoints: item.sub_knowledge_point_ids ? getKnowledgePointNames(item.sub_knowledge_point_ids) : [],
-    };
-  });
-};
-
-    // 获取错题列表
-const fetchMistakes = async () => {
-  loading.value = true;
-
-  try {
-    // 先获取科目和知识点数据
-    await Promise.all([fetchKnowledgePointList()]);
-
-    // 获取错题数据
-    const response = await axios.get(
-      `${API_BASE}/incorrectQuestion/getIncorrectQuestionByStudent/${encodeURIComponent(
-        currentStudentName.value
-      )}`
-    );
-
-    if (response.data?.code === 200) {
-      const rawData = response.data.data || [];
-      
-      // 排序
-      rawData.sort((a, b) => {
-        const dateA = new Date(a.last_wrong_time).getTime();
-        const dateB = new Date(b.last_wrong_time).getTime();
+    const fetchAllQuestionDetails = async (collectionItems) => {
+      // 按收藏时间排序
+      collectionItems.sort((a, b) => {
+        const dateA = new Date(a.collection_time || a.created_at).getTime();
+        const dateB = new Date(b.collection_time || b.created_at).getTime();
         return dateB - dateA;
       });
 
-      // 首先获取收藏状态
-      await fetchCollectionStatus(rawData);
-      
-      // 然后获取所有题目详情
-      mistakes.value = await fetchAllQuestionDetails(rawData);
+      const questionIds = collectionItems.map((item) => item.question_id).filter((id) => id);
+      if (questionIds.length === 0) return collectionItems;
 
-      // 确保每个错题都有状态
-      mistakes.value.forEach((item) => {
-        if (!item.status) {
-          item.status = "pending";
+      // 计算需要请求的ID
+      const cachedIds = [];
+      const needFetchIds = [];
+
+      questionIds.forEach((id) => {
+        const idStr = String(id);
+        if (questionDetailsLoaded.value.has(idStr) || questionCache.has(idStr)) {
+          cachedIds.push(idStr);
+        } else {
+          needFetchIds.push(id);
         }
       });
 
-      updateStats();
-      ElMessage.success(`获取到 ${mistakes.value.length} 条错题记录`);
-    } else {
-      ElMessage.warning("获取错题数据成功，但数据格式可能不符合预期");
-      updateStats();
-    }
-  } catch (error) {
-    console.error("API错误:", error.response?.data || error.message);
-    ElMessage.error("获取数据失败");
-    updateStats();
-  } finally {
-    loading.value = false;
-  }
-};
+      // 创建ID到详情的映射
+      const questionMap = {};
 
-    // 获取收藏状态
-const fetchCollectionStatus = async (mistakeItems) => {
-  try {
-    // 获取收藏列表
-    const collectionResponse = await axios.get(
-      `${API_BASE}/collections/getCollectionList/${encodeURIComponent(
-        currentStudentName.value
-      )}`
-    );
-    
-    let collectedQuestionIds = [];
-    
-    if (collectionResponse.data?.code === 200) {
-      // 提取所有已收藏的题目ID
-      collectedQuestionIds = collectionResponse.data.data.map(
-        item => item.question_id
-      );
-      console.log('已收藏的题目ID列表:', collectedQuestionIds);
-    } else {
-      console.warn('获取收藏列表失败:', collectionResponse.data?.message);
-    }
-    
-    // 更新每个错题的收藏状态
-    mistakeItems.forEach((item) => {
-      if (item.question_id) {
-        item.is_collected = collectedQuestionIds.includes(item.question_id);
-        item.collectLoading = false;
+      // 处理已缓存的数据
+      cachedIds.forEach((idStr) => {
+        const cachedDetail = questionCache.get(idStr);
+        if (cachedDetail) {
+          questionMap[idStr] = cachedDetail;
+        }
+      });
+
+      // 获取需要请求的题目详情
+      if (needFetchIds.length > 0) {
+        try {
+          const response = await axios.post(
+            `${API_BASE}/questions/findQuestionById`,
+            needFetchIds,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (response.data?.code === 200) {
+            const questionDetails = response.data.data || [];
+            questionDetails.forEach((detail) => {
+              if (detail?.id) {
+                const detailIdStr = String(detail.id);
+
+                // 处理知识点信息
+                if (detail.knowledge_point_id) {
+                  detail.knowledgePoints = getKnowledgePointNames(detail.knowledge_point_id);
+                }
+                if (detail.sub_knowledge_point_ids) {
+                  detail.subKnowledgePoints = getKnowledgePointNames(detail.sub_knowledge_point_ids);
+                } else {
+                  detail.subKnowledgePoints = [];
+                }
+
+                questionCache.set(detailIdStr, detail);
+                questionDetailsLoaded.value.add(detailIdStr);
+                questionMap[detailIdStr] = detail;
+              }
+            });
+          }
+        } catch (error) {
+          console.error("API请求错误:", error.response?.data || error.message);
+        }
       }
-    });
-    
-  } catch (error) {
-    console.error("获取收藏状态失败:", error);
-    // 失败时默认设为未收藏
-    mistakeItems.forEach((item) => {
-      item.is_collected = false;
-      item.collectLoading = false;
-    });
-  }
-};
 
-    // 收藏/取消收藏
-const toggleCollect = async (row) => {
-  if (!row?.question_id) {
-    ElMessage.warning('无法收藏，题目ID不存在');
-    return;
-  }
-  
-  try {
-    row.collectLoading = true;
-    currentMistake.value && (currentMistake.value.collectLoading = true);
-    
-    if (row.is_collected) {
-      // 取消收藏
-      await axios.delete(`${API_BASE}/collections/cancelCollecting`, {
-        data: {
-          question_id: row.question_id,
-          student: currentStudentName.value
+      // 合并数据
+      return collectionItems.map((item) => {
+        const itemIdStr = String(item.question_id);
+        const questionDetail = questionMap[itemIdStr];
+
+        if (questionDetail) {
+          return enrichCollectionWithDetail(item, questionDetail);
         }
+
+        // 如果没有获取到详情，返回基础信息
+        return {
+          ...item,
+          type: getQuestionType(item),
+          is_collected: true,
+          collectLoading: false,
+          knowledgePoints: item.knowledge_points_id ? getKnowledgePointNames(item.knowledge_points_id) : [],
+          subKnowledgePoints: item.sub_knowledge_point_ids ? getKnowledgePointNames(item.sub_knowledge_point_ids) : [],
+        };
       });
+    };
+
+    // 获取收藏列表
+    const fetchCollections = async () => {
+      loading.value = true;
+
+      try {
+        // 先获取科目和知识点数据
+        await Promise.all([fetchKnowledgePointList()]);
+
+        // 获取收藏数据
+        const response = await axios.get(
+          `${API_BASE}/collections/getCollectionList/${encodeURIComponent(
+            currentStudentName.value
+          )}`
+        );
+
+        if (response.data?.code === 200) {
+          const rawData = response.data.data || [];
+          
+          // 获取所有题目详情
+          collections.value = await fetchAllQuestionDetails(rawData);
+
+          // 更新统计数据
+          updateStats();
+          
+          ElMessage.success(`获取到 ${collections.value.length} 条收藏记录`);
+        } else {
+          ElMessage.warning("获取收藏数据成功，但数据格式可能不符合预期");
+          updateStats();
+        }
+      } catch (error) {
+        console.error("API错误:", error.response?.data || error.message);
+        ElMessage.error("获取数据失败");
+        updateStats();
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    // 取消收藏
+    const cancelCollect = async (row) => {
+      if (!row?.question_id) {
+        ElMessage.warning('无法取消收藏，题目ID不存在');
+        return;
+      }
       
-      row.is_collected = false;
-      currentMistake.value && (currentMistake.value.is_collected = false);
-      ElMessage.success('已取消收藏');
-    } else {
-      // 添加收藏
-      await axios.post(`${API_BASE}/collections/collectQuestion`, {
-        question_id: row.question_id,
-        student: currentStudentName.value
-      });
-      
-      row.is_collected = true;
-      currentMistake.value && (currentMistake.value.is_collected = true);
-      ElMessage.success('已收藏题目');
-    }
-  } catch (error) {
-    console.error('收藏操作失败:', error);
-    ElMessage.error(error.response?.data?.message || '操作失败');
-  } finally {
-    row.collectLoading = false;
-    currentMistake.value && (currentMistake.value.collectLoading = false);
-  }
-};
+      try {
+        row.collectLoading = true;
+        currentQuestion.value && (currentQuestion.value.collectLoading = true);
+        
+        await ElMessageBox.confirm("确认取消收藏该题目？", "提示", {
+          confirmButtonText: "确认",
+          cancelButtonText: "取消",
+          type: "warning",
+        });
+
+        // 调用取消收藏API
+        await axios.delete(`${API_BASE}/collections/cancelCollecting`, {
+          data: {
+            question_id: row.question_id,
+            student: currentStudentName.value
+          }
+        });
+
+        // 从列表中移除
+        collections.value = collections.value.filter(
+          (item) => item.question_id !== row.question_id
+        );
+
+        if (currentQuestion.value && currentQuestion.value.question_id === row.question_id) {
+          showDetailDialog.value = false;
+        }
+
+        updateStats();
+        ElMessage.success('已取消收藏');
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('取消收藏失败:', error);
+          ElMessage.error(error.response?.data?.message || '操作失败');
+        }
+      } finally {
+        row.collectLoading = false;
+        currentQuestion.value && (currentQuestion.value.collectLoading = false);
+      }
+    };
+
+    // 开始练习
+    const practiceQuestion = (row) => {
+      ElMessage.info('练习功能开发中...');
+      // 这里可以跳转到练习页面或打开练习弹窗
+    };
 
     // 更新统计数据
     const updateStats = () => {
-      const total = mistakes.value.length;
+      const total = collections.value.length;
 
-      const recent = mistakes.value.filter((item) => {
-        if (!item.last_wrong_time) return false;
-        const days = (Date.now() - new Date(item.last_wrong_time).getTime()) / (1000 * 3600 * 24);
+      // 近期新增（7天内）
+      const recent = collections.value.filter((item) => {
+        if (!item.collection_time && !item.created_at) return false;
+        const collectionDate = item.collection_time || item.created_at;
+        const days = (Date.now() - new Date(collectionDate).getTime()) / (1000 * 3600 * 24);
         return days <= 7;
       }).length;
 
-      const reviewed = mistakes.value.filter((item) => item.status === "reviewed").length;
-      const accuracy = reviewed > 0 ? Math.round((reviewed / total) * 100) : 0;
+      // 涉及科目数量
+      const subjectSet = new Set();
+      collections.value.forEach((item) => {
+        const subjectName = getSubjectName(item.subject_id);
+        if (subjectName) {
+          subjectSet.add(subjectName);
+        }
+      });
 
-      stats.value = { total, recent, reviewed, accuracy };
+      // 题目类型数量
+      const typeSet = new Set();
+      collections.value.forEach((item) => {
+        const typeName = getQuestionType(item).name;
+        if (typeName) {
+          typeSet.add(typeName);
+        }
+      });
+
+      stats.value = {
+        total,
+        recent,
+        subjectCount: subjectSet.size,
+        typeCount: typeSet.size
+      };
     };
 
     // 其他方法
@@ -972,7 +890,7 @@ const toggleCollect = async (row) => {
     };
 
     const handleRowClick = async (row) => {
-      currentMistake.value = row;
+      currentQuestion.value = row;
       showAnswer.value = false;
       showAnalysis.value = false;
       showDetailDialog.value = true;
@@ -982,8 +900,8 @@ const toggleCollect = async (row) => {
       });
     };
 
-    const reviewMistake = async (row) => {
-      currentMistake.value = row;
+    const viewDetail = async (row) => {
+      currentQuestion.value = row;
       showAnswer.value = false;
       showAnalysis.value = false;
       showDetailDialog.value = true;
@@ -1012,47 +930,6 @@ const toggleCollect = async (row) => {
           }
         });
       }, 100);
-    };
-
-    const markAsReviewed = async (row) => {
-      try {
-        await ElMessageBox.confirm("确认标记为已复习？", "提示", {
-          confirmButtonText: "确认",
-          cancelButtonText: "取消",
-          type: "warning",
-        });
-
-        row.status = "reviewed";
-        updateStats();
-        ElMessage.success("标记成功");
-      } catch {
-        // 用户取消
-      }
-    };
-
-    const deleteMistake = async (row) => {
-      try {
-        await ElMessageBox.confirm("确认删除这条错题记录？", "警告", {
-          confirmButtonText: "删除",
-          cancelButtonText: "取消",
-          type: "error",
-        });
-
-        mistakes.value = mistakes.value.filter((item) => item.id !== row.id);
-        updateStats();
-        ElMessage.success("删除成功");
-      } catch {
-        // 用户取消
-      }
-    };
-
-    const handleReviewed = () => {
-      if (currentMistake.value) {
-        currentMistake.value.status = "reviewed";
-        updateStats();
-        showDetailDialog.value = false;
-        ElMessage.success("已标记为已复习");
-      }
     };
 
     const formatDate = (dateString) => {
@@ -1140,15 +1017,15 @@ const toggleCollect = async (row) => {
 
     // 初始化
     onMounted(() => {
-      fetchMistakes();
+      fetchCollections();
     });
 
     return {
       // 状态
-      mistakes,
+      collections,
       loading,
       showDetailDialog,
-      currentMistake,
+      currentQuestion,
       filters,
       subjects,
       pagination,
@@ -1157,16 +1034,15 @@ const toggleCollect = async (row) => {
       showAnalysis,
 
       // 计算属性
-      filteredMistakes,
+      filteredCollections,
 
       // 方法
-      fetchMistakes,
+      fetchCollections,
       handleFilterChange,
       handleRowClick,
-      reviewMistake,
-      markAsReviewed,
-      deleteMistake,
-      handleReviewed,
+      viewDetail,
+      cancelCollect,
+      practiceQuestion,
       formatDate,
       formatQuestionPreview,
       markdownToHtml,
@@ -1177,7 +1053,6 @@ const toggleCollect = async (row) => {
       hasOptions,
       handleSizeChange,
       handleCurrentChange,
-      toggleCollect,
     };
   },
 };
@@ -1291,31 +1166,9 @@ const toggleCollect = async (row) => {
   line-height: 3.5;
 }
 
-/* 收藏按钮样式 */
-:deep(.el-table .el-button--info) {
-  background-color: #f7a168 !important;
-  border-color: #f7a168 !important;
-}
-
-:deep(.el-table .el-button--danger) {
-  background-color: #f56c6c !important;
-  border-color: #f56c6c !important;
-}
-
-/* 所有按钮图标始终白色 */
+/* 按钮图标始终白色 */
 :deep(.el-table .el-button .el-icon svg) {
   color: white !important;
-}
-
-/* 悬停效果 - 背景色略微变化 */
-:deep(.el-table .el-button--info:hover) {
-  background-color: #66b1ff !important;
-  border-color: #66b1ff !important;
-}
-
-:deep(.el-table .el-button--danger:hover) {
-  background-color: #f78989 !important;
-  border-color: #f78989 !important;
 }
 
 /* 处理markdown内容中的段落 */
@@ -1328,11 +1181,6 @@ const toggleCollect = async (row) => {
 .options-container {
   max-height: 300px;
   overflow-y: auto;
-}
-
-.wrong-answer {
-  color: #f56c6c;
-  font-weight: bold;
 }
 
 .question-image,
@@ -1349,7 +1197,7 @@ const toggleCollect = async (row) => {
   line-height: 1.6;
 }
 
-.mistakes-book {
+.collections-book {
   padding: 20px;
   background-color: #f8fafc;
   min-height: 100%;
@@ -1428,16 +1276,16 @@ const toggleCollect = async (row) => {
 }
 
 .total .stat-icon {
-  background: #3b82f6;
+  background: #f59e0b;
 }
 .recent .stat-icon {
   background: #10b981;
 }
-.reviewed .stat-icon {
+.subject .stat-icon {
   background: #8b5cf6;
 }
-.accuracy .stat-icon {
-  background: #f59e0b;
+.type .stat-icon {
+  background: #3b82f6;
 }
 
 .stat-value {
@@ -1453,8 +1301,8 @@ const toggleCollect = async (row) => {
   margin-top: 4px;
 }
 
-/* 错题列表 */
-.mistakes-list {
+/* 收藏列表 */
+.collections-list {
   background: white;
   border-radius: 12px;
   padding: 20px;
@@ -1471,23 +1319,13 @@ const toggleCollect = async (row) => {
   text-align: left;
 }
 
-.error-count {
-  display: inline-block;
-  padding: 2px 8px;
-  background: #fee2e2;
-  color: #dc2626;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* 错题行样式 */
-:deep(.mistake-row) {
+/* 收藏行样式 */
+:deep(.collection-row) {
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-:deep(.mistake-row:hover) {
+:deep(.collection-row:hover) {
   background-color: #f1f5f9 !important;
 }
 
@@ -1502,8 +1340,8 @@ const toggleCollect = async (row) => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* 错题详情样式 */
-.mistake-detail {
+/* 题目详情样式 */
+.question-detail {
   padding: 10px;
 }
 
@@ -1557,40 +1395,6 @@ const toggleCollect = async (row) => {
   margin-right: 4px;
 }
 
-/* 答案对比区域样式 */
-.answer-comparison {
-  margin-top: 15px;
-}
-
-.answer-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  padding: 8px;
-  border-radius: 4px;
-  background: #f8f9fa;
-}
-
-.answer-label {
-  font-weight: bold;
-  margin-right: 12px;
-  min-width: 80px;
-}
-
-.correct-answer {
-  color: #10b981;
-  font-weight: bold;
-}
-
-.wrong-answer {
-  color: #ef4444;
-  font-weight: bold;
-}
-
-.answer-status {
-  margin-left: auto;
-}
-
 /* 过渡动画 */
 :deep(.el-collapse-transition-leave-active),
 :deep(.el-collapse-transition-enter-active) {
@@ -1640,13 +1444,23 @@ const toggleCollect = async (row) => {
     display: none !important;
   }
 
-  .mistakes-book {
+  .collections-book {
     padding: 0;
   }
 
-  .mistakes-list {
+  .collections-list {
     box-shadow: none;
     padding: 0;
   }
+}
+
+/* 难度星星样式调整 */
+:deep(.el-rate__icon) {
+  font-size: 16px;
+}
+
+:deep(.el-rate__text) {
+  font-size: 12px;
+  margin-left: 5px;
 }
 </style>

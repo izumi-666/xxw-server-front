@@ -80,6 +80,10 @@
             <el-icon><EditPen /></el-icon>
             <span>错题本</span>
           </el-menu-item>
+          <el-menu-item index="student-collections">
+            <el-icon><Star /></el-icon>
+            <span>我的收藏</span>
+          </el-menu-item>
         </el-sub-menu>
 
         <el-menu-item index="student-settings">
@@ -215,6 +219,7 @@ export default {
         "student-dashboard": "/student/studentdashboard",
         "exam-management": "/student/exammanagement",
         "student-mistakes-book": "/student/mistakesbook",
+        "student-collections": "/student/studentcollections",
         "self-assessment": "/student/selfassessment",
         "self-exercise": "/student/selfexercise",
       };
