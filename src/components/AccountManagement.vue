@@ -119,7 +119,7 @@
         <button class="btn-primary student-btn" @click="showCreateForm('student')">
           ＋新建学生账户
         </button>
-        <button class="btn-primary teacher-btn" @click="showCreateForm('teacher')">
+        <button class="btn-primary teacher-btn" @click="showCreateForm('staff')">
           ＋新建教师账户
         </button>
       </div>

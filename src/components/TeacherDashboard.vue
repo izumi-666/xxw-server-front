@@ -118,7 +118,6 @@ const holidayMap = ref({});
 const customFestivals = {
   // 格式: '月-日': { name: '节日名称', type: 'festival类型', isHoliday: 是否法定假日 }
   '1-1': { name: '元旦', type: 'holiday', isHoliday: true },
-  '2-10': { name: '春节', type: 'holiday', isHoliday: true },
   '2-14': { name: '情人节', type: 'festival', isHoliday: false },
   '3-8': { name: '妇女节', type: 'festival', isHoliday: false },
   '3-12': { name: '植树节', type: 'festival', isHoliday: false },
@@ -248,9 +247,20 @@ const getFestivalName = (day) => {
     return holidayMap.value[dateStr].name;
   }
   
-  // 然后检查自定义节日
+  // 然后检查自定义节日，但要排除已被API包含的节日
   const customKey = `${currentMonth.value + 1}-${day}`;
   if (customFestivals[customKey]) {
+    // 春节日期每年都不同，所以需要特殊处理
+    // 只有当API没有返回春节信息时，才显示自定义的春节
+    if (customFestivals[customKey].name === '春节') {
+      // 检查API中是否已有春节信息
+      const hasSpringFestivalInAPI = Object.values(holidayMap.value).some(
+        holiday => holiday.name && holiday.name.includes('春节')
+      );
+      if (hasSpringFestivalInAPI) {
+        return ''; // API已有春节，不显示自定义春节
+      }
+    }
     return customFestivals[customKey].name;
   }
   

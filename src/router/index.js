@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Login from "../Login.vue";
 import QuestionManager from "../components/QuestionManager.vue";
+import QuestionReview from "../components/QuestionReview.vue";
 import PaperManagement from "../components/PaperManagement.vue";
 import ExamManagement from "../components/ExamManagement.vue"; //考试管理(教师用)
 import KnowledgePointManagement from "../components/KnowledgePointManagement.vue";//知识点管理
@@ -180,6 +181,15 @@ const routes = [
         meta: {
           requiresAuth: true,
           breadcrumb: ["教学管理", "题库录入"]
+        }
+      },
+      {
+        path: "review",
+        name: "question-review",
+        component: QuestionReview,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["教学管理", "审核题目"]
         }
       },
       {

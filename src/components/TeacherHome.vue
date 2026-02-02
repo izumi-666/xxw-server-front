@@ -83,6 +83,14 @@
           <span>题库录入</span>
         </el-menu-item>
 
+        <el-menu-item 
+      v-if="shouldShowReviewMenu()"
+      index="question-review"
+    >
+      <el-icon><Checked /></el-icon>
+      <span>审核题目</span>
+    </el-menu-item>
+
         <el-menu-item index="knowledgepoint-management">
           <el-icon><Document /></el-icon>
           <span>知识点管理</span>
@@ -185,6 +193,7 @@ export default {
       userName: localStorage.getItem("userName") || "教师",
       // notificationCount: 3,
       showNotificationDrawer: false,
+      userPermissions: [],
 
       notifications: [
       ],
@@ -194,9 +203,30 @@ export default {
   mounted() {
 
     this.initRoute();
+    this.loadUserPermissions();
   },
 
   methods: {
+      // 加载用户权限
+  loadUserPermissions() {
+    const permissionsStr = localStorage.getItem("userPermissions");
+    if (permissionsStr) {
+      try {
+        this.userPermissions = JSON.parse(permissionsStr);
+      } catch (e) {
+        console.error("解析用户权限失败", e);
+        this.userPermissions = [];
+      }
+    }
+  },
+  
+  // 检查是否显示审核题目菜单
+  shouldShowReviewMenu() {
+    // 检查是否是 ROLE_ROOT 或 ROLE_ADMINISTRATOR
+    return this.userPermissions.some(permission => 
+      permission === "ROLE_ROOT" || permission === "ROLE_ADMINISTRATOR"
+    );
+  },
 
     initRoute() {
       if (this.$route.name) this.activeMenu = this.$route.name;
@@ -252,6 +282,11 @@ export default {
           module: "题库录入",
           page: "题库管理",
         },
+        "question-review": {
+        path: "/teacher/review",
+        module: "题库审核",
+        page: "题目审核",
+      },
         // settings: { path: "/teacher/settings", module: "个人设置", page: "账户设置" },
         "knowledgepoint-management": {
           path: "/teacher/knowledgepointmanagement",
