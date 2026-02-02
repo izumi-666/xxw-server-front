@@ -884,7 +884,6 @@ const fetchCollectionStatus = async (mistakeItems) => {
       collectedQuestionIds = collectionResponse.data.data.map(
         item => item.question_id
       );
-      console.log('已收藏的题目ID列表:', collectedQuestionIds);
     } else {
       console.warn('获取收藏列表失败:', collectionResponse.data?.message);
     }

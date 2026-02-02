@@ -526,6 +526,30 @@
           </div>
         </div>
 
+        <!-- 审核人选择 -->
+<div class="form-group">
+  <label class="form-label required">审核人：</label>
+  <select v-model="selectedReviewer" class="form-select" required>
+    <option value="">请选择审核人</option>
+    <option 
+      v-for="reviewer in reviewerOptions" 
+      :key="reviewer.id" 
+      :value="reviewer.account"
+    >
+      {{ reviewer.name || reviewer.account }}
+      <template v-if="reviewer.name && reviewer.account !== reviewer.name">
+        ({{ reviewer.account }})
+      </template>
+    </option>
+  </select>
+  <div v-if="selectedReviewer" class="selected-item">
+    已选择: {{ getReviewerName(selectedReviewer) }}
+    <button type="button" @click="selectedReviewer = ''" class="btn-remove">
+      清除
+    </button>
+  </div>
+</div>
+
         <!-- 提交按钮 -->
         <div class="form-actions">
           <button
@@ -1660,6 +1684,14 @@
             <h4>基本信息</h4>
             <div class="preview-grid">
               <div class="preview-item">
+      <label>上传人:</label>
+      <span>{{ getPreviewUploaderName() }}</span>
+    </div>
+    <div class="preview-item">
+      <label>审核人:</label>
+      <span>{{ getPreviewReviewerName() }}</span>
+    </div>
+              <div class="preview-item">
                 <label>学校:</label>
                 <span>{{ getPreviewSchoolName() }}</span>
               </div>
@@ -2060,6 +2092,16 @@ const hasSearched = ref(false); // 是否已进行过搜索
 const updateFormRef = ref(null); // 更新表单的DOM引用
 const showImagePreview = ref(false); // 图片预览显示状态
 const previewImageUrl = ref(""); // 预览图片的URL
+
+//审核题目相关
+const currentUser = ref(""); // 当前用户名
+const staffList = ref([]); // 教师列表
+const reviewerOptions = ref([]); // 可选的审核人列表
+const selectedReviewer = ref(""); // 选择的审核人
+
+// 加载状态
+const loadingReviewers = ref(false); // 加载审核人列表状态
+const reviewerLoadError = ref(false); // 加载失败状态
 
 // ==================== 记忆上传设置 ====================
 // 从localStorage读取或初始化上传记忆
@@ -2586,7 +2628,25 @@ const validateForm = () => {
     ElMessage.error("请输入题目内容");
     return false;
   }
+  if (!selectedReviewer.value) {
+    ElMessage.error("请选择审核人");
+    return false;
+  }
   return true;
+};
+
+/**
+ * 获取预览的审核人名称
+ */
+const getPreviewReviewerName = () => {
+  return getReviewerName(selectedReviewer.value);
+};
+
+/**
+ * 获取预览的上传人名称
+ */
+const getPreviewUploaderName = () => {
+  return currentUser.value;
 };
 
 /**
@@ -3331,6 +3391,106 @@ const closeImagePreview = () => {
   previewImageUrl.value = "";
 };
 
+// ==================== 审核题目相关方法 ====================
+/**
+ * 获取当前用户信息
+ */
+/**
+ * 获取当前用户信息
+ */
+const getCurrentUser = () => {
+  // 从 localStorage 获取当前用户名
+  currentUser.value = localStorage.getItem("userName") || "";
+  // 最后检查是否获取到用户名
+  if (!currentUser.value) {
+    console.error("无法获取当前用户名，请检查localStorage中是否有userName字段");
+  }
+};
+
+/**
+ * 获取教师列表并过滤审核人
+ */
+const loadReviewerList = async () => {
+  try {
+    loadingReviewers.value = true;
+    reviewerLoadError.value = false;
+    
+    // 并行获取教师列表和角色列表
+    const [staffResponse, roleResponse] = await Promise.all([
+      axios.get(`${API_BASE}/user/getStaffList`),
+      axios.get(`${API_BASE}/questions/getRoleList`)
+    ]);
+    
+    if (staffResponse.data.code === 200 && staffResponse.data.data) {
+      // 保存完整的教师列表
+      staffList.value = staffResponse.data.data;
+      
+      // 处理角色映射关系
+      let roleMap = {};
+      if (roleResponse.data.code === 200 && roleResponse.data.data) {
+        roleResponse.data.data.forEach(role => {
+          roleMap[role.id] = role.role_name;
+        });
+      }
+      
+      // 过滤出有审核权限的用户 (role是1或2，对应ROLE_ROOT和ROLE_ADMINISTRATOR)
+      reviewerOptions.value = staffList.value
+        .filter(user => {
+          if (!user || user.role === undefined || user.role === null) {
+            return false;
+          }
+          
+          // 获取用户角色ID
+          const userRoleId = Number(user.role);
+          
+          // 检查是否是ROOT或ADMINISTRATOR
+          const isReviewer = userRoleId === 1 || userRoleId === 2; // 1: ROLE_ROOT, 2: ROLE_ADMINISTRATOR
+          
+          // 获取角色名称用于日志
+          const roleName = roleMap[userRoleId] || `未知角色(ID:${userRoleId})`;
+
+          // 排除当前用户自己
+          if (currentUser.value && user.account === currentUser.value) {
+            return false;
+          }
+          
+          return isReviewer;
+        })
+        .map(user => ({
+          id: user.id,
+          account: user.account,
+          name: user.name || user.account,
+          role_id: user.role,
+          role_name: roleMap[user.role] || `角色ID:${user.role}`
+        }));
+      
+      if (reviewerOptions.value.length === 0) {
+        console.warn("没有找到符合条件的审核人");
+        ElMessage.warning("没有找到符合条件的审核人，请确保有ROOT或ADMINISTRATOR权限的教师账户");
+      }
+      
+    } else {
+      console.error("获取教师列表失败:", staffResponse.data.message);
+      reviewerLoadError.value = true;
+      ElMessage.error("获取审核人列表失败");
+    }
+  } catch (err) {
+    console.error("获取教师列表失败:", err);
+    reviewerLoadError.value = true;
+    ElMessage.error("获取审核人列表失败");
+  } finally {
+    loadingReviewers.value = false;
+  }
+};
+
+/**
+ * 获取审核人名称
+ */
+const getReviewerName = (account) => {
+  const reviewer = reviewerOptions.value.find(r => r.account === account);
+  return reviewer ? (reviewer.name || reviewer.account) : account;
+};
+
 // ==================== 下拉框失焦处理方法 ====================
 // 这些方法使用setTimeout延迟隐藏下拉框，确保点击选项能够正常触发
 const onKnowledgeBlur = () => {
@@ -3785,6 +3945,8 @@ const saveUploadMemory = () => {
  */
 onMounted(() => {
   loadLists();
+  getCurrentUser();
+  loadReviewerList();
 });
 
 /**
@@ -4878,6 +5040,12 @@ const handleSubmit = async () => {
     ElMessage.error("请选择问题类别");
     return;
   }
+  
+  // 验证审核人是否选择
+  if (!selectedReviewer.value) {
+    ElMessage.error("请选择审核人");
+    return;
+  }
 
   try {
     submitting.value = true;
@@ -4951,13 +5119,16 @@ const handleSubmit = async () => {
       img_url: form.img_url,
     };
 
-    const res = await axios.post(`${API_BASE}/questions/uploadSingleQuestion`, payload);
+    const url = `${API_BASE}/questions/uploadSingleQuestion/${currentUser.value}/${selectedReviewer.value}`;
+    const res = await axios.post(url, payload);
+    
     if (res.data.message && res.data.message.includes("题目已存在")) {
       ElMessage.error("题目已存在");
     } else {
       ElMessage.success("上传成功");
       saveUploadMemory(); // 保存用户设置
       resetForm(); // 重置表单
+      selectedReviewer.value = ""; // 清空审核人选择
     }
   } catch (err) {
     console.error("提交失败:", err);
@@ -5154,6 +5325,7 @@ const resetForm = () => {
   questionCategorySearch.value = "";
   selectedKnowledgePoint.value = null;
   selectedQuestionCategory.value = null;
+  selectedReviewer.value = "";
   pendingImages.length = 0;
 };
 
@@ -7214,6 +7386,22 @@ init();
 
 .table-cell:nth-child(8) {
   width: 200px; /* 副知识点列 */
+}
+
+/* ==================== 审核人选择样式 ==================== */
+.form-select option {
+  padding: 8px 12px;
+}
+
+.form-select option:first-child {
+  color: #909399;
+}
+
+/* 已选择的审核人显示 */
+.selected-item .btn-remove {
+  margin-left: 10px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 
 /* 响应式调整 */
