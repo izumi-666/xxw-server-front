@@ -118,7 +118,6 @@ const holidayMap = ref({});
 const customFestivals = {
   // 格式: '月-日': { name: '节日名称', type: 'festival类型', isHoliday: 是否法定假日 }
   '1-1': { name: '元旦', type: 'holiday', isHoliday: true },
-  '2-10': { name: '春节', type: 'holiday', isHoliday: true },
   '2-14': { name: '情人节', type: 'festival', isHoliday: false },
   '3-8': { name: '妇女节', type: 'festival', isHoliday: false },
   '3-12': { name: '植树节', type: 'festival', isHoliday: false },
