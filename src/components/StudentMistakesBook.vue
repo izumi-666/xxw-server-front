@@ -1331,6 +1331,7 @@ const startRedo = async () => {
         subject_id: parseInt(firstSuccess.subjectId),
         selected_question_ids: firstSuccess.questionIds
       };
+
       
       // 验证数据
       if (!assessmentData.questions || assessmentData.questions.length === 0) {
@@ -1607,7 +1608,7 @@ const startRedo = async () => {
     // 监听过滤后的错题数据，恢复选中状态
 watch(filteredMistakes, () => {
   if (isRedoMode.value) {
-    // 清除之前的定时器
+    // 清空之前的定时器
     if (restoreSelectionTimer.value) {
       clearTimeout(restoreSelectionTimer.value);
     }
