@@ -170,6 +170,70 @@
               </div>
             </div>
           </div>
+          <div class="paper-pagination-controls">
+      <div class="pagination-info">
+        共 {{ paperTotalItems }} 条记录，第 {{ paperPageNum }} 页 / 共 {{ paperTotalPages }} 页
+      </div>
+      <div class="pagination-buttons">
+        <button 
+          class="pagination-btn" 
+          @click="goToFirstPaperPage"
+          :disabled="paperPageNum <= 1"
+        >
+          首页
+        </button>
+        <button 
+          class="pagination-btn" 
+          @click="goToPreviousPaperPage"
+          :disabled="paperPageNum <= 1"
+        >
+          上一页
+        </button>
+        
+        <!-- 页码选择器 -->
+        <div class="page-input-container">
+          <input
+            type="number"
+            v-model.number="paperPageNum"
+            @keyup.enter="changePaperPage(paperPageNum)"
+            min="1"
+            :max="paperTotalPages"
+            class="page-input"
+          />
+          <button 
+            class="btn-secondary jump-btn" 
+            @click="changePaperPage(paperPageNum)"
+          >
+            跳转
+          </button>
+        </div>
+        
+        <button 
+          class="pagination-btn" 
+          @click="goToNextPaperPage"
+          :disabled="paperPageNum >= paperTotalPages"
+        >
+          下一页
+        </button>
+        <button 
+          class="pagination-btn" 
+          @click="goToLastPaperPage"
+          :disabled="paperPageNum >= paperTotalPages"
+        >
+          末页
+        </button>
+      </div>
+      <div class="page-size-selector">
+        <span>每页显示：</span>
+        <select v-model="paperPageSize" class="form-select page-size-select">
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+        </select>
+        <span>条</span>
+      </div>
+    </div>
         </div>
 
         <div v-else class="no-results">
@@ -1389,12 +1453,15 @@ const hasAnyPaperPermission = computed(() => {
 });
 
 /* ==================== 数据状态 ==================== */
-const paperList = ref([]);
 const previewVisible = ref(false);
 const previewPaperData = ref(null);
 const editVisible = ref(false);
 const currentPaper = ref(null);
 const isSaving = ref(false);
+
+const paperPageNum = ref(1); // 当前页码
+const paperPageSize = ref(10); // 每页显示数量
+const allPapers = ref([]); // 存储从后端获取的所有试卷数据
 
 // 试卷编辑相关状态
 const showPaperPreview = ref(true);
@@ -1557,6 +1624,24 @@ const getTypeCount = (type) => {
     (q) => getQuestionCategoryName(q.question_category_id) === type
   ).length;
 };
+
+
+// 计算属性：计算当前页显示的试卷
+const paperList = computed(() => {
+  const start = (paperPageNum.value - 1) * paperPageSize.value;
+  const end = start + paperPageSize.value;
+  return allPapers.value.slice(start, end);
+});
+
+// 计算属性：总页数
+const paperTotalPages = computed(() => {
+  return Math.ceil(allPapers.value.length / paperPageSize.value);
+});
+
+// 计算属性：总条数
+const paperTotalItems = computed(() => {
+  return allPapers.value.length;
+});
 
 /* ==================== 试卷编辑相关方法 ==================== */
 const editPaper = async (paper) => {
@@ -1971,6 +2056,28 @@ const formatScore = (question) => {
   question.scoreError = "";
 };
 
+// 分页相关方法
+const changePaperPage = (newPage) => {
+  if (newPage < 1 || newPage > paperTotalPages.value) return;
+  paperPageNum.value = newPage;
+};
+
+const goToFirstPaperPage = () => {
+  changePaperPage(1);
+};
+
+const goToLastPaperPage = () => {
+  changePaperPage(paperTotalPages.value);
+};
+
+const goToPreviousPaperPage = () => {
+  changePaperPage(paperPageNum.value - 1);
+};
+
+const goToNextPaperPage = () => {
+  changePaperPage(paperPageNum.value + 1);
+};
+
 /* ==================== 工具函数 ==================== */
 const renderMarkdown = (text) => {
   if (!text) return "";
@@ -2031,10 +2138,27 @@ const getQuestionCategoryName = (id) => {
 /* ==================== 试卷管理相关方法 ==================== */
 const loadPapers = async () => {
   try {
+    // 这里调用后端接口获取所有试卷
     const res = await axios.get(`${API_BASE}/paper/getPaperList`);
-    paperList.value = res.data.data || [];
+    const papers = res.data.data || [];
+    
+    // 按创建时间降序排序（假设有 created_at 字段）
+    // 如果没有 created_at 字段，可以使用 id 或其他字段排序
+    papers.sort((a, b) => {
+      // 如果都有创建时间字段
+      if (a.created_at && b.created_at) {
+        return new Date(b.created_at) - new Date(a.created_at);
+      }
+      // 否则按 ID 降序
+      return b.id - a.id;
+    });
+    
+    allPapers.value = papers;
+    paperPageNum.value = 1; // 重置到第一页
+    
   } catch (error) {
     console.error("加载试卷列表失败:", error);
+    ElMessage.error("加载试卷列表失败");
   }
 };
 
@@ -2042,8 +2166,26 @@ const searchPaper = async () => {
   if (!hasReadPermission.value) return;
 
   try {
-    const res = await axios.post(`${API_BASE}/paper/findPaper`, searchForm.value);
-    paperList.value = res.data.data || [];
+    // 先获取所有数据
+    const res = await axios.post(`${API_BASE}/paper/findPaper`, {
+      name: searchForm.value.name,
+      subject_ids: searchForm.value.subject_ids,
+      grade_ids: searchForm.value.grade_ids
+    });
+    
+    let papers = res.data.data || [];
+    
+    // 按创建时间降序排序
+    papers.sort((a, b) => {
+      if (a.created_at && b.created_at) {
+        return new Date(b.created_at) - new Date(a.created_at);
+      }
+      return b.id - a.id;
+    });
+    
+    allPapers.value = papers;
+    paperPageNum.value = 1; // 搜索后重置到第一页
+    
   } catch (error) {
     console.error("搜索试卷失败:", error);
     ElMessage.error("搜索试卷失败");
@@ -2054,8 +2196,9 @@ const resetSearch = () => {
   searchForm.value = {
     name: "",
     subject_ids: [],
-    grade_ids: [],
+    grade_ids: []
   };
+  paperPageNum.value = 1; // 重置页码
   loadPapers();
 };
 
@@ -2381,8 +2524,15 @@ const deletePaper = (paper) => {
     .then(async () => {
       try {
         await axios.delete(`${API_BASE}/paper/deletePaper/${paper.id}`);
-        paperList.value = paperList.value.filter((p) => p.id !== paper.id);
+        // 从 allPapers 中删除，而不是从 paperList
+        allPapers.value = allPapers.value.filter((p) => p.id !== paper.id);
         ElMessage.success("删除成功！");
+        
+        // 如果删除后当前页没有数据了，且不是第一页，就回到前一页
+        if (paperList.value.length === 0 && paperPageNum.value > 1) {
+          paperPageNum.value--;
+        }
+        
       } catch (error) {
         console.error("删除试卷失败:", error);
         ElMessage.error("删除失败");
@@ -3435,6 +3585,113 @@ onMounted(async () => {
   font-size: 13px;
   color: #606266;
   margin: 0 10px;
+}
+
+/* 试卷分页控件样式 */
+.paper-pagination-controls {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e6e9f0;
+}
+
+.pagination-info {
+  text-align: center;
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 16px;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  border: 1px solid #dcdfe6;
+  background-color: #fff;
+  color: #606266;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.pagination-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: #f5f7fa;
+  color: #c0c4cc;
+}
+
+.page-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-input {
+  width: 80px;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.page-input:focus {
+  outline: none;
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+}
+
+.jump-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.page-size-selector {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #606266;
+}
+
+.page-size-select {
+  width: 80px;
+  padding: 6px 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .pagination-buttons {
+    flex-direction: column;
+  }
+  
+  .page-input-container {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .page-size-selector {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 /* ==================== 试卷预览区域样式 ==================== */
