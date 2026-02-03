@@ -6,8 +6,60 @@
         <h2 class="page-title">错题本</h2>
       </div>
       <div class="header-actions">
+        <!-- 错题重做按钮 -->
+        <el-button 
+          v-if="!isRedoMode"
+          type="warning"
+          @click="enterRedoMode"
+          :disabled="mistakes.length === 0"
+        >
+          <el-icon><RefreshRight /></el-icon>错题重做
+        </el-button>
+        
+        <!-- 开始重做按钮 -->
+        <el-button 
+          v-if="isRedoMode"
+          type="success"
+          @click="startRedo"
+          :disabled="getSelectedCount === 0"
+          :loading="redoLoading"
+        >
+          <el-icon><VideoPlay /></el-icon>开始重做
+        </el-button>
+        
+        <!-- 取消重做按钮 -->
+        <el-button 
+          v-if="isRedoMode"
+          type="info"
+          @click="cancelRedoMode"
+        >
+          <el-icon><Close /></el-icon>取消
+        </el-button>
+        
         <el-button type="primary" @click="fetchMistakes" :loading="loading">
           <el-icon><Refresh /></el-icon>刷新
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 错题选择状态提示 -->
+    <div v-if="isRedoMode" class="redo-mode-tip">
+      <el-alert
+        title="错题重做模式"
+        type="warning"
+        description="请勾选需要重做的错题，然后点击'开始重做'按钮"
+        show-icon
+        :closable="false"
+      />
+      <div class="selection-info">
+        已选择 <span class="selected-count">{{ getSelectedCount }}</span> 道错题
+        <el-button 
+          v-if="getSelectedCount > 0"
+          type="text" 
+          @click="clearSelection"
+          size="small"
+        >
+          清空选择
         </el-button>
       </div>
     </div>
@@ -147,12 +199,25 @@
     <!-- 错题列表 -->
     <div class="mistakes-list">
       <el-table
+        ref="mistakesTableRef"
         :data="filteredMistakes"
         v-loading="loading"
         @row-click="handleRowClick"
         style="width: 100%"
-        row-class-name="mistake-row"
+        :row-class-name="getRowClassName"
+        :row-key="getRowKey"
+        @selection-change="handleSelectionChange"
       >
+        <!-- 多选列（只在重做模式下显示） -->
+        <el-table-column 
+          v-if="isRedoMode"
+          type="selection"
+          width="55"
+          align="center"
+          :selectable="checkSelectable"
+          :reserve-selection="true"
+        />
+
         <!-- 科目列 -->
         <el-table-column
           prop="subject"
@@ -535,7 +600,8 @@
 
 <script>
 import { ref, computed, onMounted, nextTick, watch } from "vue";
-import { ArrowDown, ArrowUp } from "@element-plus/icons-vue";
+import { useRouter } from 'vue-router';
+import { ArrowDown, ArrowUp, RefreshRight, VideoPlay, Close } from "@element-plus/icons-vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import axios from "axios";
 import {
@@ -550,7 +616,7 @@ import {
   Star,
   StarFilled
 } from "@element-plus/icons-vue";
-import { getAllSubjects, getSubjectName } from "../utils/subjectList";
+import { getAllSubjects, getSubjectName, initSubjectData } from "../utils/subjectList";
 import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
 import { fetchKnowledgePointList, getKnowledgePointNames } from "../utils/knowledgeList";
@@ -594,9 +660,14 @@ export default {
     ArrowDown,
     ArrowUp,
     Star,
-    StarFilled
+    StarFilled,
+    RefreshRight,
+    VideoPlay,
+    Close
   },
   setup() {
+    const router = useRouter();
+    
     // 状态管理
     const mistakes = ref([]);
     const loading = ref(false);
@@ -606,6 +677,15 @@ export default {
     const showAnswer = ref(false);
     const showAnalysis = ref(false);
     const currentStudentName = ref(localStorage.getItem("userName") || "student");
+    const mistakesTableRef = ref(null);
+    
+    // 重做模式相关状态
+    const isRedoMode = ref(false);
+    const selectedMistakes = ref([]); // 当前页选中的错题
+    const selectedMistakeIds = ref(new Map()); // 全局选中的错题，key: rowKey, value: mistake object
+    const redoLoading = ref(false);
+    const allMistakesMap = ref(new Map()); // 存储所有错题的引用
+    const restoreSelectionTimer = ref(null);
 
     // 筛选条件
     const filters = ref({
@@ -632,6 +712,11 @@ export default {
 
     // 计算属性
     const subjects = computed(() => getAllSubjects());
+    
+    // 获取已选择的题目数量
+    const getSelectedCount = computed(() => {
+      return selectedMistakeIds.value.size;
+    });
     
     const filteredMistakes = computed(() => {
       let result = [...mistakes.value];
@@ -698,256 +783,282 @@ export default {
       return getQuestionTypeInfo(0);
     };
 
+    // 获取行的唯一key
+    const getRowKey = (row) => {
+      // 优先使用错题ID，如果没有则使用题目ID，最后使用随机字符串
+      return row.id || row.question_id || Math.random().toString(36).substr(2);
+    };
+
     // 用题目详情丰富错题信息
-const enrichMistakeWithDetail = (mistake, detail) => {
-  return {
-    ...mistake,
-    ...detail,
-    type: getQuestionType(detail),
-    status: mistake.status || "pending",
-    last_answer: mistake.last_answer || detail.last_answer || "未作答",
-    knowledgePoints: getKnowledgePointNames(detail.knowledge_point_id || mistake.knowledge_point_id),
-    subKnowledgePoints: getKnowledgePointNames(
-      detail.sub_knowledge_point_ids || mistake.sub_knowledge_point_ids
-    ) || [],
-    // 保留原有的收藏状态
-    is_collected: mistake.is_collected || false,
-    collectLoading: false
-  };
-};
+    const enrichMistakeWithDetail = (mistake, detail) => {
+      const enriched = {
+        ...mistake,
+        ...detail,
+        type: getQuestionType(detail),
+        status: mistake.status || "pending",
+        last_answer: mistake.last_answer || detail.last_answer || "未作答",
+        knowledgePoints: getKnowledgePointNames(detail.knowledge_point_id || mistake.knowledge_point_id),
+        subKnowledgePoints: getKnowledgePointNames(
+          detail.sub_knowledge_point_ids || mistake.sub_knowledge_point_ids
+        ) || [],
+        is_collected: mistake.is_collected || false,
+        collectLoading: false
+      };
+      
+      // 生成行的唯一key并保存
+      const rowKey = getRowKey(enriched);
+      enriched._rowKey = rowKey;
+      
+      return enriched;
+    };
 
     // 批量获取题目详情
-const fetchAllQuestionDetails = async (mistakeItems) => {
-  mistakeItems.sort((a, b) => {
-    const dateA = new Date(a.last_wrong_time).getTime();
-    const dateB = new Date(b.last_wrong_time).getTime();
-    return dateB - dateA;
-  });
-
-  // 注意：这里不再调用 fetchCollectionStatus，因为已经在 fetchMistakes 中调用过了
-
-  const questionIds = mistakeItems.map((item) => item.question_id).filter((id) => id);
-  if (questionIds.length === 0) return mistakeItems;
-
-  // 计算需要请求的ID
-  const cachedIds = [];
-  const needFetchIds = [];
-
-  questionIds.forEach((id) => {
-    const idStr = String(id);
-    if (questionDetailsLoaded.value.has(idStr) || questionCache.has(idStr)) {
-      cachedIds.push(idStr);
-    } else {
-      needFetchIds.push(id);
-    }
-  });
-
-  // 创建ID到详情的映射
-  const questionMap = {};
-
-  // 处理已缓存的数据
-  cachedIds.forEach((idStr) => {
-    const cachedDetail = questionCache.get(idStr);
-    if (cachedDetail) {
-      questionMap[idStr] = cachedDetail;
-    }
-  });
-
-  // 获取需要请求的题目详情
-  if (needFetchIds.length > 0) {
-    try {
-      const response = await axios.post(
-        `${API_BASE}/questions/findQuestionById`,
-        needFetchIds,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.data?.code === 200) {
-        const questionDetails = response.data.data || [];
-        questionDetails.forEach((detail) => {
-          if (detail?.id) {
-            const detailIdStr = String(detail.id);
-
-            // 处理知识点信息
-            if (detail.knowledge_point_id) {
-              detail.knowledgePoints = getKnowledgePointNames(detail.knowledge_point_id);
-            }
-            if (detail.sub_knowledge_point_ids) {
-              detail.subKnowledgePoints = getKnowledgePointNames(detail.sub_knowledge_point_ids);
-            } else {
-              detail.subKnowledgePoints = [];
-            }
-
-            questionCache.set(detailIdStr, detail);
-            questionDetailsLoaded.value.add(detailIdStr);
-            questionMap[detailIdStr] = detail;
-          }
-        });
-      }
-    } catch (error) {
-      console.error("API请求错误:", error.response?.data || error.message);
-    }
-  }
-
-  // 合并数据
-  return mistakeItems.map((item) => {
-    const itemIdStr = String(item.question_id);
-    const questionDetail = questionMap[itemIdStr];
-
-    if (questionDetail) {
-      return enrichMistakeWithDetail(item, questionDetail);
-    }
-
-    // 如果没有获取到详情，返回基础信息
-    return {
-      ...item,
-      type: getQuestionType(item),
-      status: item.status || "pending",
-      last_answer: item.last_answer || "未作答",
-      knowledgePoints: item.knowledge_points_id ? getKnowledgePointNames(item.knowledge_points_id) : [],
-      subKnowledgePoints: item.sub_knowledge_point_ids ? getKnowledgePointNames(item.sub_knowledge_point_ids) : [],
-    };
-  });
-};
-
-    // 获取错题列表
-const fetchMistakes = async () => {
-  loading.value = true;
-
-  try {
-    // 先获取科目和知识点数据
-    await Promise.all([fetchKnowledgePointList()]);
-
-    // 获取错题数据
-    const response = await axios.get(
-      `${API_BASE}/incorrectQuestion/getIncorrectQuestionByStudent/${encodeURIComponent(
-        currentStudentName.value
-      )}`
-    );
-
-    if (response.data?.code === 200) {
-      const rawData = response.data.data || [];
-      
-      // 排序
-      rawData.sort((a, b) => {
+    const fetchAllQuestionDetails = async (mistakeItems) => {
+      mistakeItems.sort((a, b) => {
         const dateA = new Date(a.last_wrong_time).getTime();
         const dateB = new Date(b.last_wrong_time).getTime();
         return dateB - dateA;
       });
 
-      // 首先获取收藏状态
-      await fetchCollectionStatus(rawData);
-      
-      // 然后获取所有题目详情
-      mistakes.value = await fetchAllQuestionDetails(rawData);
+      const questionIds = mistakeItems.map((item) => item.question_id).filter((id) => id);
+      if (questionIds.length === 0) return mistakeItems;
 
-      // 确保每个错题都有状态
-      mistakes.value.forEach((item) => {
-        if (!item.status) {
-          item.status = "pending";
+      // 计算需要请求的ID
+      const cachedIds = [];
+      const needFetchIds = [];
+
+      questionIds.forEach((id) => {
+        const idStr = String(id);
+        if (questionDetailsLoaded.value.has(idStr) || questionCache.has(idStr)) {
+          cachedIds.push(idStr);
+        } else {
+          needFetchIds.push(id);
         }
       });
 
-      updateStats();
-      ElMessage.success(`获取到 ${mistakes.value.length} 条错题记录`);
-    } else {
-      ElMessage.warning("获取错题数据成功，但数据格式可能不符合预期");
-      updateStats();
-    }
-  } catch (error) {
-    console.error("API错误:", error.response?.data || error.message);
-    ElMessage.error("获取数据失败");
-    updateStats();
-  } finally {
-    loading.value = false;
-  }
-};
+      // 创建ID到详情的映射
+      const questionMap = {};
+
+      // 处理已缓存的数据
+      cachedIds.forEach((idStr) => {
+        const cachedDetail = questionCache.get(idStr);
+        if (cachedDetail) {
+          questionMap[idStr] = cachedDetail;
+        }
+      });
+
+      // 获取需要请求的题目详情
+      if (needFetchIds.length > 0) {
+        try {
+          const response = await axios.post(
+            `${API_BASE}/questions/findQuestionById`,
+            needFetchIds,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (response.data?.code === 200) {
+            const questionDetails = response.data.data || [];
+            questionDetails.forEach((detail) => {
+              if (detail?.id) {
+                const detailIdStr = String(detail.id);
+
+                // 处理知识点信息
+                if (detail.knowledge_point_id) {
+                  detail.knowledgePoints = getKnowledgePointNames(detail.knowledge_point_id);
+                }
+                if (detail.sub_knowledge_point_ids) {
+                  detail.subKnowledgePoints = getKnowledgePointNames(detail.sub_knowledge_point_ids);
+                } else {
+                  detail.subKnowledgePoints = [];
+                }
+
+                questionCache.set(detailIdStr, detail);
+                questionDetailsLoaded.value.add(detailIdStr);
+                questionMap[detailIdStr] = detail;
+              }
+            });
+          }
+        } catch (error) {
+          console.error("API请求错误:", error.response?.data || error.message);
+        }
+      }
+
+      // 合并数据
+      return mistakeItems.map((item) => {
+        const itemIdStr = String(item.question_id);
+        const questionDetail = questionMap[itemIdStr];
+
+        if (questionDetail) {
+          return enrichMistakeWithDetail(item, questionDetail);
+        }
+
+        // 如果没有获取到详情，返回基础信息
+        const basicItem = {
+          ...item,
+          type: getQuestionType(item),
+          status: item.status || "pending",
+          last_answer: item.last_answer || "未作答",
+          knowledgePoints: item.knowledge_points_id ? getKnowledgePointNames(item.knowledge_points_id) : [],
+          subKnowledgePoints: item.sub_knowledge_point_ids ? getKnowledgePointNames(item.sub_knowledge_point_ids) : [],
+        };
+        
+        // 生成行的唯一key并保存
+        const rowKey = getRowKey(basicItem);
+        basicItem._rowKey = rowKey;
+        
+        return basicItem;
+      });
+    };
+
+    // 获取错题列表
+    const fetchMistakes = async () => {
+      loading.value = true;
+
+      try {
+        // 先获取知识点数据
+        await initSubjectData();
+        await Promise.all([fetchKnowledgePointList()]);
+
+        // 获取错题数据
+        const response = await axios.get(
+          `${API_BASE}/incorrectQuestion/getIncorrectQuestionByStudent/${encodeURIComponent(
+            currentStudentName.value
+          )}`
+        );
+
+        if (response.data?.code === 200) {
+          const rawData = response.data.data || [];
+          
+          // 排序
+          rawData.sort((a, b) => {
+            const dateA = new Date(a.last_wrong_time).getTime();
+            const dateB = new Date(b.last_wrong_time).getTime();
+            return dateB - dateA;
+          });
+
+          // 首先获取收藏状态
+          await fetchCollectionStatus(rawData);
+          
+          // 然后获取所有题目详情
+          const enrichedData = await fetchAllQuestionDetails(rawData);
+          
+          // 更新 allMistakesMap
+          allMistakesMap.value.clear();
+          enrichedData.forEach(item => {
+            if (item._rowKey) {
+              allMistakesMap.value.set(item._rowKey, item);
+            }
+          });
+          
+          mistakes.value = enrichedData;
+
+          // 确保每个错题都有状态
+          mistakes.value.forEach((item) => {
+            if (!item.status) {
+              item.status = "pending";
+            }
+          });
+
+          updateStats();
+          ElMessage.success(`获取到 ${mistakes.value.length} 条错题记录`);
+        } else {
+          ElMessage.warning("获取错题数据成功，但数据格式可能不符合预期");
+          updateStats();
+        }
+      } catch (error) {
+        console.error("API错误:", error.response?.data || error.message);
+        ElMessage.error("获取数据失败");
+        updateStats();
+      } finally {
+        loading.value = false;
+      }
+    };
 
     // 获取收藏状态
-const fetchCollectionStatus = async (mistakeItems) => {
-  try {
-    // 获取收藏列表
-    const collectionResponse = await axios.get(
-      `${API_BASE}/collections/getCollectionList/${encodeURIComponent(
-        currentStudentName.value
-      )}`
-    );
-    
-    let collectedQuestionIds = [];
-    
-    if (collectionResponse.data?.code === 200) {
-      // 提取所有已收藏的题目ID
-      collectedQuestionIds = collectionResponse.data.data.map(
-        item => item.question_id
-      );
-    } else {
-      console.warn('获取收藏列表失败:', collectionResponse.data?.message);
-    }
-    
-    // 更新每个错题的收藏状态
-    mistakeItems.forEach((item) => {
-      if (item.question_id) {
-        item.is_collected = collectedQuestionIds.includes(item.question_id);
-        item.collectLoading = false;
+    const fetchCollectionStatus = async (mistakeItems) => {
+      try {
+        // 获取收藏列表
+        const collectionResponse = await axios.get(
+          `${API_BASE}/collections/getCollectionList/${encodeURIComponent(
+            currentStudentName.value
+          )}`
+        );
+        
+        let collectedQuestionIds = [];
+        
+        if (collectionResponse.data?.code === 200) {
+          // 提取所有已收藏的题目ID
+          collectedQuestionIds = collectionResponse.data.data.map(
+            item => item.question_id
+          );
+        } else {
+          console.warn('获取收藏列表失败:', collectionResponse.data?.message);
+        }
+        
+        // 更新每个错题的收藏状态
+        mistakeItems.forEach((item) => {
+          if (item.question_id) {
+            item.is_collected = collectedQuestionIds.includes(item.question_id);
+            item.collectLoading = false;
+          }
+        });
+        
+      } catch (error) {
+        console.error("获取收藏状态失败:", error);
+        // 失败时默认设为未收藏
+        mistakeItems.forEach((item) => {
+          item.is_collected = false;
+          item.collectLoading = false;
+        });
       }
-    });
-    
-  } catch (error) {
-    console.error("获取收藏状态失败:", error);
-    // 失败时默认设为未收藏
-    mistakeItems.forEach((item) => {
-      item.is_collected = false;
-      item.collectLoading = false;
-    });
-  }
-};
+    };
 
     // 收藏/取消收藏
-const toggleCollect = async (row) => {
-  if (!row?.question_id) {
-    ElMessage.warning('无法收藏，题目ID不存在');
-    return;
-  }
-  
-  try {
-    row.collectLoading = true;
-    currentMistake.value && (currentMistake.value.collectLoading = true);
-    
-    if (row.is_collected) {
-      // 取消收藏
-      await axios.delete(`${API_BASE}/collections/cancelCollecting`, {
-        data: {
-          question_id: row.question_id,
-          student: currentStudentName.value
+    const toggleCollect = async (row) => {
+      if (!row?.question_id) {
+        ElMessage.warning('无法收藏，题目ID不存在');
+        return;
+      }
+      
+      try {
+        row.collectLoading = true;
+        currentMistake.value && (currentMistake.value.collectLoading = true);
+        
+        if (row.is_collected) {
+          // 取消收藏
+          await axios.delete(`${API_BASE}/collections/cancelCollecting`, {
+            data: {
+              question_id: row.question_id,
+              student: currentStudentName.value
+            }
+          });
+          
+          row.is_collected = false;
+          currentMistake.value && (currentMistake.value.is_collected = false);
+          ElMessage.success('已取消收藏');
+        } else {
+          // 添加收藏
+          await axios.post(`${API_BASE}/collections/collectQuestion`, {
+            question_id: row.question_id,
+            student: currentStudentName.value
+          });
+          
+          row.is_collected = true;
+          currentMistake.value && (currentMistake.value.is_collected = true);
+          ElMessage.success('已收藏题目');
         }
-      });
-      
-      row.is_collected = false;
-      currentMistake.value && (currentMistake.value.is_collected = false);
-      ElMessage.success('已取消收藏');
-    } else {
-      // 添加收藏
-      await axios.post(`${API_BASE}/collections/collectQuestion`, {
-        question_id: row.question_id,
-        student: currentStudentName.value
-      });
-      
-      row.is_collected = true;
-      currentMistake.value && (currentMistake.value.is_collected = true);
-      ElMessage.success('已收藏题目');
-    }
-  } catch (error) {
-    console.error('收藏操作失败:', error);
-    ElMessage.error(error.response?.data?.message || '操作失败');
-  } finally {
-    row.collectLoading = false;
-    currentMistake.value && (currentMistake.value.collectLoading = false);
-  }
-};
+      } catch (error) {
+        console.error('收藏操作失败:', error);
+        ElMessage.error(error.response?.data?.message || '操作失败');
+      } finally {
+        row.collectLoading = false;
+        currentMistake.value && (currentMistake.value.collectLoading = false);
+      }
+    };
 
     // 更新统计数据
     const updateStats = () => {
@@ -965,12 +1076,148 @@ const toggleCollect = async (row) => {
       stats.value = { total, recent, reviewed, accuracy };
     };
 
-    // 其他方法
-    const handleFilterChange = () => {
-      pagination.value.currentPage = 1;
+    // 重做相关方法
+    const checkSelectable = (row) => {
+      return row.status !== 'reviewed';
     };
 
-    const handleRowClick = async (row) => {
+    // 获取行类名
+    const getRowClassName = ({ row }) => {
+      const classes = [];
+      if (isRedoMode.value) {
+        classes.push('is-selectable');
+        const rowKey = getRowKey(row);
+        if (selectedMistakeIds.value.has(rowKey)) {
+          classes.push('is-selected');
+        }
+      }
+      return classes.join(' ');
+    };
+
+    // 清除无效的选择（已复习的题目）
+    const clearInvalidSelections = () => {
+      // 清除已复习题目的选择
+      const invalidKeys = [];
+      selectedMistakeIds.value.forEach((value, key) => {
+        if (value.status === 'reviewed') {
+          invalidKeys.push(key);
+        }
+      });
+      
+      invalidKeys.forEach(key => {
+        selectedMistakeIds.value.delete(key);
+      });
+      
+      // 如果当前页有这些无效选择，也需要清除
+      if (mistakesTableRef.value) {
+        const currentSelections = mistakesTableRef.value.getSelectionRows();
+        currentSelections.forEach(row => {
+          const rowKey = getRowKey(row);
+          if (selectedMistakeIds.value.has(rowKey) && row.status === 'reviewed') {
+            mistakesTableRef.value.toggleRowSelection(row, false);
+          }
+        });
+      }
+    };
+
+    const enterRedoMode = () => {
+      isRedoMode.value = true;
+      clearInvalidSelections(); // 清除无效的选择
+      ElMessage.info('已进入错题重做模式，请选择需要重做的错题');
+    };
+
+    const cancelRedoMode = () => {
+      isRedoMode.value = false;
+      selectedMistakeIds.value.clear();
+      selectedMistakes.value = [];
+      if (mistakesTableRef.value) {
+        mistakesTableRef.value.clearSelection();
+      }
+    };
+
+    const clearSelection = () => {
+      selectedMistakeIds.value.clear();
+      selectedMistakes.value = [];
+      if (mistakesTableRef.value) {
+        mistakesTableRef.value.clearSelection();
+      }
+      ElMessage.info('已清空所有选择');
+    };
+
+    const handleSelectionChange = (selection) => {
+      selectedMistakes.value = selection;
+      
+      // 获取当前页所有行的key
+      const currentPageKeys = new Set(filteredMistakes.value.map(row => getRowKey(row)));
+      
+      // 更新 selectedMistakeIds
+      currentPageKeys.forEach(key => {
+        const isSelected = selection.some(row => getRowKey(row) === key);
+        if (isSelected) {
+          // 找到对应的完整数据
+          const fullData = allMistakesMap.value.get(key);
+          if (fullData && checkSelectable(fullData)) {
+            selectedMistakeIds.value.set(key, fullData);
+          }
+        } else {
+          // 当前页取消选择时，如果该行不在其他页面被选中，则从全局选择中移除
+          // 注意：这里我们不移除，因为可能在别的页面选中了
+          // 如果需要严格的当前页取消选择逻辑，可以在这里实现
+        }
+      });
+    };
+
+    // 恢复选中状态
+    const restoreSelection = () => {
+      if (!mistakesTableRef.value || !isRedoMode.value) return;
+      
+      // 清空当前页的选择
+      mistakesTableRef.value.clearSelection();
+      
+      // 恢复当前页的选择状态
+      if (selectedMistakeIds.value.size > 0) {
+        filteredMistakes.value.forEach(row => {
+          const rowKey = getRowKey(row);
+          if (selectedMistakeIds.value.has(rowKey) && checkSelectable(row)) {
+            mistakesTableRef.value.toggleRowSelection(row, true);
+          }
+        });
+      }
+    };
+
+    // 点击行处理（重做模式下）
+    const handleRowClick = async (row, column, event) => {
+      // 在重做模式下，点击行触发选择/取消选择
+      if (isRedoMode.value) {
+        // 检查是否可选中
+        if (!checkSelectable(row)) {
+          ElMessage.warning('已复习的题目不能重做');
+          return;
+        }
+        
+        const rowKey = getRowKey(row);
+        
+        if (mistakesTableRef.value) {
+          // 获取当前行的选择状态
+          const currentSelections = mistakesTableRef.value.getSelectionRows();
+          const isSelected = currentSelections.some(r => getRowKey(r) === rowKey);
+          
+          if (isSelected) {
+            // 取消选中当前页
+            mistakesTableRef.value.toggleRowSelection(row, false);
+            // 从全局选择中移除
+            selectedMistakeIds.value.delete(rowKey);
+          } else {
+            // 选中当前页
+            mistakesTableRef.value.toggleRowSelection(row, true);
+            // 添加到全局选择
+            selectedMistakeIds.value.set(rowKey, row);
+          }
+        }
+        return;
+      }
+      
+      // 非重做模式下，点击行查看详情
       currentMistake.value = row;
       showAnswer.value = false;
       showAnalysis.value = false;
@@ -979,6 +1226,178 @@ const toggleCollect = async (row) => {
       nextTick(() => {
         renderKatexInDialog();
       });
+    };
+
+const startRedo = async () => {
+  if (selectedMistakeIds.value.size === 0) {
+    ElMessage.warning('请至少选择一道错题');
+    return;
+  }
+
+  try {
+    redoLoading.value = true;
+    
+    // 获取所有已选错题的数据
+    const selectedItems = Array.from(selectedMistakeIds.value.values());
+    
+    // 检查所选错题是否有相同的科目
+    const subjects = [...new Set(selectedItems.map(item => item.subject_id))];
+    if (subjects.length > 1) {
+      await ElMessageBox.confirm(
+        '您选择了多个科目的错题，系统将按科目分组进行重做。确定继续吗？',
+        '提示',
+        {
+          confirmButtonText: '继续',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      );
+    }
+
+    // 按科目分组
+    const questionsBySubject = {};
+    selectedItems.forEach(item => {
+      const subjectId = item.subject_id;
+      if (!questionsBySubject[subjectId]) {
+        questionsBySubject[subjectId] = [];
+      }
+      // 存储完整的题目ID数组
+      questionsBySubject[subjectId].push(item.question_id);
+    });
+
+    // 对每个科目发起重做请求
+    const redoRequests = Object.entries(questionsBySubject).map(async ([subjectId, questionIds]) => {
+      try {
+        const requestData = {
+          subject_id: parseInt(subjectId),
+          question_ids: questionIds,
+          student: currentStudentName.value
+        };
+
+        const response = await axios.post(
+          `${API_BASE}/incorrectQuestion/review`,
+          requestData,
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.data?.code === 200) {
+          return {
+            success: true,
+            subjectId,
+            data: response.data.data,
+            questionIds
+          };
+        } else {
+          console.error('API返回错误:', response.data);
+          return {
+            success: false,
+            subjectId,
+            message: response.data?.message || '请求失败'
+          };
+        }
+      } catch (error) {
+        console.error(`科目 ${subjectId} 重做请求失败:`, error);
+        return {
+          success: false,
+          subjectId,
+          message: error.response?.data?.message || error.message
+        };
+      }
+    });
+
+    const results = await Promise.all(redoRequests);
+    const successResults = results.filter(r => r.success);
+    
+     if (successResults.length > 0) {
+      // 取第一个成功的响应数据
+      const firstSuccess = successResults[0];
+      const responseData = firstSuccess.data;
+      
+      // 准备存储的数据
+      const assessmentData = {
+        exam_name: responseData.exam_name || `错题重做_${new Date().toLocaleString()}`,
+        start_time: responseData.start_time || new Date().toISOString(),
+        duration: responseData.duration || 60,
+        exam_id: responseData.exam_id,
+        paper_id: responseData.paper_id,
+        exam_history_id: responseData.exam_history_id,
+        questions: responseData.questions || [],
+        // 添加额外的元数据
+        from: 'mistakesbook',
+        subject_id: parseInt(firstSuccess.subjectId),
+        selected_question_ids: firstSuccess.questionIds
+      };
+      
+      // 验证数据
+      if (!assessmentData.questions || assessmentData.questions.length === 0) {
+        throw new Error('API返回的题目数据为空');
+      }
+      
+      // 确保每个题目都有必要的字段
+      assessmentData.questions = assessmentData.questions.map((q, index) => ({
+        ...q,
+        // 确保有 id 字段
+        id: q.id || `temp_${index}_${Date.now()}`,
+        // 确保有标记类型
+        marking_type: q.marking_type || 0,
+        // 确保有 difficulty_level
+        difficulty_level: q.difficulty_level || 2,
+        // 确保有分数
+        score: q.score || 1,
+        // 确保 options 是对象
+        options: q.options || {}
+      }));
+      
+      // 存储到本地
+      localStorage.setItem('current_assessment', JSON.stringify(assessmentData));
+    
+      router.push({
+        path: '/student/studentcollections/redoquestions',
+        query: {
+          from: 'mistakesbook',
+          exam_history_id: assessmentData.exam_history_id,
+          exam_id: assessmentData.exam_id,
+          timestamp: Date.now() // 防止缓存
+        }
+      });
+      
+      // 退出重做模式
+      isRedoMode.value = false;
+      selectedMistakeIds.value.clear();
+      selectedMistakes.value = [];
+      
+      ElMessage.success(`已开始重做 ${assessmentData.questions.length} 道错题`);
+    } else {
+      const errorMessages = results
+        .filter(r => !r.success)
+        .map(r => `科目 ${r.subjectId}: ${r.message}`)
+        .join('; ');
+      
+      ElMessage.error(`重做请求失败: ${errorMessages}`);
+    }
+    
+  }catch (error) {
+    console.error('开始重做失败:', error);
+    ElMessage.error(error.message || '开始重做失败');
+  } finally {
+    redoLoading.value = false;
+  }
+};
+
+    // 其他方法
+    const handleFilterChange = () => {
+      pagination.value.currentPage = 1;
+      // 筛选时保持选中状态
+      if (isRedoMode.value) {
+        // 在下一次渲染后恢复选中状态
+        nextTick(() => {
+          restoreSelection();
+        });
+      }
     };
 
     const reviewMistake = async (row) => {
@@ -1022,6 +1441,16 @@ const toggleCollect = async (row) => {
         });
 
         row.status = "reviewed";
+        // 如果是已选中的题目，将其从选择中移除
+        if (isRedoMode.value) {
+          const rowKey = getRowKey(row);
+          if (selectedMistakeIds.value.has(rowKey)) {
+            selectedMistakeIds.value.delete(rowKey);
+            if (mistakesTableRef.value) {
+              mistakesTableRef.value.toggleRowSelection(row, false);
+            }
+          }
+        }
         updateStats();
         ElMessage.success("标记成功");
       } catch {
@@ -1038,6 +1467,13 @@ const toggleCollect = async (row) => {
         });
 
         mistakes.value = mistakes.value.filter((item) => item.id !== row.id);
+        // 如果是已选中的题目，将其从选择中移除
+        if (isRedoMode.value) {
+          const rowKey = getRowKey(row);
+          if (selectedMistakeIds.value.has(rowKey)) {
+            selectedMistakeIds.value.delete(rowKey);
+          }
+        }
         updateStats();
         ElMessage.success("删除成功");
       } catch {
@@ -1048,6 +1484,16 @@ const toggleCollect = async (row) => {
     const handleReviewed = () => {
       if (currentMistake.value) {
         currentMistake.value.status = "reviewed";
+        // 如果是已选中的题目，将其从选择中移除
+        if (isRedoMode.value) {
+          const rowKey = getRowKey(currentMistake.value);
+          if (selectedMistakeIds.value.has(rowKey)) {
+            selectedMistakeIds.value.delete(rowKey);
+            if (mistakesTableRef.value) {
+              mistakesTableRef.value.toggleRowSelection(currentMistake.value, false);
+            }
+          }
+        }
         updateStats();
         showDetailDialog.value = false;
         ElMessage.success("已标记为已复习");
@@ -1131,11 +1577,47 @@ const toggleCollect = async (row) => {
 
     const handleSizeChange = (val) => {
       pagination.value.pageSize = val;
+      // 分页大小变化后恢复选中状态
+      if (isRedoMode.value) {
+        nextTick(() => {
+          restoreSelection();
+        });
+      }
     };
 
     const handleCurrentChange = (val) => {
       pagination.value.currentPage = val;
+      // 页码变化后恢复选中状态
+      if (isRedoMode.value) {
+        nextTick(() => {
+          restoreSelection();
+        });
+      }
     };
+
+    // 监听重做模式变化
+    watch(isRedoMode, (newVal) => {
+      if (newVal) {
+        // 进入重做模式时自动清空选择
+        selectedMistakeIds.value.clear();
+        selectedMistakes.value = [];
+      }
+    });
+
+    // 监听过滤后的错题数据，恢复选中状态
+watch(filteredMistakes, () => {
+  if (isRedoMode.value) {
+    // 清除之前的定时器
+    if (restoreSelectionTimer.value) {
+      clearTimeout(restoreSelectionTimer.value);
+    }
+    
+    // 设置新的定时器，确保在DOM更新后恢复选中状态
+    restoreSelectionTimer.value = setTimeout(() => {
+      restoreSelection();
+    }, 100);
+  }
+});
 
     // 初始化
     onMounted(() => {
@@ -1154,6 +1636,13 @@ const toggleCollect = async (row) => {
       stats,
       showAnswer,
       showAnalysis,
+      
+      // 重做相关状态
+      isRedoMode,
+      selectedMistakes,
+      redoLoading,
+      mistakesTableRef,
+      getSelectedCount,
 
       // 计算属性
       filteredMistakes,
@@ -1177,6 +1666,16 @@ const toggleCollect = async (row) => {
       handleSizeChange,
       handleCurrentChange,
       toggleCollect,
+      
+      // 重做相关方法
+      enterRedoMode,
+      cancelRedoMode,
+      clearSelection,
+      startRedo,
+      handleSelectionChange,
+      checkSelectable,
+      getRowKey,
+      getRowClassName,
     };
   },
 };
@@ -1372,6 +1871,42 @@ const toggleCollect = async (row) => {
 .header-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* 重做模式提示样式 */
+.redo-mode-tip {
+  margin-bottom: 20px;
+  animation: slideDown 0.3s ease;
+}
+
+.selection-info {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selected-count {
+  font-weight: bold;
+  color: #e6a23c;
+  font-size: 18px;
+  margin: 0 5px;
+}
+
+/* 动画效果 */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 筛选栏 */
@@ -1482,12 +2017,24 @@ const toggleCollect = async (row) => {
 
 /* 错题行样式 */
 :deep(.mistake-row) {
-  cursor: pointer;
   transition: background-color 0.2s;
 }
 
 :deep(.mistake-row:hover) {
   background-color: #f1f5f9 !important;
+}
+
+/* 重做模式下的行样式 */
+:deep(.mistake-row.is-selectable) {
+  cursor: pointer;
+}
+
+:deep(.mistake-row.is-selected) {
+  background-color: #f0f9ff !important;
+}
+
+:deep(.mistake-row.is-disabled .el-checkbox__input.is-disabled) {
+  cursor: not-allowed;
 }
 
 /* 分页 */

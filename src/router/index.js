@@ -10,6 +10,7 @@ import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
 import TakeExam from "../components/TakeExam.vue"; //学生参加考试
 import StudentViewResults from "../components/StudentViewResults.vue"; //学生查看考试结果
 import StudentMistakesBook from "../components/StudentMistakesBook.vue"; //学生错题本
+import RedoQuestions from "../components/RedoQuestions.vue"; //学生重做错题
 import StudentCollections from "../components/StudentCollections.vue"; //学生收藏
 import SelfAssessment from "../components/SelfAssessment.vue"; //学生自我评测
 import SelfTakeExam from "../components/SelfTakeExercise.vue"; // 学生自我评测参加考试
@@ -119,6 +120,15 @@ const routes = [
         meta: {
           requiresAuth: true,
           breadcrumb: ["自主学习", "我的收藏"]
+        }
+      },
+       {
+        path: "studentcollections/redoquestions",
+        name: "redo-questions",
+        component: RedoQuestions,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["自主学习", "我的收藏" , "错题重做"]
         }
       },
     ]

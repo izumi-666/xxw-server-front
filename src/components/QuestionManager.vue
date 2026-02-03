@@ -946,7 +946,9 @@
           <div class="results-table">
             <!-- 表格头部 -->
             <div class="table-header">
-              <div class="table-cell">学校</div>
+              <!-- <div class="table-cell">学校</div> -->
+              <div class="table-cell">上传者</div>
+  <div class="table-cell">审核者</div>
               <div class="table-cell">年级</div>
               <div class="table-cell">科目</div>
               <div class="table-cell">问题类别</div>
@@ -962,7 +964,9 @@
             </div>
             <!-- 表格数据行 -->
             <div v-for="q in questionList" :key="q.id" class="table-row">
-              <div class="table-cell">{{ getSchoolName(q.school_id) }}</div>
+  <div class="table-cell">{{ q.uploader || "-" }}</div>
+  <div class="table-cell">{{ q.reviewer || "-" }}</div>
+              <!-- <div class="table-cell">{{ getSchoolName(q.school_id) }}</div> -->
               <div class="table-cell">{{ getGradeName(q.grade_id) }}</div>
               <div class="table-cell">{{ getSubjectName(q.subject_id) }}</div>
               <div class="table-cell">
@@ -1123,6 +1127,22 @@
               </option>
             </select>
           </div>
+
+          <!-- 显示提交者信息（只读） -->
+<div class="form-group">
+  <label class="form-label">提交者：</label>
+  <div class="readonly-field">
+    {{ selectedQuestion?.uploader || "-" }}
+  </div>
+</div>
+
+<!-- 显示审核者信息（只读） -->
+<div class="form-group">
+  <label class="form-label">审核者：</label>
+  <div class="readonly-field">
+    {{ selectedQuestion?.reviewer || "-" }}
+  </div>
+</div>
 
           <!-- 年级选择 -->
           <div class="form-group">
@@ -6669,6 +6689,19 @@ init();
   min-height: 80px; /* 最小高度 */
 }
 
+/* 只读字段样式 */
+.readonly-field {
+  padding: 10px 12px;
+  background-color: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  color: #606266;
+  font-size: 14px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
 /* ==================== 可搜索选择框样式 ==================== */
 .searchable-select {
   position: relative; /* 相对定位，为下拉列表提供定位上下文 */
@@ -7014,54 +7047,58 @@ init();
 /* ==================== 表格列宽设置 ==================== */
 /* 按顺序为每个表格列设置固定宽度 */
 .table-cell:nth-child(1) {
-  width: 120px; /* 学校列 */
+  width: 60px; /* 上传者列 */
 }
 
 .table-cell:nth-child(2) {
-  width: 80px; /* 年级列 */
+  width: 60px; /* 审核者列 */
 }
 
 .table-cell:nth-child(3) {
-  width: 50px; /* 科目列 */
+  width: 80px; /* 年级列 */
 }
 
 .table-cell:nth-child(4) {
-  width: 90px; /* 问题类别列 */
+  width: 50px; /* 科目列 */
 }
 
 .table-cell:nth-child(5) {
-  width: 80px; /* 评分方法列 */
+  width: 90px; /* 问题类别列 */
 }
 
 .table-cell:nth-child(6) {
-  width: 100px; /* 知识点列 */
+  width: 50px; /* 评分方法列 */
 }
 
 .table-cell:nth-child(7) {
-  width: 100px; /* 解题思想列 */
+  width: 100px; /* 知识点列 */
 }
 
 .table-cell:nth-child(8) {
-  width: 150px; /* 副知识点列 */
+  width: 100px; /* 解题思想列 */
 }
 
 .table-cell:nth-child(9) {
-  width: 50px; /* 难度列 */
+  width: 150px; /* 副知识点列 */
 }
 
 .table-cell:nth-child(10) {
-  width: 320px; /* 题目内容列 */
+  width: 50px; /* 难度列 */
 }
 
 .table-cell:nth-child(11) {
-  width: 100px; /* 备注列 */
+  width: 300px; /* 题目内容列 */
 }
 
 .table-cell:nth-child(12) {
-  width: 100px; /* 图片列 */
+  width: 100px; /* 备注列 */
 }
 
 .table-cell:nth-child(13) {
+  width: 100px; /* 图片列 */
+}
+
+.table-cell:nth-child(14) {
   width: 45px; /* 操作列 */
 }
 
@@ -7381,7 +7418,7 @@ init();
 
 /* 为知识点和副知识点列增加宽度 */
 .table-cell:nth-child(6) {
-  width: 150px; /* 知识点列 */
+  width: 100px; /* 知识点列 */
 }
 
 .table-cell:nth-child(8) {
