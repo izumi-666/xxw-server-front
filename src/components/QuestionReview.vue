@@ -11,15 +11,8 @@
       </div>
     </div>
 
-    <!-- 加载动画（覆盖整个页面） -->
-    <LoadingOverlay 
-      v-if="initialLoading"
-      text="正在加载待审核题目..."
-      :bold="true"
-    />
-
     <!-- 页面内容区域 -->
-    <div v-if="!initialLoading">
+    <div>
       <!-- 操作区域 -->
       <div class="action-section">
         <div class="action-row">
@@ -34,14 +27,6 @@
             >
               <span v-if="approving">同意中...</span>
               <span v-else>批量同意 ({{ selectedIds.length }})</span>
-            </button>
-            <button 
-              @click="batchReject" 
-              class="btn-delete" 
-              :disabled="!hasSelectedItems || rejecting"
-            >
-              <span v-if="rejecting">拒绝中...</span>
-              <span v-else>批量拒绝 ({{ selectedIds.length }})</span>
             </button>
             <button @click="refreshList" class="btn-secondary">
               刷新列表
@@ -74,13 +59,16 @@
             </div>
             
             <!-- 列表加载动画 -->
-            <LoadingOverlay 
-              v-if="loading"
-              text="正在加载待审核题目..."
-              :bold="true"
-            />
+            <div v-if="loading" class="loading-container">
+              <div class="loading-content">
+                <div class="loading-spinner">
+                  <div class="spinner"></div>
+                </div>
+                <p class="loading-text">正在加载待审核题目...</p>
+              </div>
+            </div>
 
-            <div class="list-container" v-if="questionList.length && !loading">
+            <div class="list-container" v-else-if="questionList.length">
               <div class="question-table">
                 <div class="table-header">
                   <div class="table-cell select-cell">选择</div>
@@ -144,6 +132,7 @@
                   <div class="table-cell submitter-cell">{{ question.uploader || '未知' }}</div>
                   <div class="table-cell reviewer-cell">{{ question.reviewer || '待分配' }}</div>
                   <div class="table-cell action-cell" @click.stop>
+                    <!-- 行内操作按钮 -->
                     <div class="row-actions">
                       <button 
                         @click="approveQuestion(question.id)" 
@@ -153,7 +142,7 @@
                         同意
                       </button>
                       <button 
-                        @click="rejectQuestion(question.id)" 
+                        @click="singleRejectQuestion(question.id)"
                         class="btn-reject-small"
                         :disabled="rejecting"
                       >
@@ -194,7 +183,7 @@
               </div>
             </div>
             
-            <div class="empty-list" v-else-if="!loading">
+            <div class="empty-list" v-else>
               <p>暂无待审核题目</p>
             </div>
           </div>
@@ -342,27 +331,24 @@
                 </div>
               </div>
               
-              <!-- 审核操作 -->
-              <div class="detail-section">
-                <h4>审核操作</h4>
-                <div class="review-actions">
-                  <button 
-                    @click="approveQuestion(selectedQuestion.id)" 
-                    class="btn-primary"
-                    :disabled="approving"
-                  >
-                    <span v-if="approving">同意中...</span>
-                    <span v-else>同意该题目</span>
-                  </button>
-                  <button 
-                    @click="rejectQuestion(selectedQuestion.id)" 
-                    class="btn-delete"
-                    :disabled="rejecting"
-                  >
-                    <span v-if="rejecting">拒绝中...</span>
-                    <span v-else>拒绝该题目</span>
-                  </button>
-                </div>
+              <!-- 审核操作按钮 -->
+              <div class="review-actions">
+                <button 
+                  @click="approveQuestion(selectedQuestion.id)" 
+                  class="btn-primary"
+                  :disabled="approving"
+                >
+                  <span v-if="approving">同意中...</span>
+                  <span v-else>同意该题目</span>
+                </button>
+                <button 
+                  @click="singleRejectQuestion(selectedQuestion.id)"
+                  class="btn-delete"
+                  :disabled="rejecting"
+                >
+                  <span v-if="rejecting">拒绝中...</span>
+                  <span v-else>拒绝该题目</span>
+                </button>
               </div>
             </div>
             
@@ -374,19 +360,31 @@
         </div>
       </div>
 
-      <!-- ==================== 拒绝确认对话框 ==================== -->
+      <!-- 拒绝确认对话框 -->
       <div v-if="showRejectConfirm" class="modal-overlay">
         <div class="modal-content">
-          <h3>确认拒绝</h3>
-          <p v-if="rejectingSingle">
-            确定要拒绝题目 "{{ truncateContent(selectedQuestion?.title || '', 50) }}" 吗？
+          <h3>拒绝题目</h3>
+          <!-- 只显示单个题目 -->
+          <p v-if="rejectingSingleId">
+            确定要拒绝选中的题目吗？
           </p>
-          <p v-else>
-            确定要拒绝选中的 {{ selectedIds.length }} 个题目吗？
-          </p>
-          
+          <!-- 拒绝理由输入框 -->
+          <div class="reject-reason-input">
+            <label for="rejectReason">拒绝理由：</label>
+            <textarea 
+              id="rejectReason"
+              v-model="rejectReason"
+              placeholder="请输入拒绝理由..."
+              rows="4"
+              class="reason-textarea"
+              maxlength="500"
+            ></textarea>
+            <div class="char-count" :class="{ 'limit': rejectReason.length >= 500 }">
+              {{ rejectReason.length }}/500
+            </div>
+          </div>
           <div class="modal-actions">
-            <button @click="confirmReject" class="btn-delete" :disabled="rejecting">
+            <button @click="confirmSingleReject" class="btn-delete" :disabled="rejecting || !rejectReason.trim()">
               <span v-if="rejecting">处理中...</span>
               <span v-else>确认拒绝</span>
             </button>
@@ -408,7 +406,6 @@ import { getSubjectName, initSubjectData } from "../utils/subjectList.js";
 import { getSchoolList, schoolList } from "../utils/schoolList.js";
 import { getKnowledgePointName, fetchKnowledgePointList } from "../utils/knowledgeList.js";
 import { markdownToHtml } from "../utils/markdownUtils.js";
-import LoadingOverlay from "../utils/LoadingOverlay.vue";
 
 // API基础URL
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -421,9 +418,9 @@ const currentUserName = ref(""); // 当前用户名
 const questionList = ref([]); // 题目列表
 const selectedQuestion = ref(null); // 选中的题目
 const selectedIds = ref([]); // 选中的题目ID数组
+const rejectingSingleId = ref(null); // 存储单个拒绝的题目ID
 
 // 加载状态
-const initialLoading = ref(true); // 初始加载状态（基础数据）
 const loading = ref(false); // 题目列表加载状态
 const approving = ref(false); // 同意操作中
 const rejecting = ref(false); // 拒绝操作中
@@ -438,6 +435,7 @@ const totalCount = ref(0);
 const showRejectConfirm = ref(false); // 拒绝确认框显示状态
 const rejectReason = ref(""); // 拒绝原因
 const rejectingSingle = ref(false); // 是否拒绝单个题目
+const pendingRejectIds = ref([]); // 待拒绝的题目ID数组
 
 // ==================== 计算属性 ====================
 // 是否有选中的题目
@@ -467,9 +465,6 @@ const totalPages = computed(() => {
 
 // ==================== 生命周期 ====================
 onMounted(async () => {
-  // 立即显示初始加载动画
-  initialLoading.value = true;
-  
   try {
     // 并行加载所有基础数据
     await Promise.all([
@@ -482,8 +477,6 @@ onMounted(async () => {
   } catch (error) {
     console.error("页面初始化失败:", error);
     ElMessage.error("页面初始化失败，请刷新页面重试");
-  } finally {
-    initialLoading.value = false;
   }
 });
 
@@ -658,10 +651,11 @@ const handleRowClick = (question) => {
   selectedQuestion.value = question;
 };
 
-// 同意题目
+// 同意题目（批量）
 const approveQuestion = async (questionId) => {
+  // 如果传入questionId，则只同意这一个题目
+  // 如果没有传入questionId，则同意所有选中的题目（批量同意）
   const ids = questionId ? [questionId] : selectedIds.value;
-  const approveIds = [...ids];
   
   if (ids.length === 0) {
     ElMessage.warning("请选择要同意的题目");
@@ -670,18 +664,19 @@ const approveQuestion = async (questionId) => {
   
   approving.value = true;
   try {
+    // 批量同意时，直接发送ID数组
     const response = await axios.post(
       `${API_BASE}/questions/approvedQuestions`,
-      approveIds
+      ids
     );
 
     if (response.data.code === 200) {
-      ElMessage.success(`成功同意 ${approveIds.length} 个题目`);
+      ElMessage.success(`成功同意 ${ids.length} 个题目`);
       
       await loadReviewQuestionList();
-      selectedIds.value = selectedIds.value.filter(id => !approveIds.includes(id));
+      selectedIds.value = selectedIds.value.filter(id => !ids.includes(id));
       
-      if (selectedQuestion.value && approveIds.includes(selectedQuestion.value.id)) {
+      if (selectedQuestion.value && ids.includes(selectedQuestion.value.id)) {
         selectedQuestion.value = null;
       }
     } else {
@@ -695,48 +690,57 @@ const approveQuestion = async (questionId) => {
   }
 };
 
-// 拒绝题目
-const rejectQuestion = (questionId) => {
-  if (questionId) {
-    selectedIds.value = [questionId];
-    rejectingSingle.value = true;
-  } else {
-    if (selectedIds.value.length === 0) {
-      ElMessage.warning("请选择要拒绝的题目");
-      return;
-    }
-    rejectingSingle.value = false;
-  }
-  
-  showRejectConfirm.value = true;
-  rejectReason.value = "";
-};
-
-// 确认拒绝
-const confirmReject = async () => {
-  if (selectedIds.value.length === 0) {
+// 单个题目拒绝
+const singleRejectQuestion = (questionId) => {
+  if (!questionId) {
     ElMessage.warning("请选择要拒绝的题目");
     return;
   }
   
-  const rejectedIds = [...selectedIds.value];
+  // 只允许单个题目拒绝
+  rejectingSingleId.value = questionId;
+  showRejectConfirm.value = true;
+  rejectReason.value = ""; // 重置拒绝理由
+};
+
+// 确认单个拒绝
+const confirmSingleReject = async () => {
+  if (!rejectingSingleId.value) {
+    ElMessage.warning("请选择要拒绝的题目");
+    return;
+  }
+  
+  // 检查拒绝理由是否填写
+  if (!rejectReason.value.trim()) {
+    ElMessage.warning("请填写拒绝理由");
+    return;
+  }
   
   rejecting.value = true;
   try {
+    // 根据API要求，发送对象格式而不是数组
+    const rejectRequest = {
+      questionId: rejectingSingleId.value,
+      comment: rejectReason.value.trim()
+    };
+    
     const response = await axios.post(
       `${API_BASE}/questions/rejectedQuestions`,
-      rejectedIds
+      rejectRequest  // 直接发送对象
     );
 
     if (response.data.code === 200) {
-      ElMessage.success(`成功拒绝 ${rejectedIds.length} 个题目`);
+      ElMessage.success("题目已成功拒绝");
       
       await loadReviewQuestionList();
-      selectedIds.value = selectedIds.value.filter(id => !rejectedIds.includes(id));
+      
+      // 更新已选择的ID，移除已拒绝的题目
+      selectedIds.value = selectedIds.value.filter(id => id !== rejectingSingleId.value);
       
       cancelReject();
       
-      if (selectedQuestion.value && rejectedIds.includes(selectedQuestion.value.id)) {
+      // 如果当前查看的题目被拒绝了，清空详情
+      if (selectedQuestion.value && selectedQuestion.value.id === rejectingSingleId.value) {
         selectedQuestion.value = null;
       }
     } else {
@@ -744,7 +748,15 @@ const confirmReject = async () => {
     }
   } catch (err) {
     console.error("拒绝题目失败:", err);
-    ElMessage.error(err.response?.data?.message || "拒绝题目失败");
+    
+    if (err.response) {
+      console.error("服务器响应:", err.response.data);
+      ElMessage.error(`拒绝失败: ${err.response.data?.message || err.response.statusText}`);
+    } else if (err.request) {
+      ElMessage.error("网络错误，请检查连接");
+    } else {
+      ElMessage.error(err.message || "拒绝题目失败");
+    }
   } finally {
     rejecting.value = false;
   }
@@ -754,17 +766,16 @@ const confirmReject = async () => {
 const cancelReject = () => {
   showRejectConfirm.value = false;
   rejectReason.value = "";
-  rejectingSingle.value = false;
+  rejectingSingleId.value = null;
 };
 
 // 批量同意
 const batchApprove = () => {
-  approveQuestion();
-};
-
-// 批量拒绝
-const batchReject = () => {
-  rejectQuestion();
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning("请选择要同意的题目");
+    return;
+  }
+  approveQuestion(); // 不传参，同意所有选中的题目
 };
 
 // 刷新列表
@@ -948,6 +959,85 @@ const onPageSizeChange = () => {
   padding: 8px 16px;
   border-radius: 20px;
   font-weight: 500;
+}
+
+/* ==================== 加载动画样式 ==================== */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 40px 0;
+}
+
+.loading-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.spinner {
+  width: 100%;
+  height: 100%;
+  border: 4px solid rgba(64, 158, 255, 0.1);
+  border-top-color: #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  color: #606266;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 表格行加载占位符 */
+.loading-row {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    90deg,
+    rgba(240, 240, 240, 0.2) 25%,
+    rgba(230, 230, 230, 0.4) 37%,
+    rgba(240, 240, 240, 0.2) 63%
+  );
+  background-size: 1000px 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 /* ==================== 操作区域样式 ==================== */
@@ -1665,6 +1755,53 @@ const onPageSizeChange = () => {
   font-size: 16px;
 }
 
+/* ==================== 拒绝理由输入框样式 ==================== */
+.reject-reason-input {
+  margin: 20px;
+}
+
+.reject-reason-input label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #303133;
+  font-size: 14px;
+}
+
+.reason-textarea {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+  transition: border-color 0.3s;
+}
+
+.reason-textarea:focus {
+  outline: none;
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.reason-textarea::placeholder {
+  color: #c0c4cc;
+}
+
+.char-count {
+  text-align: right;
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+
+.char-count.limit {
+  color: #f56c6c;
+}
+
 /* ==================== 模态框样式 ==================== */
 .modal-overlay {
   position: fixed;
@@ -1684,7 +1821,7 @@ const onPageSizeChange = () => {
   padding: 30px;
   border-radius: 12px;
   max-width: 500px;
-  width: 90%;
+  width: 100%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   animation: modalAppear 0.3s ease-out;
 }
@@ -1760,13 +1897,6 @@ const onPageSizeChange = () => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ==================== 按钮样式 ==================== */
@@ -1867,12 +1997,19 @@ const onPageSizeChange = () => {
   display: flex;
   gap: 15px;
   justify-content: center;
-  margin-top: 30px;
+  margin-top: 25px;
 }
 
 .modal-actions button {
   min-width: 100px;
   padding: 10px 20px;
+  height: 36px;
+}
+
+/* 禁用状态样式 */
+.modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* ==================== 知识点标签样式 ==================== */

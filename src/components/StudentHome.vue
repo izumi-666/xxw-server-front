@@ -38,7 +38,7 @@
           <span>首页</span>
         </el-menu-item>
 
-        <el-menu-item index="self-analysis">
+        <el-menu-item index="student-self-analysis">
           <el-icon><DataAnalysis /></el-icon>
           <span>自我分析</span>
         </el-menu-item>
@@ -58,7 +58,6 @@
           <span>线上课堂</span>
         </el-menu-item>
 
-        <!-- 自主学习 -->
         <el-sub-menu index="self-study">
           <template #title>
             <el-icon><Collection /></el-icon>
@@ -217,6 +216,7 @@ export default {
 
       const routes = {
         "student-dashboard": "/student/studentdashboard",
+        "student-self-analysis": "/student/studentselfanalysis",
         "exam-management": "/student/exammanagement",
         "student-mistakes-book": "/student/mistakesbook",
         "student-collections": "/student/studentcollections",

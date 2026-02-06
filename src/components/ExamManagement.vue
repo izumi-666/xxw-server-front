@@ -98,12 +98,23 @@
       <div class="search-results card">
         <div class="results-header">
           <h2 class="section-title">考试列表</h2>
-          <div class="results-count" v-if="examList.length">
+          <div class="results-count" v-if="!loading && examList.length">
             共 {{ totalItems }} 场考试
           </div>
         </div>
 
-        <div v-if="examList.length">
+        <!-- 加载动画 -->
+        <div v-if="loading" class="loading-container">
+          <div class="loading-content">
+            <div class="loading-spinner">
+              <div class="spinner"></div>
+            </div>
+            <p class="loading-text">正在加载考试列表...</p>
+          </div>
+        </div>
+
+        <!-- 考试列表内容 -->
+        <div v-else-if="examList.length">
           <div class="exams-table">
             <table class="table">
               <thead>
@@ -124,21 +135,25 @@
                   </td>
                   <td>
                     <span
-  class="status-badge"
-  :class="getStatusClass(getExamDisplayStatus(exam))"
->
-  {{ getStatusText(getExamDisplayStatus(exam)) }}
-</span>
+                      class="status-badge"
+                      :class="getStatusClass(getExamDisplayStatus(exam))"
+                    >
+                      {{ getStatusText(getExamDisplayStatus(exam)) }}
+                    </span>
                   </td>
                   <td>
                     <div class="exam-time-range">
                       <div class="time-item">
                         <span class="time-label">开始时间：</span>
-                        <span class="time-value">{{ formatDateTime(exam.start_time) }}</span>
+                        <span class="time-value">{{
+                          formatDateTime(exam.start_time)
+                        }}</span>
                       </div>
                       <div class="time-item">
                         <span class="time-label">结束时间：</span>
-                        <span class="time-value">{{ formatDateTime(calculateEndTime(exam)) }}</span>
+                        <span class="time-value">{{
+                          formatDateTime(calculateEndTime(exam))
+                        }}</span>
                       </div>
                       <div class="time-item">
                         <span class="time-label">考试时长：</span>
@@ -174,23 +189,20 @@
                       >
                         发布
                       </button>
-                      
+
                       <!-- 查看详情按钮（所有状态都可查看） -->
-                      <button
-                        class="btn-info btn-sm"
-                        @click="viewExamDetails(exam)"
-                      >
+                      <button class="btn-info btn-sm" @click="viewExamDetails(exam)">
                         详情
                       </button>
 
                       <!-- 批改按钮 -->
                       <button
-      v-if="shouldShowGradeButton(exam)"
-      class="btn-warning btn-sm"
-      @click="gradeExam(exam)"
-    >
-      批改
-    </button>
+                        v-if="shouldShowGradeButton(exam)"
+                        class="btn-warning btn-sm"
+                        @click="gradeExam(exam)"
+                      >
+                        批改
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -264,7 +276,10 @@
                 </div>
                 <div class="info-item">
                   <label>考试状态：</label>
-                  <span class="status-badge" :class="getStatusClass(detailExamData?.status)">
+                  <span
+                    class="status-badge"
+                    :class="getStatusClass(detailExamData?.status)"
+                  >
                     {{ getStatusText(detailExamData?.status) }}
                   </span>
                 </div>
@@ -311,7 +326,9 @@
                 <div class="paper-info-details">
                   <div>总分：{{ detailExamData.paper_info.total_score }} 分</div>
                   <div>题量：{{ detailExamData.paper_info.question_count }} 题</div>
-                  <div v-if="detailExamData.paper_info.difficulty">难度：{{ detailExamData.paper_info.difficulty }}</div>
+                  <div v-if="detailExamData.paper_info.difficulty">
+                    难度：{{ detailExamData.paper_info.difficulty }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,7 +447,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 发布考试弹窗 -->
     <div v-if="publishVisible" class="modal-overlay" @click="publishVisible = false">
       <div class="modal-content" @click.stop>
@@ -522,6 +539,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 /* ==================== 数据状态 ==================== */
 const examList = ref([]);
 const paperList = ref([]);
+const loading = ref(false); // 添加loading状态
 
 // 分页相关
 const fullExamList = ref([]);
@@ -536,7 +554,6 @@ const updatePagedExams = () => {
   examList.value = fullExamList.value.slice(start, end);
   totalItems.value = fullExamList.value.length;
 };
-
 
 // 模态框状态
 const detailVisible = ref(false);
@@ -607,7 +624,7 @@ const getStatusText = (status) => {
     DRAFT: "未发布",
     PUBLISHED: "已发布",
     ONGOING: "考试中",
-    FINISHED: "已完成"
+    FINISHED: "已完成",
   };
   return statusMap[status] || status;
 };
@@ -618,7 +635,7 @@ const getStatusClass = (status) => {
     DRAFT: "status-draft",
     PUBLISHED: "status-published",
     ONGOING: "status-ongoing",
-    FINISHED: "status-finished"
+    FINISHED: "status-finished",
   };
   return classMap[status] || "";
 };
@@ -730,7 +747,7 @@ const getUserInfo = () => {
 
     const userInfo = JSON.parse(userInfoStr);
     let permissions = [];
-    
+
     try {
       permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
     } catch (e) {
@@ -738,7 +755,7 @@ const getUserInfo = () => {
     }
 
     return {
-      id: userInfo.id,  // 添加 id 字段
+      id: userInfo.id, // 添加 id 字段
       account: userInfo.account,
       username: userInfo.name || userInfo.account,
       permissions,
@@ -779,7 +796,7 @@ const loadExams = async () => {
   // 尝试从 localStorage 获取 userInfo，看看是否有 id
   const userInfoStr = localStorage.getItem("userInfo");
   let userId = userInfo.account; // 默认使用 account
-  
+
   if (userInfoStr) {
     try {
       const userDetail = JSON.parse(userInfoStr);
@@ -789,48 +806,62 @@ const loadExams = async () => {
     }
   }
 
-  const res = await axios.get(
-    `${API_BASE}/exam/getExamList/staff/${userId}`
-  );
+  loading.value = true; // 开始加载
+  try {
+    const res = await axios.get(`${API_BASE}/exam/getExamList/staff/${userId}`);
 
-  // 获取数据并按照开始时间降序排列（最新的在前面）
-  let exams = Array.isArray(res.data.data) ? res.data.data : [];
-  
-  // 按开始时间排序：最新的考试排在最前面
-  exams.sort((a, b) => {
-    const timeA = new Date(a.start_time).getTime();
-    const timeB = new Date(b.start_time).getTime();
-    return timeB - timeA; // 降序排列
-  });
-  
-  fullExamList.value = exams;
+    // 获取数据并按照开始时间降序排列（最新的在前面）
+    let exams = Array.isArray(res.data.data) ? res.data.data : [];
 
-  currentPage.value = 1;
-  updatePagedExams();
+    // 按开始时间排序：最新的考试排在最前面
+    exams.sort((a, b) => {
+      const timeA = new Date(a.start_time).getTime();
+      const timeB = new Date(b.start_time).getTime();
+      return timeB - timeA; // 降序排列
+    });
+
+    fullExamList.value = exams;
+
+    currentPage.value = 1;
+    updatePagedExams();
+  } catch (error) {
+    console.error("加载考试列表失败:", error);
+    ElMessage.error("加载考试列表失败");
+  } finally {
+    loading.value = false; // 加载完成
+  }
 };
 
 // 搜索考试
 const searchExam = async () => {
-  // 直接传递账户名字符串数组
-  const res = await axios.post(`${API_BASE}/exam/findExam`, {
-    name: searchForm.value.name,
-    staffs: searchForm.value.created_by
-  });
+  loading.value = true; // 开始加载
+  try {
+    // 直接传递账户名字符串数组
+    const res = await axios.post(`${API_BASE}/exam/findExam`, {
+      name: searchForm.value.name,
+      staffs: searchForm.value.created_by,
+    });
 
-  // 获取数据并按照开始时间降序排列
-  let exams = Array.isArray(res.data.data) ? res.data.data : [];
-  
-  // 按开始时间排序：最新的考试排在最前面
-  exams.sort((a, b) => {
-    const timeA = new Date(a.start_time).getTime();
-    const timeB = new Date(b.start_time).getTime();
-    return timeB - timeA; // 降序排列
-  });
-  
-  fullExamList.value = exams;
+    // 获取数据并按照开始时间降序排列
+    let exams = Array.isArray(res.data.data) ? res.data.data : [];
 
-  currentPage.value = 1;
-  updatePagedExams();
+    // 按开始时间排序：最新的考试排在最前面
+    exams.sort((a, b) => {
+      const timeA = new Date(a.start_time).getTime();
+      const timeB = new Date(b.start_time).getTime();
+      return timeB - timeA; // 降序排列
+    });
+
+    fullExamList.value = exams;
+
+    currentPage.value = 1;
+    updatePagedExams();
+  } catch (error) {
+    console.error("搜索考试失败:", error);
+    ElMessage.error("搜索考试失败");
+  } finally {
+    loading.value = false; // 加载完成
+  }
 };
 
 const resetSearch = () => {
@@ -883,15 +914,15 @@ const goToPage = (page) => {
 const shouldShowGradeButton = (exam) => {
   // 直接使用后端状态判断
   // ONGOING 或 FINISHED 状态的考试都可以批改
-  return exam.status === 'ONGOING' || exam.status === 'FINISHED';
+  return exam.status === "ONGOING" || exam.status === "FINISHED";
 };
 
 // 批改考试
 const gradeExam = (exam) => {
   // 跳转到批改考试页面，传递考试ID
   router.push({
-    path: '/teacher/exammanagement/assessexam',
-    query: { examId: exam.id }
+    path: "/teacher/exammanagement/assessexam",
+    query: { examId: exam.id },
   });
 };
 
@@ -1065,7 +1096,7 @@ const loadStudentList = async () => {
     studentList.value = list.map((item) => ({
       id: item.id,
       name: item.name || item.account, // 使用姓名，如果没有则使用账号
-      account: item.account // 保留账号字段备用
+      account: item.account, // 保留账号字段备用
     }));
 
     filteredStudents.value = studentList.value;
@@ -1077,7 +1108,7 @@ const loadStudentList = async () => {
 const openPublishExam = async (exam) => {
   publishExamData.value = exam;
   selectedStudentNames.value = [];
-  
+
   await loadStudentList();
   publishVisible.value = true;
 };
@@ -1171,13 +1202,13 @@ const calculateEndTime = (exam) => {
   if (exam?.end_time) {
     return exam.end_time;
   }
-  
+
   if (exam?.start_time && exam?.duration) {
     const startTime = new Date(exam.start_time);
     const endTime = new Date(startTime.getTime() + exam.duration * 60000);
     return endTime;
   }
-  
+
   return "";
 };
 
@@ -1186,7 +1217,7 @@ const calculateDuration = (exam) => {
   if (exam?.duration) {
     const hours = Math.floor(exam.duration / 60);
     const minutes = exam.duration % 60;
-    
+
     if (hours === 0) {
       return `${minutes}分钟`;
     } else if (minutes === 0) {
@@ -1329,6 +1360,85 @@ watch(currentPage, updatePagedExams);
 .header-actions {
   display: flex;
   gap: 12px;
+}
+
+/* ==================== 加载动画样式 ==================== */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 40px 0;
+}
+
+.loading-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.spinner {
+  width: 100%;
+  height: 100%;
+  border: 4px solid rgba(64, 158, 255, 0.1);
+  border-top-color: #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  color: #606266;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 表格行加载占位符 */
+.loading-row {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    90deg,
+    rgba(240, 240, 240, 0.2) 25%,
+    rgba(230, 230, 230, 0.4) 37%,
+    rgba(240, 240, 240, 0.2) 63%
+  );
+  background-size: 1000px 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 /* ==================== 表单控件样式 ==================== */
@@ -1586,7 +1696,7 @@ watch(currentPage, updatePagedExams);
 .table td {
   padding: 16px 12px;
   border-bottom: 1px solid #e6e9f0;
-   text-align: center;
+  text-align: center;
 }
 
 .table tr:hover {
@@ -1611,10 +1721,9 @@ watch(currentPage, updatePagedExams);
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  margin: 0 auto;  
+  margin: 0 auto;
   width: fit-content;
 }
-
 
 .time-item {
   display: flex;
@@ -2206,6 +2315,16 @@ watch(currentPage, updatePagedExams);
 
   .info-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* 响应式加载动画 */
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .loading-text {
+    font-size: 14px;
   }
 }
 

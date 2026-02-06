@@ -2195,6 +2195,11 @@ onMounted(() => {
   gap: 24px;
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .loading-spinner {
   width: 60px;
   height: 60px;

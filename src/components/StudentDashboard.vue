@@ -26,7 +26,7 @@
             :key="index"
             class="day"
             :class="[
-              day && getDayInfo(day)?.type,
+              getDayTypeClass(day),
               { 
                 today: isToday(day), 
                 selected: day === selectedDate
@@ -68,9 +68,9 @@
       <div class="memo-card">
         <div class="memo-header">
           <h2>📌 {{ selectedDateText }} 备忘录</h2>
-          <div class="day-info" v-if="getDayInfo(selectedDate)">
-            <span class="info-tag" :class="getDayInfo(selectedDate)?.type">
-              {{ getDayTypeText(getDayInfo(selectedDate)?.type) }}
+          <div class="day-info">
+            <span class="info-tag" :class="getDayTypeClass(selectedDate)">
+              {{ getDayTypeText(getDayTypeClass(selectedDate)) }}
             </span>
             <span v-if="getFestivalName(selectedDate)" class="festival-tag">
               {{ getFestivalName(selectedDate) }}
@@ -116,23 +116,23 @@ const holidayMap = ref({});
 
 /* 自定义节日数据（补充API可能缺失的节日） */
 const customFestivals = {
-  // 格式: '月-日': { name: '节日名称', type: 'festival类型', isHoliday: 是否法定假日 }
-  '1-1': { name: '元旦', type: 'holiday', isHoliday: true },
-  '2-14': { name: '情人节', type: 'festival', isHoliday: false },
-  '3-8': { name: '妇女节', type: 'festival', isHoliday: false },
-  '3-12': { name: '植树节', type: 'festival', isHoliday: false },
-  '4-4': { name: '清明节', type: 'holiday', isHoliday: true },
-  '5-1': { name: '劳动节', type: 'holiday', isHoliday: true },
-  '5-4': { name: '青年节', type: 'festival', isHoliday: false },
-  '6-1': { name: '儿童节', type: 'festival', isHoliday: false },
-  '6-10': { name: '端午节', type: 'holiday', isHoliday: true },
-  '7-1': { name: '建党节', type: 'festival', isHoliday: false },
-  '8-1': { name: '建军节', type: 'festival', isHoliday: false },
-  '9-10': { name: '教师节', type: 'festival', isHoliday: false },
-  '10-1': { name: '国庆节', type: 'holiday', isHoliday: true },
-  '12-13': { name: '国家公祭日', type: 'festival', isHoliday: false },
-  '12-24': { name: '平安夜', type: 'festival', isHoliday: false },
-  '12-25': { name: '圣诞节', type: 'festival', isHoliday: false },
+  // 格式: '月-日': { name: '节日名称', isHoliday: 是否法定假日 }
+  '1-1': { name: '元旦', isHoliday: true },
+  '2-14': { name: '情人节', isHoliday: false },
+  '3-8': { name: '妇女节', isHoliday: false },
+  '3-12': { name: '植树节', isHoliday: false },
+  '4-4': { name: '清明节', isHoliday: true },
+  '5-1': { name: '劳动节', isHoliday: true },
+  '5-4': { name: '青年节', isHoliday: false },
+  '6-1': { name: '儿童节', isHoliday: false },
+  '6-10': { name: '端午节', isHoliday: true },
+  '7-1': { name: '建党节', isHoliday: false },
+  '8-1': { name: '建军节', isHoliday: false },
+  '9-10': { name: '教师节', isHoliday: false },
+  '10-1': { name: '国庆节', isHoliday: true },
+  '12-13': { name: '国家公祭日', isHoliday: false },
+  '12-24': { name: '平安夜', isHoliday: false },
+  '12-25': { name: '圣诞节', isHoliday: false },
 };
 
 /* 备忘录数据 */
@@ -173,8 +173,6 @@ const fetchHolidays = async () => {
     data.forEach((item) => {
       map[item.date] = {
         name: item.localName,
-        type: "holiday",
-        description: item.name,
         isHoliday: true
       };
     });
@@ -196,44 +194,46 @@ watch(currentYear, () => {
   fetchHolidays();
 });
 
-/* 获取日期信息 */
-const getDayInfo = (day) => {
-  if (!day) return null;
-
-  const dateStr = `${currentYear.value}-${String(currentMonth.value + 1).padStart(
-    2,
-    "0"
-  )}-${String(day).padStart(2, "0")}`;
+/* 判断是否是周末 */
+const isWeekend = (day) => {
+  if (!day) return false;
+  
   const date = new Date(currentYear.value, currentMonth.value, day);
   const week = date.getDay();
+  return week === 0 || week === 6;
+};
 
-  // 检查自定义节日
-  const customKey = `${currentMonth.value + 1}-${day}`;
-  if (customFestivals[customKey]) {
-    return {
-      ...customFestivals[customKey],
-      date: dateStr
-    };
-  }
-
-  // 法定节假日（API）
+/* 判断是否是法定节假日 */
+const isHoliday = (day) => {
+  if (!day) return false;
+  
+  const dateStr = `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  
+  // 检查节假日API
   if (holidayMap.value[dateStr]) {
-    return holidayMap.value[dateStr];
+    return true;
   }
-
-  // 周末
-  if (week === 0 || week === 6) {
-    return { 
-      type: "weekend",
-      name: week === 0 ? '周日' : '周六'
-    };
+  
+  // 检查自定义节假日
+  const customKey = `${currentMonth.value + 1}-${day}`;
+  if (customFestivals[customKey] && customFestivals[customKey].isHoliday) {
+    return true;
   }
+  
+  return false;
+};
 
-  // 工作日
-  return { 
-    type: "weekday",
-    name: `周${weeks[week]}`
-  };
+/* 获取日期类型（用于CSS类名） */
+const getDayTypeClass = (day) => {
+  if (!day) return '';
+  
+  if (isHoliday(day)) {
+    return 'holiday';
+  } else if (isWeekend(day)) {
+    return 'weekend';
+  } else {
+    return 'weekday';
+  }
 };
 
 /* 获取节日名称 */
@@ -259,10 +259,9 @@ const getFestivalName = (day) => {
 /* 获取日期类型文本 */
 const getDayTypeText = (type) => {
   const typeMap = {
-    'holiday': '节假日',
+    'holiday': '法定节假日',
     'weekend': '周末',
-    'weekday': '工作日',
-    'festival': '节日'
+    'weekday': '工作日'
   };
   return typeMap[type] || '工作日';
 };
@@ -332,7 +331,7 @@ const nextMonth = () => {
 <style scoped>
 /* ==================== 页面整体 ==================== */
 .dashboard {
-  max-width: 2000px;
+   max-width: 2000px;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
@@ -344,10 +343,10 @@ const nextMonth = () => {
 /* ==================== 页面头部样式 ==================== */
 .page-header {
   background: linear-gradient(135deg, #409eff 0%, #3375e0 100%);
-  border-radius: 16px;
-  padding: 24px 32px;
-  margin-bottom: 16px;
-  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.25);
+  border-radius: 12px;
+  padding: 20px 30px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.2);
 }
 
 .header-content {
@@ -597,11 +596,6 @@ const nextMonth = () => {
 .info-tag.weekday {
   background: #eff6ff;
   color: #3b82f6;
-}
-
-.info-tag.festival {
-  background: #faf5ff;
-  color: #7c3aed;
 }
 
 .festival-tag {

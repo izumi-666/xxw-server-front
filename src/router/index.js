@@ -22,6 +22,7 @@ import VisitorHome from "../components/VisitorHome.vue";
 import AccountManagement from "../components/AccountManagement.vue";
 import TeacherDashboard from "../components/TeacherDashboard.vue";
 import StudentDashboard from "../components/StudentDashboard.vue";
+import StudentSelfAnalysis from "../components/StudentSelfAnalysis.vue"; //学生自我分析
 import HomeworkManagement from "../components/HomeworkManagement.vue";
 
 const routes = [
@@ -39,6 +40,15 @@ const routes = [
         meta: {
           requiresAuth: true,
           breadcrumb: ["首页"]
+        }
+      },
+      {
+        path: "studentselfanalysis",
+        name: "student-self-analysis",
+        component: StudentSelfAnalysis,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["自我分析"]
         }
       },
       {

@@ -8,108 +8,144 @@
     </div>
 
     <!-- ==================== 学生账户列表 ==================== -->
-    <div v-if="hasReadPermission && studentList.length" class="card">
-      <h2 class="section-title">学生账户列表</h2>
-
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>账号</th>
-              <th>性别</th>
-              <th>手机号</th>
-              <th>邮箱</th>
-              <th>紧急联系人电话</th>
-              <th>出生年月</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="stu in studentList" :key="stu.id">
-              <td>{{ stu.account }}</td>
-              <td>{{ formatGender(stu.gender) }}</td>
-              <td>{{ stu.phone || "-" }}</td>
-              <td>{{ stu.email || "-" }}</td>
-              <td>{{ stu.emergency_call || "-" }}</td>
-              <td>{{ formatDate(stu.date_of_birth) }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <div v-if="hasReadPermission" class="card">
+      <div class="section-header">
+        <h2 class="section-title">学生账户列表</h2>
+        <div class="results-count" v-if="!studentLoading && studentList.length">
+          共 {{ studentTotal }} 名学生
+        </div>
       </div>
 
-      <!-- 分页 -->
-      <div v-if="studentTotalPages > 1" class="pagination">
-        <button
-          class="page-btn"
-          :disabled="studentPage === 1"
-          @click="changeStudentPage(studentPage - 1)"
-        >
-          上一页
-        </button>
-        <span class="page-info"> 第 {{ studentPage }} / {{ studentTotalPages }} 页 </span>
-        <button
-          class="page-btn"
-          :disabled="studentPage === studentTotalPages"
-          @click="changeStudentPage(studentPage + 1)"
-        >
-          下一页
-        </button>
+      <!-- 学生列表加载动画 -->
+      <div v-if="studentLoading" class="loading-container">
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+          </div>
+          <p class="loading-text">正在加载学生列表...</p>
+        </div>
+      </div>
+
+      <!-- 学生列表内容 -->
+      <div v-else-if="studentList.length">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>账号</th>
+                <th>性别</th>
+                <th>手机号</th>
+                <th>邮箱</th>
+                <th>紧急联系人电话</th>
+                <th>出生年月</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="stu in studentList" :key="stu.id">
+                <td>{{ stu.account }}</td>
+                <td>{{ formatGender(stu.gender) }}</td>
+                <td>{{ stu.phone || "-" }}</td>
+                <td>{{ stu.email || "-" }}</td>
+                <td>{{ stu.emergency_call || "-" }}</td>
+                <td>{{ formatDate(stu.date_of_birth) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 分页 -->
+        <div v-if="studentTotalPages > 1" class="pagination">
+          <button
+            class="page-btn"
+            :disabled="studentPage === 1"
+            @click="changeStudentPage(studentPage - 1)"
+          >
+            上一页
+          </button>
+          <span class="page-info"> 第 {{ studentPage }} / {{ studentTotalPages }} 页 </span>
+          <button
+            class="page-btn"
+            :disabled="studentPage === studentTotalPages"
+            @click="changeStudentPage(studentPage + 1)"
+          >
+            下一页
+          </button>
+        </div>
+      </div>
+
+      <!-- 学生列表空状态 -->
+      <div v-else class="empty-tip">
+        <p>暂无学生账户数据</p>
       </div>
     </div>
 
     <!-- ==================== 教师账户列表 ==================== -->
-    <div v-if="hasReadPermission && teacherList.length" class="card">
-      <h2 class="section-title">教师账户列表</h2>
-
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>账号</th>
-              <th>性别</th>
-              <th>手机号</th>
-              <th>邮箱</th>
-              <th>出生年月</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="teacher in teacherList" :key="teacher.id">
-              <td>{{ teacher.account }}</td>
-              <td>{{ formatGender(teacher.gender) }}</td>
-              <td>{{ teacher.phone || "-" }}</td>
-              <td>{{ teacher.email || "-" }}</td>
-              <td>{{ formatDate(teacher.date_of_birth) }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <div v-if="hasReadPermission" class="card">
+      <div class="section-header">
+        <h2 class="section-title">教师账户列表</h2>
+        <div class="results-count" v-if="!teacherLoading && teacherList.length">
+          共 {{ teacherTotal }} 名教师
+        </div>
       </div>
 
-      <!-- 分页 -->
-      <div v-if="teacherTotalPages > 1" class="pagination">
-        <button
-          class="page-btn"
-          :disabled="teacherPage === 1"
-          @click="changeTeacherPage(teacherPage - 1)"
-        >
-          上一页
-        </button>
-        <span class="page-info"> 第 {{ teacherPage }} / {{ teacherTotalPages }} 页 </span>
-        <button
-          class="page-btn"
-          :disabled="teacherPage === teacherTotalPages"
-          @click="changeTeacherPage(teacherPage + 1)"
-        >
-          下一页
-        </button>
+      <!-- 教师列表加载动画 -->
+      <div v-if="teacherLoading" class="loading-container">
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <div class="spinner"></div>
+          </div>
+          <p class="loading-text">正在加载教师列表...</p>
+        </div>
       </div>
-    </div>
 
-    <!-- 无数据提示 -->
-    <div
-      v-if="hasReadPermission && !studentList.length && !teacherList.length"
-      class="card"
-    >
-      <div class="empty-tip">
-        <p>暂无账户数据</p>
+      <!-- 教师列表内容 -->
+      <div v-else-if="teacherList.length">
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>账号</th>
+                <th>性别</th>
+                <th>手机号</th>
+                <th>邮箱</th>
+                <th>出生年月</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="teacher in teacherList" :key="teacher.id">
+                <td>{{ teacher.account }}</td>
+                <td>{{ formatGender(teacher.gender) }}</td>
+                <td>{{ teacher.phone || "-" }}</td>
+                <td>{{ teacher.email || "-" }}</td>
+                <td>{{ formatDate(teacher.date_of_birth) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 分页 -->
+        <div v-if="teacherTotalPages > 1" class="pagination">
+          <button
+            class="page-btn"
+            :disabled="teacherPage === 1"
+            @click="changeTeacherPage(teacherPage - 1)"
+          >
+            上一页
+          </button>
+          <span class="page-info"> 第 {{ teacherPage }} / {{ teacherTotalPages }} 页 </span>
+          <button
+            class="page-btn"
+            :disabled="teacherPage === teacherTotalPages"
+            @click="changeTeacherPage(teacherPage + 1)"
+          >
+            下一页
+          </button>
+        </div>
+      </div>
+
+      <!-- 教师列表空状态 -->
+      <div v-else class="empty-tip">
+        <p>暂无教师账户数据</p>
       </div>
     </div>
 
@@ -291,6 +327,11 @@ const accountType = ref(""); // 'student' 或 'staff'
 const roleList = ref([]); // 权限列表
 const loadingRoles = ref(false); // 加载权限列表状态
 
+// 学生列表加载状态
+const studentLoading = ref(false);
+// 教师列表加载状态
+const teacherLoading = ref(false);
+
 /* ==================== 学生列表 ==================== */
 const studentList = ref([]);
 const studentPage = ref(1);
@@ -352,7 +393,7 @@ const filteredRoles = computed(() => {
   return roleList.value.filter(role => rolesForType.includes(role.role_name));
 });
 
-//时间格式化
+// 时间格式化
 const formatDateToDateTime = (dateStr) => {
   if (!dateStr) return null;
   return `${dateStr} 00:00:00`;
@@ -385,6 +426,7 @@ const fetchStudentList = async () => {
     return;
   }
 
+  studentLoading.value = true; // 开始加载学生列表
   try {
     const res = await axios.get(`${API_BASE}/user/getStudentList`);
 
@@ -403,6 +445,8 @@ const fetchStudentList = async () => {
     console.error("获取学生列表失败:", error);
     studentList.value = [];
     studentTotal.value = 0;
+  } finally {
+    studentLoading.value = false; // 学生列表加载完成
   }
 };
 
@@ -414,6 +458,7 @@ const fetchTeacherList = async () => {
     return;
   }
 
+  teacherLoading.value = true; // 开始加载教师列表
   try {
     const res = await axios.get(`${API_BASE}/user/getStaffList`);
 
@@ -432,6 +477,8 @@ const fetchTeacherList = async () => {
     console.error("获取教师列表失败:", error);
     teacherList.value = [];
     teacherTotal.value = 0;
+  } finally {
+    teacherLoading.value = false; // 教师列表加载完成
   }
 };
 
@@ -614,15 +661,89 @@ onMounted(() => {
   background: #fff;
   border-radius: 12px;
   padding: 24px;
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #409eff;
 }
 
 .section-title {
-  margin: 0 0 20px;
+  margin: 0;
   font-size: 20px;
   font-weight: 600;
   color: #303133;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #409eff;
+}
+
+.results-count {
+  font-size: 14px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+/* ==================== 加载动画样式 ==================== */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  padding: 40px 0;
+}
+
+.loading-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.spinner {
+  width: 100%;
+  height: 100%;
+  border: 4px solid rgba(64, 158, 255, 0.1);
+  border-top-color: #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  color: #606266;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ===== 表单 ===== */
@@ -864,11 +985,15 @@ onMounted(() => {
   border-color: #f78989;
 }
 
+/* ===== 空状态提示 ===== */
 .empty-tip {
   padding: 40px 20px;
   text-align: center;
   color: #909399;
   font-size: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  margin: 20px 0;
 }
 
 .empty-tip-hint {
@@ -897,5 +1022,65 @@ onMounted(() => {
   color: #909399;
   font-size: 16px;
   margin: 0;
+}
+
+/* ==================== 响应式设计 ==================== */
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .results-count {
+    align-self: flex-start;
+  }
+  
+  .create-btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-primary,
+  .btn-cancel {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .loading-text {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 16px;
+  }
+  
+  .page-header {
+    padding: 16px 20px;
+  }
+  
+  .page-title {
+    font-size: 24px;
+  }
+  
+  .card {
+    padding: 20px;
+  }
+  
+  .criteria-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+  }
 }
 </style>

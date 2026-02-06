@@ -1,44 +1,57 @@
 <template>
-  <div class="mistakes-book">
-    <!-- 页面标题和操作栏 -->
+    <!-- 页面头部 -->
     <div class="page-header">
-      <div class="header-left">
-        <h2 class="page-title">错题本</h2>
-      </div>
-      <div class="header-actions">
-        <!-- 错题重做按钮 -->
-        <el-button 
-          v-if="!isRedoMode"
-          type="warning"
-          @click="enterRedoMode"
-          :disabled="mistakes.length === 0"
-        >
-          <el-icon><RefreshRight /></el-icon>错题重做
-        </el-button>
-        
-        <!-- 开始重做按钮 -->
-        <el-button 
-          v-if="isRedoMode"
-          type="success"
-          @click="startRedo"
-          :disabled="getSelectedCount === 0"
-          :loading="redoLoading"
-        >
-          <el-icon><VideoPlay /></el-icon>开始重做
-        </el-button>
-        
-        <!-- 取消重做按钮 -->
-        <el-button 
-          v-if="isRedoMode"
-          type="info"
-          @click="cancelRedoMode"
-        >
-          <el-icon><Close /></el-icon>取消
-        </el-button>
-        
-        <el-button type="primary" @click="fetchMistakes" :loading="loading">
-          <el-icon><Refresh /></el-icon>刷新
-        </el-button>
+      <div class="header-content">
+        <h1 class="page-title">
+          错题本
+        </h1>
+        <div class="header-actions">
+          <!-- 错题重做按钮 -->
+          <el-button 
+            v-if="!isRedoMode"
+            type="warning"
+            @click="enterRedoMode"
+            :disabled="mistakes.length === 0"
+            class="btn-action"
+          >
+            <el-icon><RefreshRight /></el-icon>
+            错题重做
+          </el-button>
+          
+          <!-- 开始重做按钮 -->
+          <el-button 
+            v-if="isRedoMode"
+            type="success"
+            @click="startRedo"
+            :disabled="getSelectedCount === 0"
+            :loading="redoLoading"
+            class="btn-action"
+          >
+            <el-icon><VideoPlay /></el-icon>
+            开始重做
+          </el-button>
+          
+          <!-- 取消重做按钮 -->
+          <el-button 
+            v-if="isRedoMode"
+            type="info"
+            @click="cancelRedoMode"
+            class="btn-action"
+          >
+            <el-icon><Close /></el-icon>
+            取消
+          </el-button>
+          
+          <el-button 
+            type="primary" 
+            @click="fetchMistakes" 
+            :loading="loading"
+            class="btn-action"
+          >
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -595,7 +608,6 @@
         </div>
       </div>
     </el-dialog>
-  </div>
 </template>
 
 <script>
@@ -1848,35 +1860,92 @@ watch(filteredMistakes, () => {
   line-height: 1.6;
 }
 
-.mistakes-book {
-  padding: 20px;
-  background-color: #f8fafc;
-  min-height: 100%;
+/* ==================== 页面头部样式 ==================== */
+.page-header {
+  background: linear-gradient(135deg, #409eff 0%, #3375e0 100%);
+  border-radius: 12px;
+  padding: 20px 30px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.2);
 }
 
-/* 页面标题 */
-.page-header {
+.header-content {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  align-items: center;
 }
 
-.header-left h2 {
+.page-title {
+  color: white;
   margin: 0;
-  color: #1e293b;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
-/* 重做模式提示样式 */
+/* ==================== 按钮样式 ==================== */
+.btn-action {
+  background-color: white;
+  color: #409eff;
+  border: 2px solid white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+
+.btn-action:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.3);
+}
+
+.btn-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 重做按钮特殊样式 */
+.btn-action.el-button--warning {
+  background-color: #e6a23c;
+  color: white;
+  border-color: #e6a23c;
+}
+
+.btn-action.el-button--success {
+  background-color: #67c23a;
+  color: white;
+  border-color: #67c23a;
+}
+
+.btn-action.el-button--info {
+  background-color: #909399;
+  color: white;
+  border-color: #909399;
+}
+
+.btn-action.el-button--primary {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+/* ==================== 重做模式提示样式 ==================== */
 .redo-mode-tip {
+  margin-top: 20px;
   margin-bottom: 20px;
   animation: slideDown 0.3s ease;
 }
@@ -1910,7 +1979,7 @@ watch(filteredMistakes, () => {
   }
 }
 
-/* 筛选栏 */
+/* ==================== 筛选栏 ==================== */
 .filter-bar {
   background: white;
   padding: 20px;
@@ -1931,7 +2000,7 @@ watch(filteredMistakes, () => {
   white-space: nowrap;
 }
 
-/* 统计数据卡片 */
+/* ==================== 统计数据卡片 ==================== */
 .stats-cards {
   margin-bottom: 24px;
 }
@@ -1988,7 +2057,7 @@ watch(filteredMistakes, () => {
   margin-top: 4px;
 }
 
-/* 错题列表 */
+/* ==================== 错题列表 ==================== */
 .mistakes-list {
   background: white;
   border-radius: 12px;
@@ -2038,7 +2107,7 @@ watch(filteredMistakes, () => {
   cursor: not-allowed;
 }
 
-/* 分页 */
+/* ==================== 分页 ==================== */
 .pagination-container {
   display: flex;
   justify-content: center;
@@ -2049,7 +2118,7 @@ watch(filteredMistakes, () => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* 错题详情样式 */
+/* ==================== 错题详情样式 ==================== */
 .mistake-detail {
   padding: 10px;
 }
@@ -2157,16 +2226,31 @@ watch(filteredMistakes, () => {
   max-height: 1000px;
 }
 
-/* 响应式设计 */
+/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
   .page-header {
+    padding: 16px 20px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .header-content {
     flex-direction: column;
     gap: 16px;
+    align-items: flex-start;
   }
 
   .header-actions {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .btn-action {
+    padding: 8px 16px;
+    font-size: 13px;
   }
 
   .filter-bar .el-col {
@@ -2178,17 +2262,13 @@ watch(filteredMistakes, () => {
   }
 }
 
-/* 打印样式 */
+/* ==================== 打印样式 ==================== */
 @media print {
   .header-actions,
   .filter-bar,
   .pagination-container,
   .el-table-column--selection {
     display: none !important;
-  }
-
-  .mistakes-book {
-    padding: 0;
   }
 
   .mistakes-list {

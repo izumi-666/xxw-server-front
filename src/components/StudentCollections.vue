@@ -1,14 +1,21 @@
 <template>
-  <div class="collections-book">
-    <!-- 页面标题和操作栏 -->
+    <!-- 页面头部 -->
     <div class="page-header">
-      <div class="header-left">
-        <h2 class="page-title">收藏题目</h2>
-      </div>
-      <div class="header-actions">
-        <el-button type="primary" @click="fetchCollections" :loading="loading">
-          <el-icon><Refresh /></el-icon>刷新
-        </el-button>
+      <div class="header-content">
+        <h1 class="page-title">
+          我的收藏
+        </h1>
+        <div class="header-actions">
+          <el-button 
+            type="primary" 
+            @click="fetchCollections" 
+            :loading="loading"
+            class="btn-action"
+          >
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
+        </div>
       </div>
     </div>
 
@@ -475,7 +482,6 @@
         </div>
       </div>
     </el-dialog>
-  </div>
 </template>
 
 <script>
@@ -495,7 +501,7 @@ import {
   EditPen,
   Delete
 } from "@element-plus/icons-vue";
-import { getAllSubjects, getSubjectName } from "../utils/subjectList";
+import { getAllSubjects, getSubjectName, initSubjectData } from "../utils/subjectList";
 import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
 import { fetchKnowledgePointList, getKnowledgePointNames } from "../utils/knowledgeList";
@@ -762,6 +768,9 @@ export default {
       try {
         // 先获取科目和知识点数据
         await Promise.all([fetchKnowledgePointList()]);
+        
+        // 初始化科目数据
+        await initSubjectData();
 
         // 获取收藏数据
         const response = await axios.get(
@@ -1197,25 +1206,29 @@ export default {
   line-height: 1.6;
 }
 
-.collections-book {
-  padding: 20px;
-  background-color: #f8fafc;
-  min-height: 100%;
+/* ==================== 页面头部样式 ==================== */
+.page-header {
+  background: linear-gradient(135deg, #409eff 0%, #3375e0 100%);
+  border-radius: 12px;
+  padding: 20px 30px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(103, 194, 58, 0.2);
 }
 
-/* 页面标题 */
-.page-header {
+.header-content {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  align-items: center;
 }
 
-.header-left h2 {
+.page-title {
+  color: white;
   margin: 0;
-  color: #1e293b;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .header-actions {
@@ -1223,7 +1236,46 @@ export default {
   gap: 12px;
 }
 
-/* 筛选栏 */
+/* ==================== 按钮样式 ==================== */
+.btn-action {
+  background-color: white;
+  color: #409eff;
+  border: 2px solid white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+
+.btn-action:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.3);
+}
+
+.btn-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-action.el-button--primary {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.btn-action.el-button--primary:hover:not(:disabled) {
+  background-color: #66b1ff;
+  border-color: #66b1ff;
+}
+
+/* ==================== 筛选栏 ==================== */
 .filter-bar {
   background: white;
   padding: 20px;
@@ -1244,7 +1296,7 @@ export default {
   white-space: nowrap;
 }
 
-/* 统计数据卡片 */
+/* ==================== 统计数据卡片 ==================== */
 .stats-cards {
   margin-bottom: 24px;
 }
@@ -1276,16 +1328,16 @@ export default {
 }
 
 .total .stat-icon {
-  background: #f59e0b;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 }
 .recent .stat-icon {
-  background: #10b981;
+  background: linear-gradient(135deg, #10b981, #059669);
 }
 .subject .stat-icon {
-  background: #8b5cf6;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
 }
 .type .stat-icon {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
 .stat-value {
@@ -1301,7 +1353,7 @@ export default {
   margin-top: 4px;
 }
 
-/* 收藏列表 */
+/* ==================== 收藏列表 ==================== */
 .collections-list {
   background: white;
   border-radius: 12px;
@@ -1326,7 +1378,7 @@ export default {
 }
 
 :deep(.collection-row:hover) {
-  background-color: #f1f5f9 !important;
+  background-color: #f0f9ff !important;
 }
 
 /* 分页 */
@@ -1340,7 +1392,7 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* 题目详情样式 */
+/* ==================== 题目详情样式 ==================== */
 .question-detail {
   padding: 10px;
 }
@@ -1350,6 +1402,7 @@ export default {
   padding: 15px;
   background: #f8fafc;
   border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
 .detail-section h3 {
@@ -1414,16 +1467,31 @@ export default {
   max-height: 1000px;
 }
 
-/* 响应式设计 */
+/* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
   .page-header {
+    padding: 16px 20px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .header-content {
     flex-direction: column;
     gap: 16px;
+    align-items: flex-start;
   }
 
   .header-actions {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .btn-action {
+    padding: 8px 16px;
+    font-size: 13px;
   }
 
   .filter-bar .el-col {
@@ -1435,17 +1503,13 @@ export default {
   }
 }
 
-/* 打印样式 */
+/* ==================== 打印样式 ==================== */
 @media print {
   .header-actions,
   .filter-bar,
   .pagination-container,
   .el-table-column--selection {
     display: none !important;
-  }
-
-  .collections-book {
-    padding: 0;
   }
 
   .collections-list {
@@ -1462,5 +1526,37 @@ export default {
 :deep(.el-rate__text) {
   font-size: 12px;
   margin-left: 5px;
+}
+
+/* 收藏按钮样式 */
+:deep(.el-table .el-button--danger) {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+}
+
+:deep(.el-table .el-button--primary) {
+  background-color: #409eff !important;
+  border-color: #409eff !important;
+}
+
+:deep(.el-table .el-button--success) {
+  background-color: #67c23a !important;
+  border-color: #67c23a !important;
+}
+
+/* 悬停效果 */
+:deep(.el-table .el-button--danger:hover) {
+  background-color: #f78989 !important;
+  border-color: #f78989 !important;
+}
+
+:deep(.el-table .el-button--primary:hover) {
+  background-color: #66b1ff !important;
+  border-color: #66b1ff !important;
+}
+
+:deep(.el-table .el-button--success:hover) {
+  background-color: #85ce61 !important;
+  border-color: #85ce61 !important;
 }
 </style>

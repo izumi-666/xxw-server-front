@@ -12,12 +12,23 @@
       <div class="search-results card">
         <div class="results-header">
           <h2 class="section-title">考试列表</h2>
-          <div class="results-count" v-if="examList.length">
+          <div class="results-count" v-if="!loading && examList.length">
             共 {{ totalItems }} 场考试
           </div>
         </div>
 
-        <div v-if="examList.length">
+        <!-- 加载动画 -->
+        <div v-if="loading" class="loading-container">
+          <div class="loading-content">
+            <div class="loading-spinner">
+              <div class="spinner"></div>
+            </div>
+            <p class="loading-text">正在加载考试列表...</p>
+          </div>
+        </div>
+
+        <!-- 考试列表内容 -->
+        <div v-else-if="examList.length">
           <div class="exams-table">
             <table class="table">
               <thead>
@@ -149,6 +160,7 @@
           </div>
         </div>
 
+        <!-- 空状态 -->
         <div v-else class="no-results">
           <div class="no-results-content">
             <p>暂无考试安排</p>
@@ -274,6 +286,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 /* ==================== 数据状态 ==================== */
 const examList = ref([]);
+const loading = ref(false); // 添加loading状态
 
 // 分页相关
 const fullExamList = ref([]);
@@ -412,6 +425,7 @@ const loadExams = async () => {
     return;
   }
 
+  loading.value = true; // 开始加载
   try {
     // 1. 获取考试列表
     const examsRes = await axios.get(
@@ -452,6 +466,8 @@ const loadExams = async () => {
   } catch (error) {
     console.error("加载考试列表失败:", error);
     ElMessage.error("加载考试列表失败");
+  } finally {
+    loading.value = false; // 加载完成
   }
 };
 
@@ -737,6 +753,85 @@ watch(currentPage, updatePagedExams);
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ==================== 加载动画样式 ==================== */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 40px 0;
+}
+
+.loading-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.spinner {
+  width: 100%;
+  height: 100%;
+  border: 4px solid rgba(64, 158, 255, 0.1);
+  border-top-color: #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  color: #606266;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 表格行加载占位符 */
+.loading-row {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    90deg,
+    rgba(240, 240, 240, 0.2) 25%,
+    rgba(230, 230, 230, 0.4) 37%,
+    rgba(240, 240, 240, 0.2) 63%
+  );
+  background-size: 1000px 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 /* ==================== 按钮样式 ==================== */
@@ -1429,6 +1524,16 @@ watch(currentPage, updatePagedExams);
 
   .info-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* 响应式加载动画 */
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .loading-text {
+    font-size: 14px;
   }
 }
 </style>

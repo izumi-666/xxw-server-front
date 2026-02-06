@@ -974,8 +974,8 @@
               </div>
               <div class="table-cell">{{ getMarkingTypeName(q.marking_type) }}</div>
               <div class="table-cell">
-                {{ getKnowledgePointName(q.knowledge_point_id) }}
-              </div>
+  {{ getKnowledgePointName(q.knowledge_point_id) }}
+</div>
               <!-- 解题思想单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
                 <span
@@ -994,20 +994,19 @@
               </div>
               <!-- 副知识点单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
-                <span
-                  v-for="subId in q.sub_knowledge_point_ids || []"
-                  :key="subId"
-                  class="sub-knowledge-tag"
-                >
-                  {{ getKnowledgePointName(subId) }}
-                </span>
-                <span
-                  v-if="!(q.sub_knowledge_point_ids && q.sub_knowledge_point_ids.length)"
-                  class="no-sub-knowledge"
-                >
-                  无
-                </span>
-              </div>
+  <template v-if="q.sub_knowledge_point_ids && q.sub_knowledge_point_ids.length">
+    <span
+      v-for="subId in q.sub_knowledge_point_ids"
+      :key="subId"
+      class="sub-knowledge-tag"
+    >
+      {{ getKnowledgePointName(subId) }}
+    </span>
+  </template>
+  <span v-else class="no-sub-knowledge">
+    无
+  </span>
+</div>
               <div class="table-cell">{{ q.difficulty_level }}星</div>
               <!-- 题目内容单元格-->
               <div class="table-cell title-cell" v-html="renderMarkdown(q.title)"></div>
@@ -1965,6 +1964,8 @@ import axios from "axios";
 import { ElMessage, ElMessageBox } from "element-plus";
 import "element-plus/dist/index.css";
 import KnowledgeTree from "./KnowledgePointTree.vue";
+// 导入知识点工具函数
+import { fetchKnowledgePointList, getKnowledgePointName, getKnowledgePointNames } from '../utils/knowledgeList';
 
 // 导入 Markdown 渲染相关
 import { marked } from "marked";
@@ -3967,6 +3968,7 @@ onMounted(() => {
   loadLists();
   getCurrentUser();
   loadReviewerList();
+  fetchKnowledgePointList();
 });
 
 /**
@@ -5430,88 +5432,6 @@ const getSubjectName = (id) => {
   if (id === null) return "-";
   const subject = subjectList.value.find((s) => s.id === Number(id));
   return subject ? subject.name : "-";
-};
-
-/**
- * 从知识点树中查找知识点名称
- */
-const findKnowledgePointName = (id, treeType = "upload") => {
-  if (!id) return null;
-
-  // 根据类型选择正确的树数据
-  let treeData = [];
-  switch (treeType) {
-    case "upload":
-      treeData = knowledgeTreeData.value;
-      break;
-    case "uploadSub":
-      treeData = subKnowledgeTreeData.value;
-      break;
-    case "update":
-      treeData = updateKnowledgeTreeData.value;
-      break;
-    case "updateForm":
-      treeData = updateFormKnowledgeTreeData.value;
-      break;
-    case "updateFormSub":
-      treeData = updateFormSubKnowledgeTreeData.value;
-      break;
-  }
-
-  // 递归查找函数
-  const findNode = (nodes, targetId) => {
-    for (const node of nodes) {
-      if (node.id === Number(targetId)) {
-        return node.name;
-      }
-      if (node.children && node.children.length) {
-        const found = findNode(node.children, targetId);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  return findNode(treeData, id);
-};
-
-/**
- * 根据ID获取知识点名称（在检索结果表格中使用）
- */
-const getKnowledgePointName = (id) => {
-  if (id === null || id === undefined) return "-";
-
-  // 尝试从所有可用的知识点树中查找
-  const treesToSearch = [
-    { data: knowledgeTreeData.value, type: "当前上传知识点" },
-    { data: subKnowledgeTreeData.value, type: "当前上传副知识点" },
-    { data: updateKnowledgeTreeData.value, type: "更新检索知识点" },
-    { data: updateFormKnowledgeTreeData.value, type: "更新表单知识点" },
-    { data: updateFormSubKnowledgeTreeData.value, type: "更新表单副知识点" },
-  ];
-
-  // 递归查找函数
-  const findNode = (nodes, targetId) => {
-    for (const node of nodes) {
-      if (node.id === Number(targetId)) {
-        return node.name;
-      }
-      if (node.children && node.children.length) {
-        const found = findNode(node.children, targetId);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  for (const tree of treesToSearch) {
-    if (tree.data && tree.data.length > 0) {
-      const name = findNode(tree.data, id);
-      if (name) return name;
-    }
-  }
-
-  return "-";
 };
 
 /**
