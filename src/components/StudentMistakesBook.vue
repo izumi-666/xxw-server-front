@@ -42,6 +42,17 @@
             取消
           </el-button>
           
+          <!-- 查看图表按钮 -->
+          <el-button 
+            type="info"
+            @click="viewChart"
+            class="btn-action"
+            :disabled="mistakes.length === 0"
+          >
+            <el-icon><TrendCharts /></el-icon>
+            查看图表
+          </el-button>
+          
           <el-button 
             type="primary" 
             @click="fetchMistakes" 
@@ -215,6 +226,7 @@
         ref="mistakesTableRef"
         :data="filteredMistakes"
         v-loading="loading"
+        element-loading-text="正在加载错题..."
         @row-click="handleRowClick"
         style="width: 100%"
         :row-class-name="getRowClassName"
@@ -1088,6 +1100,74 @@ export default {
       stats.value = { total, recent, reviewed, accuracy };
     };
 
+    // 查看图表
+    const viewChart = () => {
+      if (mistakes.value.length === 0) {
+        ElMessage.warning('暂无错题数据，无法查看图表');
+        return;
+      }
+      
+      // 传递错题数据到图表页面
+      const mistakesData = {
+        total: mistakes.value.length,
+        reviewed: mistakes.value.filter(item => item.status === 'reviewed').length,
+        pending: mistakes.value.filter(item => item.status !== 'reviewed').length,
+        bySubject: {},
+        byType: {},
+        recent: stats.value.recent,
+        accuracy: stats.value.accuracy
+      };
+      
+      // 按科目统计
+      mistakes.value.forEach(item => {
+        const subjectName = getSubjectName(item.subject_id);
+        if (!mistakesData.bySubject[subjectName]) {
+          mistakesData.bySubject[subjectName] = {
+            total: 0,
+            reviewed: 0,
+            pending: 0
+          };
+        }
+        mistakesData.bySubject[subjectName].total++;
+        if (item.status === 'reviewed') {
+          mistakesData.bySubject[subjectName].reviewed++;
+        } else {
+          mistakesData.bySubject[subjectName].pending++;
+        }
+        
+        // 按题型统计
+        const typeInfo = getQuestionType(item);
+        if (!mistakesData.byType[typeInfo.name]) {
+          mistakesData.byType[typeInfo.name] = 0;
+        }
+        mistakesData.byType[typeInfo.name]++;
+      });
+      
+      // 按时间统计（最近30天）
+      const timeStats = {};
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      mistakes.value.forEach(item => {
+        const date = new Date(item.last_wrong_time);
+        if (date >= thirtyDaysAgo) {
+          const dateStr = date.toISOString().split('T')[0];
+          if (!timeStats[dateStr]) {
+            timeStats[dateStr] = 0;
+          }
+          timeStats[dateStr]++;
+        }
+      });
+      
+      mistakesData.timeDistribution = timeStats;
+      
+      // 将统计信息存储到localStorage，以便图表页面使用
+      localStorage.setItem('mistakesAnalysisData', JSON.stringify(mistakesData));
+      
+      router.push('/student/mistakesbook/studentmistakebookanalysis');
+      
+    };
+
     // 重做相关方法
     const checkSelectable = (row) => {
       return row.status !== 'reviewed';
@@ -1679,6 +1759,7 @@ watch(filteredMistakes, () => {
       handleSizeChange,
       handleCurrentChange,
       toggleCollect,
+      viewChart, // 新增方法
       
       // 重做相关方法
       enterRedoMode,
@@ -1941,6 +2022,18 @@ watch(filteredMistakes, () => {
   background-color: #409eff;
   color: white;
   border-color: #409eff;
+}
+
+/* 查看图表按钮特殊样式 */
+.btn-action.el-button--info {
+  background-color: #20c997;
+  color: white;
+  border-color: #20c997;
+}
+
+.btn-action.el-button--info:hover:not(:disabled) {
+  background-color: #1aa179;
+  border-color: #1aa179;
 }
 
 /* ==================== 重做模式提示样式 ==================== */

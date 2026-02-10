@@ -508,7 +508,6 @@ const loadAllBasicData = async () => {
       getSchoolList()
     ]);
     
-    console.log("所有基础数据加载完成");
   } catch (error) {
     console.error("加载基础数据失败:", error);
     // 如果某个数据加载失败，不影响其他功能
@@ -652,10 +651,10 @@ const handleRowClick = (question) => {
 };
 
 // 同意题目（批量）
-const approveQuestion = async (questionId) => {
-  // 如果传入questionId，则只同意这一个题目
-  // 如果没有传入questionId，则同意所有选中的题目（批量同意）
-  const ids = questionId ? [questionId] : selectedIds.value;
+const approveQuestion = async (question_id) => {
+  // 如果传入question_id，则只同意这一个题目
+  // 如果没有传入question_id，则同意所有选中的题目（批量同意）
+  const ids = question_id ? [question_id] : selectedIds.value;
   
   if (ids.length === 0) {
     ElMessage.warning("请选择要同意的题目");
@@ -691,14 +690,14 @@ const approveQuestion = async (questionId) => {
 };
 
 // 单个题目拒绝
-const singleRejectQuestion = (questionId) => {
-  if (!questionId) {
+const singleRejectQuestion = (question_id) => {
+  if (!question_id) {
     ElMessage.warning("请选择要拒绝的题目");
     return;
   }
   
   // 只允许单个题目拒绝
-  rejectingSingleId.value = questionId;
+  rejectingSingleId.value = question_id;
   showRejectConfirm.value = true;
   rejectReason.value = ""; // 重置拒绝理由
 };
@@ -720,7 +719,7 @@ const confirmSingleReject = async () => {
   try {
     // 根据API要求，发送对象格式而不是数组
     const rejectRequest = {
-      questionId: rejectingSingleId.value,
+      question_id: rejectingSingleId.value,
       comment: rejectReason.value.trim()
     };
     

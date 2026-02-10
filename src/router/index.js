@@ -22,7 +22,8 @@ import VisitorHome from "../components/VisitorHome.vue";
 import AccountManagement from "../components/AccountManagement.vue";
 import TeacherDashboard from "../components/TeacherDashboard.vue";
 import StudentDashboard from "../components/StudentDashboard.vue";
-import StudentSelfAnalysis from "../components/StudentSelfAnalysis.vue"; //学生自我分析
+import StudentMistakeBookAnalysis from "../components/StudentMistakeBookAnalysis.vue"; //学生错题本分析
+import StudentSelfAnalysis from "../components/StudentSelfAnalysis.vue"; //学生错题本分析
 import HomeworkManagement from "../components/HomeworkManagement.vue";
 
 const routes = [
@@ -85,6 +86,15 @@ const routes = [
         meta: {
           requiresAuth: true,
           breadcrumb: ["自主学习", "错题本"]
+        }
+      },
+       {
+        path: "mistakesbook/studentmistakebookanalysis",
+        name: "student-mistake-book-analysis",
+        component: StudentMistakeBookAnalysis,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["自主练习", "错题本" , "错题分析"]
         }
       },
       {

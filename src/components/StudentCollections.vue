@@ -156,6 +156,7 @@
       <el-table
         :data="filteredCollections"
         v-loading="loading"
+        element-loading-text="正在加载收藏题目..."
         @row-click="handleRowClick"
         style="width: 100%"
         row-class-name="collection-row"

@@ -4,6 +4,16 @@
     <div class="page-header">
       <div class="header-content">
         <h1 class="page-title">教务管理首页</h1>
+        
+        <!-- 通知图标 -->
+        <div class="notification-container">
+          <div class="notification-icon" @click="toggleNotificationPanel">
+            <span class="icon">🔔</span>
+            <span v-if="unreadCount > 0" class="notification-badge">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -97,11 +107,67 @@
         </div>
       </div>
     </div>
+
+    <!-- 通知面板 -->
+    <div v-if="showNotificationPanel" class="notification-panel-overlay" @click="closeNotificationPanel">
+      <div class="notification-panel" @click.stop>
+        <div class="notification-panel-header">
+          <h3>审核通知</h3>
+          <button class="close-btn" @click="closeNotificationPanel">×</button>
+        </div>
+        
+        <div v-if="loading" class="loading">加载中...</div>
+        
+        <div v-else-if="reviewResults.length === 0" class="empty-notification">
+          暂无审核通知
+        </div>
+        
+        <div v-else class="notification-list">
+          <div 
+            v-for="(result, index) in reviewResults" 
+            :key="index"
+            class="notification-item"
+            :class="{ unread: result.uploader_read === 0 }"
+          >
+            <div class="notification-header">
+              <span class="question-title">题目: {{ result.question.title }}</span>
+              <span class="status-badge" :class="getStatusClass(result.status)">
+                {{ getStatusText(result.status) }}
+              </span>
+            </div>
+            
+            <div class="notification-content">
+              <div class="question-info">
+                <span class="info-item">科目ID: {{ result.question.subject_id }}</span>
+                <span class="info-item">难度: {{ result.question.difficulty_level }}</span>
+                <span class="info-item">上传人: {{ result.question.uploader }}</span>
+              </div>
+              
+              <div v-if="result.status === 'REJECTED'" class="review-comment">
+                <strong>审核意见:</strong> {{ result.comment }}
+              </div>
+              
+              <div class="notification-actions">
+                <button 
+                  v-if="result.uploader_read === 0"
+                  class="mark-read-btn"
+                  @click="markAsRead(result.question.id)"
+                >
+                  标记为已读
+                </button>
+                <span v-else class="read-status">已读</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 /* 当前日期 */
 const today = new Date();
@@ -110,6 +176,13 @@ const currentMonth = ref(today.getMonth());
 const selectedDate = ref(today.getDate());
 
 const weeks = ["日", "一", "二", "三", "四", "五", "六"];
+
+/* 通知相关状态 */
+const showNotificationPanel = ref(false);
+const reviewResults = ref([]);
+const loading = ref(false);
+const unreadCount = ref(0);
+const currentUser = localStorage.getItem("userName");
 
 /* 节日数据 */
 const holidayMap = ref({});
@@ -161,6 +234,74 @@ const selectedDateText = computed(
   () => `${currentYear.value}年${currentMonth.value + 1}月${selectedDate.value}日`
 );
 
+/* 获取审核结果列表 */
+const fetchReviewResults = async () => {
+  try {
+    loading.value = true;
+    const response = await fetch(`${API_BASE}/questions/getQuestionReviewResultList/${currentUser}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    reviewResults.value = Array.isArray(data) ? data : [];
+    
+    // 计算未读数量
+    unreadCount.value = reviewResults.value.filter(item => item.uploader_read === 0).length;
+  } catch (error) {
+    console.error("获取审核结果失败:", error);
+    // 模拟数据用于测试
+    reviewResults.value = [
+      {
+        question: {
+          id: 123,
+          title: "下列选项中，哪个是 Java 的基本数据类型？",
+          subject_id: 2,
+          difficulty_level: 2,
+          uploader: "teacher_zhang"
+        },
+        status: "REJECTED",
+        comment: "答案解析不完整，请补充详细说明",
+        uploader_read: 0
+      },
+      {
+        question: {
+          id: 124,
+          title: "Python中列表和元组的区别是什么？",
+          subject_id: 3,
+          difficulty_level: 1,
+          uploader: "teacher_zhang"
+        },
+        status: "APPROVED",
+        comment: "审核通过",
+        uploader_read: 1
+      }
+    ];
+    unreadCount.value = reviewResults.value.filter(item => item.uploader_read === 0).length;
+  } finally {
+    loading.value = false;
+  }
+};
+
+/* 标记为已读 */
+const markAsRead = async (questionId) => {
+  try {
+    const response = await fetch(`${API_BASE}/questions/setRead/${currentUser}/${questionId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    // 更新本地状态
+    const item = reviewResults.value.find(r => r.question.id === questionId);
+    if (item) {
+      item.uploader_read = 1;
+      unreadCount.value = reviewResults.value.filter(r => r.uploader_read === 0).length;
+    }
+  } catch (error) {
+    console.error("标记已读失败:", error);
+    alert("标记已读失败，请稍后重试");
+  }
+};
+
 /* 获取节假日数据 */
 const fetchHolidays = async () => {
   try {
@@ -188,6 +329,7 @@ const fetchHolidays = async () => {
 /* 初始化数据 */
 onMounted(() => {
   fetchHolidays();
+  fetchReviewResults(); // 加载通知数据
 });
 
 watch(currentYear, () => {
@@ -266,7 +408,38 @@ const getDayTypeText = (type) => {
   return typeMap[type] || '工作日';
 };
 
-/* 方法 */
+/* 获取状态文本和样式 */
+const getStatusText = (status) => {
+  const statusMap = {
+    'REJECTED': '未通过',
+    'APPROVED': '已通过',
+    'PENDING': '待审核'
+  };
+  return statusMap[status] || status;
+};
+
+const getStatusClass = (status) => {
+  const classMap = {
+    'REJECTED': 'status-rejected',
+    'APPROVED': 'status-approved',
+    'PENDING': 'status-pending'
+  };
+  return classMap[status] || '';
+};
+
+/* 通知面板相关方法 */
+const toggleNotificationPanel = () => {
+  showNotificationPanel.value = !showNotificationPanel.value;
+  if (showNotificationPanel.value) {
+    fetchReviewResults(); // 打开面板时刷新数据
+  }
+};
+
+const closeNotificationPanel = () => {
+  showNotificationPanel.value = false;
+};
+
+/* 日历相关方法 */
 const selectDay = (day) => {
   if (!day) return;
   selectedDate.value = day;
@@ -338,6 +511,7 @@ const nextMonth = () => {
   background-color: #f5f7fa;
   min-height: 100vh;
   color: #333;
+  position: relative;
 }
 
 /* ==================== 页面头部样式 ==================== */
@@ -352,6 +526,7 @@ const nextMonth = () => {
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .page-title {
@@ -362,6 +537,263 @@ const nextMonth = () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+/* ==================== 通知图标 ==================== */
+.notification-container {
+  position: relative;
+}
+
+.notification-icon {
+  position: relative;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.3s;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-icon:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.notification-icon .icon {
+  font-size: 20px;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ff4757;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* ==================== 通知面板 ==================== */
+.notification-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.notification-panel {
+  background: white;
+  border-radius: 16px;
+  width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #409eff 0%, #3375e0 100%);
+  color: white;
+}
+
+.notification-panel-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.3s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-notification {
+  padding: 40px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.notification-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.notification-item {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-left: 4px solid #e5e7eb;
+  transition: all 0.3s;
+}
+
+.notification-item.unread {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.question-title {
+  font-weight: 600;
+  color: #1f2937;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-rejected {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.status-approved {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.status-pending {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.notification-content {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.question-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.info-item {
+  background: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.review-comment {
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border-left: 3px solid #f87171;
+}
+
+.review-comment strong {
+  color: #1f2937;
+}
+
+.notification-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.mark-read-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.mark-read-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.read-status {
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 /* ==================== 内容区 ==================== */
@@ -721,6 +1153,28 @@ textarea:focus {
   
   .calendar-legend {
     gap: 12px;
+  }
+  
+  .notification-panel {
+    width: 90vw;
+    max-height: 90vh;
+  }
+  
+  .notification-panel-overlay {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .notification-container {
+    align-self: flex-end;
+    margin-top: -40px;
   }
 }
 </style>
