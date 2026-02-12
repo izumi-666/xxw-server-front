@@ -46,63 +46,63 @@
         <div class="criteria-grid">
           <!-- 年级筛选 -->
           <div class="criteria-item">
-  <label class="criteria-label">年级</label>
-  <div class="multi-select-wrapper">
-    <div class="multi-select-trigger" @click="toggleGradeDropdown">
-      <span class="placeholder" v-if="selectedGrades.length === 0">
-        选择年级
-      </span>
-      <span class="selected-tags" v-else>
-        <span
-          v-for="grade in selectedGrades"
-          :key="grade.id"
-          class="selected-tag"
-          @click.stop="removeGrade(grade.id)"
-        >
-          {{ grade.name }}
-          <span class="remove-icon">×</span>
-        </span>
-      </span>
-      <span class="dropdown-arrow">▼</span>
-    </div>
+            <label class="criteria-label">年级</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleGradeDropdown">
+                <span class="placeholder" v-if="selectedGrades.length === 0">
+                  选择年级
+                </span>
+                <span class="selected-tags" v-else>
+                  <span
+                    v-for="grade in selectedGrades"
+                    :key="grade.id"
+                    class="selected-tag"
+                    @click.stop="removeGrade(grade.id)"
+                  >
+                    {{ grade.name }}
+                    <span class="remove-icon">×</span>
+                  </span>
+                </span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
 
-    <div class="multi-select-dropdown" v-if="showGradeDropdown">
-      <div class="search-input-container">
-        <input
-          type="text"
-          v-model="gradeSearch"
-          placeholder="搜索年级..."
-          class="search-input"
-          @input="filterGrades"
-        />
-      </div>
-      <div class="dropdown-options">
-        <div
-          v-for="grade in filteredGrades"
-          :key="grade.id"
-          class="dropdown-option"
-          @click="toggleGrade(grade)"
-        >
-          <span
-            class="checkbox"
-            :class="{ checked: isGradeSelected(grade.id) }"
-          >
-            {{ isGradeSelected(grade.id) ? "✓" : "" }}
-          </span>
-          <span class="option-text">{{ grade.name }}</span>
-        </div>
-        <div v-if="filteredGrades.length === 0" class="no-options">
-          无匹配选项
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+              <div class="multi-select-dropdown" v-if="showGradeDropdown">
+                <div class="search-input-container">
+                  <input
+                    type="text"
+                    v-model="gradeSearch"
+                    placeholder="搜索年级..."
+                    class="search-input"
+                    @input="filterGrades"
+                  />
+                </div>
+                <div class="dropdown-options">
+                  <div
+                    v-for="grade in filteredGrades"
+                    :key="grade.id"
+                    class="dropdown-option"
+                    @click="toggleGrade(grade)"
+                  >
+                    <span
+                      class="checkbox"
+                      :class="{ checked: isGradeSelected(grade.id) }"
+                    >
+                      {{ isGradeSelected(grade.id) ? "✓" : "" }}
+                    </span>
+                    <span class="option-text">{{ grade.name }}</span>
+                  </div>
+                  <div v-if="filteredGrades.length === 0" class="no-options">
+                    无匹配选项
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- 科目筛选 -->
           <div class="criteria-item">
             <label class="criteria-label">科目</label>
-            <select v-model="searchCriteria.subject_id" class="form-select">
+            <select v-model="searchCriteria.subject_id" class="form-select" @change="onSubjectChange">
               <option :value="null">全部</option>
               <option v-for="sub in subjectList" :key="sub.id" :value="sub.id">
                 {{ sub.name }}
@@ -112,49 +112,49 @@
 
           <!-- 难度筛选 -->
           <div class="criteria-item">
-  <label class="criteria-label">难度</label>
-  <div class="multi-select-wrapper">
-    <div class="multi-select-trigger" @click="toggleDifficultyDropdown">
-      <span class="placeholder" v-if="selectedDifficulties.length === 0">
-        选择难度
-      </span>
-      <span class="selected-tags" v-else>
-        <span
-          v-for="diff in selectedDifficulties"
-          :key="diff.value"
-          class="selected-tag"
-          @click.stop="removeDifficulty(diff.value)"
-        >
-          {{ diff.name }}
-          <span class="remove-icon">×</span>
-        </span>
-      </span>
-      <span class="dropdown-arrow">▼</span>
-    </div>
+            <label class="criteria-label">难度</label>
+            <div class="multi-select-wrapper">
+              <div class="multi-select-trigger" @click="toggleDifficultyDropdown">
+                <span class="placeholder" v-if="selectedDifficulties.length === 0">
+                  选择难度
+                </span>
+                <span class="selected-tags" v-else>
+                  <span
+                    v-for="diff in selectedDifficulties"
+                    :key="diff.value"
+                    class="selected-tag"
+                    @click.stop="removeDifficulty(diff.value)"
+                  >
+                    {{ diff.name }}
+                    <span class="remove-icon">×</span>
+                  </span>
+                </span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
 
-    <div class="multi-select-dropdown" v-if="showDifficultyDropdown">
-      <div class="dropdown-options">
-        <div
-          v-for="diff in filteredDifficulties"
-          :key="diff.value"
-          class="dropdown-option"
-          @click="toggleDifficulty(diff)"
-        >
-          <span
-            class="checkbox"
-            :class="{ checked: isDifficultySelected(diff.value) }"
-          >
-            {{ isDifficultySelected(diff.value) ? "✓" : "" }}
-          </span>
-          <span class="option-text">{{ diff.name }}</span>
-        </div>
-        <div v-if="filteredDifficulties.length === 0" class="no-options">
-          无匹配选项
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+              <div class="multi-select-dropdown" v-if="showDifficultyDropdown">
+                <div class="dropdown-options">
+                  <div
+                    v-for="diff in filteredDifficulties"
+                    :key="diff.value"
+                    class="dropdown-option"
+                    @click="toggleDifficulty(diff)"
+                  >
+                    <span
+                      class="checkbox"
+                      :class="{ checked: isDifficultySelected(diff.value) }"
+                    >
+                      {{ isDifficultySelected(diff.value) ? "✓" : "" }}
+                    </span>
+                    <span class="option-text">{{ diff.name }}</span>
+                  </div>
+                  <div v-if="filteredDifficulties.length === 0" class="no-options">
+                    无匹配选项
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- 题目内容关键词搜索 -->
           <div class="criteria-item full-width">
@@ -222,113 +222,149 @@
             </div>
           </div>
 
-          <!-- 知识点筛选（多选） -->
-          <div class="criteria-item">
+          <!-- 知识点筛选（知识树结构） -->
+          <div class="criteria-item full-width">
             <label class="criteria-label">知识点</label>
-            <div class="multi-select-wrapper">
-              <div class="multi-select-trigger" @click="toggleKnowledgeDropdown">
-                <span class="placeholder" v-if="selectedKnowledgePoints.length === 0">
-                  选择知识点
-                </span>
-                <span class="selected-tags" v-else>
+            
+            <div v-if="loadingKnowledgePoints" class="loading-tip">
+              正在加载知识点...
+            </div>
+            
+            <div
+              v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
+              class="knowledge-tree-container full-width-container"
+            >
+              <div class="tree-controls">
+                <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
+                  <span class="grades-label">已选年级：</span>
                   <span
-                    v-for="kp in selectedKnowledgePoints"
-                    :key="kp.id"
-                    class="selected-tag"
-                    @click.stop="removeKnowledgePoint(kp.id)"
+                    v-for="gradeId in searchCriteria.grade_ids"
+                    :key="gradeId"
+                    class="grade-tag"
                   >
-                    {{ kp.name }}
-                    <span class="remove-icon">×</span>
+                    {{ getGradeName(gradeId) }}
                   </span>
-                </span>
-                <span class="dropdown-arrow">▼</span>
+                </div>
+                <input
+                  type="text"
+                  v-model="knowledgeSearch"
+                  placeholder="搜索知识点..."
+                  class="search-input"
+                  @input="filterKnowledgeTree"
+                />
+                <button
+                  v-if="knowledgeSearch"
+                  @click="clearKnowledgeSearch"
+                  class="btn-clear"
+                >
+                  清除搜索
+                </button>
               </div>
 
-              <div class="multi-select-dropdown" v-if="showKnowledgeDropdown">
-                <div class="search-input-container">
-                  <input
-                    type="text"
-                    v-model="knowledgeSearch"
-                    placeholder="搜索知识点..."
-                    class="search-input"
-                    @input="filterKnowledgePoints"
-                  />
-                </div>
-                <div class="dropdown-options">
-                  <div
-                    v-for="kp in filteredKnowledgePoints"
-                    :key="kp.id"
-                    class="dropdown-option"
-                    @click="toggleKnowledgePoint(kp)"
-                  >
-                    <span
-                      class="checkbox"
-                      :class="{ checked: isKnowledgeSelected(kp.id) }"
-                    >
-                      {{ isKnowledgeSelected(kp.id) ? "✓" : "" }}
-                    </span>
-                    <span class="option-text">{{ kp.name }}</span>
-                  </div>
-                  <div v-if="filteredKnowledgePoints.length === 0" class="no-options">
-                    无匹配选项
-                  </div>
+              <div class="tree-wrapper">
+                <KnowledgeTree
+                  v-if="knowledgeTreeData.length"
+                  :data="knowledgeTreeData"
+                  :multi-selected-ids="searchCriteria.knowledge_point_ids"
+                  @select="selectKnowledgePoint"
+                  @toggle="toggleKnowledgeNode"
+                  :show-grade="true"
+                />
+                <div v-else-if="!loadingKnowledgePoints" class="no-knowledge">
+                  暂无知识点数据
                 </div>
               </div>
+
+              <div class="selected-items" v-if="selectedKnowledgePoints.length">
+                <span class="selected-tags-label">已选择：</span>
+                <span
+                  v-for="kp in selectedKnowledgePoints"
+                  :key="kp.id"
+                  class="selected-tag"
+                  @click="removeKnowledgePoint(kp.id)"
+                >
+                  {{ kp.name }}
+                  <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
+                  <span class="remove-icon">×</span>
+                </span>
+              </div>
+            </div>
+            
+            <div v-else class="select-tip full-width-tip">
+              请先选择科目和至少一个年级
             </div>
           </div>
 
-          <!-- 副知识点筛选（多选） -->
-          <div class="criteria-item">
+          <!-- 副知识点筛选（知识树结构） -->
+          <div class="criteria-item full-width">
             <label class="criteria-label">副知识点</label>
-            <div class="multi-select-wrapper">
-              <div class="multi-select-trigger" @click="toggleSubKnowledgeDropdown">
-                <span class="placeholder" v-if="selectedSubKnowledgePoints.length === 0">
-                  选择副知识点
-                </span>
-                <span class="selected-tags" v-else>
+            
+            <div v-if="loadingKnowledgePoints" class="loading-tip">
+              正在加载知识点...
+            </div>
+            
+            <div
+              v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
+              class="knowledge-tree-container full-width-container"
+            >
+              <div class="tree-controls">
+                <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
+                  <span class="grades-label">已选年级：</span>
                   <span
-                    v-for="kp in selectedSubKnowledgePoints"
-                    :key="kp.id"
-                    class="selected-tag"
-                    @click.stop="removeSubKnowledgePoint(kp.id)"
+                    v-for="gradeId in searchCriteria.grade_ids"
+                    :key="gradeId"
+                    class="grade-tag"
                   >
-                    {{ kp.name }}
-                    <span class="remove-icon">×</span>
+                    {{ getGradeName(gradeId) }}
                   </span>
-                </span>
-                <span class="dropdown-arrow">▼</span>
+                </div>
+                <input
+                  type="text"
+                  v-model="subKnowledgeSearch"
+                  placeholder="搜索副知识点..."
+                  class="search-input"
+                  @input="filterSubKnowledgeTree"
+                />
+                <button
+                  v-if="subKnowledgeSearch"
+                  @click="clearSubKnowledgeSearch"
+                  class="btn-clear"
+                >
+                  清除搜索
+                </button>
               </div>
 
-              <div class="multi-select-dropdown" v-if="showSubKnowledgeDropdown">
-                <div class="search-input-container">
-                  <input
-                    type="text"
-                    v-model="subKnowledgeSearch"
-                    placeholder="搜索副知识点..."
-                    class="search-input"
-                    @input="filterSubKnowledgePoints"
-                  />
-                </div>
-                <div class="dropdown-options">
-                  <div
-                    v-for="kp in filteredSubKnowledgePoints"
-                    :key="kp.id"
-                    class="dropdown-option"
-                    @click="toggleSubKnowledgePoint(kp)"
-                  >
-                    <span
-                      class="checkbox"
-                      :class="{ checked: isSubKnowledgeSelected(kp.id) }"
-                    >
-                      {{ isSubKnowledgeSelected(kp.id) ? "✓" : "" }}
-                    </span>
-                    <span class="option-text">{{ kp.name }}</span>
-                  </div>
-                  <div v-if="filteredSubKnowledgePoints.length === 0" class="no-options">
-                    无匹配选项
-                  </div>
+              <div class="tree-wrapper">
+                <KnowledgeTree
+                  v-if="subKnowledgeTreeData.length"
+                  :data="subKnowledgeTreeData"
+                  :multi-selected-ids="searchCriteria.sub_knowledge_point_ids"
+                  @select="selectSubKnowledgePoint"
+                  @toggle="toggleSubKnowledgeNode"
+                  :show-grade="true"
+                />
+                <div v-else-if="!loadingKnowledgePoints" class="no-knowledge">
+                  暂无知识点数据
                 </div>
               </div>
+
+              <div class="selected-items" v-if="selectedSubKnowledgePoints.length">
+                <span class="selected-tags-label">已选择：</span>
+                <span
+                  v-for="kp in selectedSubKnowledgePoints"
+                  :key="kp.id"
+                  class="selected-tag"
+                  @click="removeSubKnowledgePoint(kp.id)"
+                >
+                  {{ kp.name }}
+                  <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
+                  <span class="remove-icon">×</span>
+                </span>
+              </div>
+            </div>
+            
+            <div v-else class="select-tip full-width-tip">
+              请先选择科目和至少一个年级
             </div>
           </div>
 
@@ -649,14 +685,14 @@
               <span class="stat-label">试卷总分</span>
               <span class="stat-value">{{ totalScore }}</span>
             </div>
-             <div
-                    v-for="item in questionTypeStatistics"
-                    :key="item.type"
-                    class="stat-item"
-                  >
-                    <span class="stat-label">{{ item.type }}</span>
-                    <span class="stat-value">{{ item.count }}</span>
-                  </div>
+            <div
+              v-for="item in questionTypeStatistics"
+              :key="item.type"
+              class="stat-item"
+            >
+              <span class="stat-label">{{ item.type }}</span>
+              <span class="stat-value">{{ item.count }}</span>
+            </div>
             <div class="stat-item">
               <span class="stat-label">平均难度</span>
               <span class="stat-value">{{ getAverageDifficulty.toFixed(1) }}星</span>
@@ -1001,6 +1037,8 @@ import * as echarts from "echarts";
 import { getQuestionCategoryText } from "../utils/questionCategory";
 import { markdownToHtml } from "../utils/markdownUtils";
 import { ElMessage, ElMessageBox } from "element-plus";
+// 导入知识树组件
+import KnowledgeTree from "./KnowledgePointTree.vue";
 
 const router = useRouter();
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
@@ -1031,6 +1069,17 @@ const subjectList = ref([]);
 const knowledgePointList = ref([]);
 const solutionIdeaList = ref([]);
 const questionCategoryList = ref([]);
+
+// 知识点树数据
+const knowledgeTreeData = ref([]);
+const subKnowledgeTreeData = ref([]);
+const loadingKnowledgePoints = ref(false);
+const knowledgeSearch = ref("");
+const subKnowledgeSearch = ref("");
+
+// 原始知识点树数据（用于搜索）
+const originalKnowledgeTreeData = ref([]);
+const originalSubKnowledgeTreeData = ref([]);
 
 // 难度等级列表
 const difficultyList = ref([
@@ -1063,8 +1112,6 @@ const pageInput = ref(1);
 const hasSearched = ref(false);
 
 // 搜索关键词状态
-const knowledgeSearch = ref("");
-const subKnowledgeSearch = ref("");
 const solutionIdeaSearch = ref("");
 const questionCategorySearch = ref("");
 const gradeSearch = ref("");
@@ -1072,16 +1119,12 @@ const gradeSearch = ref("");
 // 下拉框显示状态
 const showGradeDropdown = ref(false);
 const showDifficultyDropdown = ref(false);
-const showKnowledgeDropdown = ref(false);
-const showSubKnowledgeDropdown = ref(false);
 const showSolutionIdeaDropdown = ref(false);
 const showQuestionCategoryDropdown = ref(false);
 
 // 过滤后的列表状态
 const filteredGrades = ref([]);
 const filteredDifficulties = ref([]);
-const filteredKnowledgePoints = ref([]);
-const filteredSubKnowledgePoints = ref([]);
 const filteredSolutionIdeas = ref([]);
 const filteredQuestionCategories = ref([]);
 
@@ -1112,18 +1155,6 @@ const selectedDifficulties = computed(() => {
     .filter(Boolean);
 });
 
-const selectedKnowledgePoints = computed(() => {
-  return searchCriteria.knowledge_point_ids
-    .map((id) => knowledgePointList.value.find((k) => k.id === id))
-    .filter(Boolean);
-});
-
-const selectedSubKnowledgePoints = computed(() => {
-  return searchCriteria.sub_knowledge_point_ids
-    .map((id) => knowledgePointList.value.find((k) => k.id === id))
-    .filter(Boolean);
-});
-
 const selectedSolutionIdeas = computed(() => {
   return searchCriteria.solution_idea_ids
     .map((id) => solutionIdeaList.value.find((s) => s.id === id))
@@ -1133,6 +1164,42 @@ const selectedSolutionIdeas = computed(() => {
 const selectedQuestionCategories = computed(() => {
   return searchCriteria.question_category_ids
     .map((id) => questionCategoryList.value.find((c) => c.id === id))
+    .filter(Boolean);
+});
+
+// 选中的知识点对象列表（包含年级信息）
+const selectedKnowledgePoints = computed(() => {
+  return searchCriteria.knowledge_point_ids
+    .map((id) => {
+      const node = findNodeInMultiGradeTree(id, knowledgeTreeData.value);
+      if (node) {
+        return {
+          id: node.id,
+          name: node.originalName || node.name,
+          gradeName: node.gradeName,
+          displayName: node.displayName || node.name
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+});
+
+// 选中的副知识点对象列表（包含年级信息）
+const selectedSubKnowledgePoints = computed(() => {
+  return searchCriteria.sub_knowledge_point_ids
+    .map((id) => {
+      const node = findNodeInMultiGradeTree(id, subKnowledgeTreeData.value);
+      if (node) {
+        return {
+          id: node.id,
+          name: node.originalName || node.name,
+          gradeName: node.gradeName,
+          displayName: node.displayName || node.name
+        };
+      }
+      return null;
+    })
     .filter(Boolean);
 });
 
@@ -1659,6 +1726,12 @@ const clearSearchCriteria = () => {
   questionCategorySearch.value = "";
   gradeSearch.value = "";
 
+  // 清空知识点树
+  knowledgeTreeData.value = [];
+  subKnowledgeTreeData.value = [];
+  originalKnowledgeTreeData.value = [];
+  originalSubKnowledgeTreeData.value = [];
+
   questionList.value = [];
   hasSearched.value = false;
   clearSelection();
@@ -1731,24 +1804,13 @@ const toggleQuestionCategoryDropdown = () => {
   }
 };
 
-const toggleKnowledgeDropdown = () => {
-  showKnowledgeDropdown.value = !showKnowledgeDropdown.value;
-  if (showKnowledgeDropdown.value) {
-    filterKnowledgePoints();
-  }
-};
-
-const toggleSubKnowledgeDropdown = () => {
-  showSubKnowledgeDropdown.value = !showSubKnowledgeDropdown.value;
-  if (showSubKnowledgeDropdown.value) {
-    filterSubKnowledgePoints();
-  }
-};
-
-const toggleSolutionIdeaDropdown = () => {
-  showSolutionIdeaDropdown.value = !showSolutionIdeaDropdown.value;
-  if (showSolutionIdeaDropdown.value) {
-    filterSolutionIdeas();
+const filterQuestionCategories = () => {
+  if (!questionCategorySearch.value) {
+    filteredQuestionCategories.value = questionCategoryList.value;
+  } else {
+    filteredQuestionCategories.value = questionCategoryList.value.filter((item) =>
+      item.name.toLowerCase().includes(questionCategorySearch.value.toLowerCase())
+    );
   }
 };
 
@@ -1761,91 +1823,14 @@ const toggleQuestionCategory = (item) => {
   }
 };
 
-const toggleKnowledgePoint = (kp) => {
-  const index = searchCriteria.knowledge_point_ids.indexOf(kp.id);
-  if (index > -1) {
-    searchCriteria.knowledge_point_ids.splice(index, 1);
-  } else {
-    searchCriteria.knowledge_point_ids.push(kp.id);
-  }
-};
-
-const toggleSubKnowledgePoint = (kp) => {
-  const index = searchCriteria.sub_knowledge_point_ids.indexOf(kp.id);
-  if (index > -1) {
-    searchCriteria.sub_knowledge_point_ids.splice(index, 1);
-  } else {
-    searchCriteria.sub_knowledge_point_ids.push(kp.id);
-  }
-};
-
-const toggleSolutionIdea = (item) => {
-  const index = searchCriteria.solution_idea_ids.indexOf(item.id);
-  if (index > -1) {
-    searchCriteria.solution_idea_ids.splice(index, 1);
-  } else {
-    searchCriteria.solution_idea_ids.push(item.id);
-  }
-};
-
 const removeQuestionCategory = (id) => {
   searchCriteria.question_category_ids = searchCriteria.question_category_ids.filter(
     (itemId) => itemId !== id
   );
 };
 
-const removeKnowledgePoint = (id) => {
-  searchCriteria.knowledge_point_ids = searchCriteria.knowledge_point_ids.filter(
-    (kp) => kp !== id
-  );
-};
-
-const removeSubKnowledgePoint = (id) => {
-  searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
-    (kp) => kp !== id
-  );
-};
-
-const removeSolutionIdea = (id) => {
-  searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
-    (itemId) => itemId !== id
-  );
-};
-
-const isKnowledgeSelected = (id) => {
-  return searchCriteria.knowledge_point_ids.includes(id);
-};
-
-const isSubKnowledgeSelected = (id) => {
-  return searchCriteria.sub_knowledge_point_ids.includes(id);
-};
-
-const isSolutionIdeaSelected = (id) => {
-  return searchCriteria.solution_idea_ids.includes(id);
-};
-
 const isQuestionCategorySelected = (id) => {
   return searchCriteria.question_category_ids.includes(id);
-};
-
-const filterKnowledgePoints = () => {
-  if (!knowledgeSearch.value) {
-    filteredKnowledgePoints.value = knowledgePointList.value;
-  } else {
-    filteredKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-      kp.name.toLowerCase().includes(knowledgeSearch.value.toLowerCase())
-    );
-  }
-};
-
-const filterSubKnowledgePoints = () => {
-  if (!subKnowledgeSearch.value) {
-    filteredSubKnowledgePoints.value = knowledgePointList.value;
-  } else {
-    filteredSubKnowledgePoints.value = knowledgePointList.value.filter((kp) =>
-      kp.name.toLowerCase().includes(subKnowledgeSearch.value.toLowerCase())
-    );
-  }
 };
 
 const filterSolutionIdeas = () => {
@@ -1858,20 +1843,34 @@ const filterSolutionIdeas = () => {
   }
 };
 
-const filterQuestionCategories = () => {
-  if (!questionCategorySearch.value) {
-    filteredQuestionCategories.value = questionCategoryList.value;
-  } else {
-    filteredQuestionCategories.value = questionCategoryList.value.filter((item) =>
-      item.name.toLowerCase().includes(questionCategorySearch.value.toLowerCase())
-    );
+const toggleSolutionIdeaDropdown = () => {
+  showSolutionIdeaDropdown.value = !showSolutionIdeaDropdown.value;
+  if (showSolutionIdeaDropdown.value) {
+    filterSolutionIdeas();
   }
+};
+
+const toggleSolutionIdea = (item) => {
+  const index = searchCriteria.solution_idea_ids.indexOf(item.id);
+  if (index > -1) {
+    searchCriteria.solution_idea_ids.splice(index, 1);
+  } else {
+    searchCriteria.solution_idea_ids.push(item.id);
+  }
+};
+
+const removeSolutionIdea = (id) => {
+  searchCriteria.solution_idea_ids = searchCriteria.solution_idea_ids.filter(
+    (itemId) => itemId !== id
+  );
+};
+
+const isSolutionIdeaSelected = (id) => {
+  return searchCriteria.solution_idea_ids.includes(id);
 };
 
 const handleClickOutside = (event) => {
   if (!event.target.closest(".multi-select-wrapper")) {
-    showKnowledgeDropdown.value = false;
-    showSubKnowledgeDropdown.value = false;
     showSolutionIdeaDropdown.value = false;
     showQuestionCategoryDropdown.value = false;
     showGradeDropdown.value = false;
@@ -1918,8 +1917,6 @@ const loadLists = async () => {
       qc.data.data || {}
     ).map(([id, name]) => ({ id: parseInt(id), name }));
 
-    filteredKnowledgePoints.value = knowledgePointList.value;
-    filteredSubKnowledgePoints.value = knowledgePointList.value;
     filteredSolutionIdeas.value = solutionIdeaList.value;
     filteredQuestionCategories.value = questionCategoryList.value;
     filteredGrades.value = gradeList.value;
@@ -2140,6 +2137,323 @@ const renderTypeScoreChart = () => {
   );
 };
 
+// ==================== 知识点树相关方法 ====================
+/**
+ * 加载多年级知识点树
+ * @param {string} type - 类型：'knowledge' 或 'subKnowledge'
+ * @param {number} subjectId - 科目ID
+ * @param {number[]} gradeIds - 年级ID数组
+ */
+const loadMultiGradeKnowledgeTree = async (type, subjectId, gradeIds) => {
+  if (!subjectId || !gradeIds.length) return;
+
+  try {
+    loadingKnowledgePoints.value = true;
+
+    // 并行加载所有选中年级的知识点
+    const gradePromises = gradeIds.map(gradeId => {
+      const grade = gradeList.value.find(g => g.id === gradeId);
+      return axios.get(
+        `${API_BASE}/questions/getKnowledgePointJson/${subjectId}/${gradeId}`
+      ).then(res => ({
+        gradeId,
+        gradeName: grade?.name || '',
+        data: res.data.data || []
+      })).catch(err => {
+        console.error(`加载年级 ${gradeId} 的知识点失败:`, err);
+        return {
+          gradeId,
+          gradeName: grade?.name || '',
+          data: []
+        };
+      });
+    });
+
+    const results = await Promise.all(gradePromises);
+    
+    let allKnowledgePoints = [];
+    
+    results.forEach(result => {
+      const { gradeId, gradeName, data } = result;
+      
+      if (data && data.length > 0) {
+        const addGradeInfo = (nodes) => {
+          return nodes.map(node => {
+            const currentNode = {
+              ...node,
+              gradeId,
+              gradeName,
+              displayName: `${gradeName}: ${node.name}`,
+              originalName: node.name,
+              expanded: true
+            };
+            
+            if (node.children && node.children.length) {
+              currentNode.children = addGradeInfo(node.children);
+            }
+            
+            return currentNode;
+          });
+        };
+        
+        const gradeKnowledge = addGradeInfo(data);
+        allKnowledgePoints.push(...gradeKnowledge);
+      }
+    });
+    
+    // 按 sort_order 排序
+    const addExpandedProperty = (nodes) => {
+      const sortedNodes = nodes.sort((a, b) => {
+        const orderA = Number(a.sort_order) || 0;
+        const orderB = Number(b.sort_order) || 0;
+        return orderA - orderB;
+      });
+
+      return sortedNodes.map((node) => {
+        const newNode = { ...node, expanded: true };
+        if (node.children && node.children.length) {
+          newNode.children = addExpandedProperty(node.children);
+        }
+        return newNode;
+      });
+    };
+
+    const treeData = addExpandedProperty(allKnowledgePoints);
+
+    // 根据类型设置数据
+    switch (type) {
+      case "knowledge":
+        knowledgeTreeData.value = treeData;
+        originalKnowledgeTreeData.value = JSON.parse(JSON.stringify(treeData));
+        break;
+      case "subKnowledge":
+        subKnowledgeTreeData.value = treeData;
+        originalSubKnowledgeTreeData.value = JSON.parse(JSON.stringify(treeData));
+        break;
+    }
+    
+    if (treeData.length === 0) {
+      ElMessage.warning("选中的年级和科目暂无知识点数据");
+    }
+    
+  } catch (err) {
+    console.error(`加载多年级知识点树失败(${type}):`, err);
+    ElMessage.error("加载知识点失败，请稍后重试");
+  } finally {
+    loadingKnowledgePoints.value = false;
+  }
+};
+
+/**
+ * 在多年级树中查找节点
+ */
+const findNodeInMultiGradeTree = (targetId, nodes) => {
+  for (const node of nodes) {
+    if (node.id === targetId) {
+      return node;
+    }
+    if (node.children && node.children.length) {
+      const found = findNodeInMultiGradeTree(targetId, node.children);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+/**
+ * 过滤知识点树
+ */
+const filterKnowledgeTree = () => {
+  if (!knowledgeSearch.value) {
+    knowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalKnowledgeTreeData.value)));
+  } else {
+    const filtered = filterTreeByKeyword(
+      JSON.parse(JSON.stringify(originalKnowledgeTreeData.value)),
+      knowledgeSearch.value
+    );
+    knowledgeTreeData.value = sortTreeByOrder(filtered);
+  }
+};
+
+/**
+ * 过滤副知识点树
+ */
+const filterSubKnowledgeTree = () => {
+  if (!subKnowledgeSearch.value) {
+    subKnowledgeTreeData.value = sortTreeByOrder(JSON.parse(JSON.stringify(originalSubKnowledgeTreeData.value)));
+  } else {
+    const filtered = filterTreeByKeyword(
+      JSON.parse(JSON.stringify(originalSubKnowledgeTreeData.value)),
+      subKnowledgeSearch.value
+    );
+    subKnowledgeTreeData.value = sortTreeByOrder(filtered);
+  }
+};
+
+/**
+ * 清除知识点搜索
+ */
+const clearKnowledgeSearch = () => {
+  knowledgeSearch.value = "";
+  filterKnowledgeTree();
+};
+
+/**
+ * 清除副知识点搜索
+ */
+const clearSubKnowledgeSearch = () => {
+  subKnowledgeSearch.value = "";
+  filterSubKnowledgeTree();
+};
+
+/**
+ * 按 sort_order 排序知识点树
+ */
+const sortTreeByOrder = (nodes) => {
+  if (!nodes || !nodes.length) return nodes;
+
+  // 对当前层级的节点按 sort_order 排序
+  const sortedNodes = nodes.sort((a, b) => {
+    const orderA = Number(a.sort_order) || 0;
+    const orderB = Number(b.sort_order) || 0;
+    return orderA - orderB;
+  });
+
+  // 递归排序子节点
+  sortedNodes.forEach((node) => {
+    if (node.children && node.children.length) {
+      node.children = sortTreeByOrder(node.children);
+    }
+  });
+
+  return sortedNodes;
+};
+
+/**
+ * 搜索过滤知识点树
+ */
+const filterTreeByKeyword = (nodes, keyword) => {
+  if (!keyword) return sortTreeByOrder(nodes);
+
+  const filtered = [];
+
+  nodes.forEach((node) => {
+    const newNode = { ...node };
+
+    // 如果节点名称匹配关键词，包含该节点
+    if (node.name.toLowerCase().includes(keyword.toLowerCase()) ||
+        (node.originalName && node.originalName.toLowerCase().includes(keyword.toLowerCase()))) {
+      newNode.expanded = true; // 搜索匹配的节点自动展开
+      filtered.push(newNode);
+    }
+    // 如果不匹配，检查子节点
+    else if (node.children && node.children.length) {
+      const filteredChildren = filterTreeByKeyword(node.children, keyword);
+      if (filteredChildren.length > 0) {
+        newNode.children = filteredChildren;
+        newNode.expanded = true; // 自动展开有匹配子节点的父节点
+        filtered.push(newNode);
+      }
+    }
+  });
+
+  // 过滤后按 sort_order 排序
+  return sortTreeByOrder(filtered);
+};
+
+/**
+ * 选择知识点（多选切换）
+ */
+const selectKnowledgePoint = (node) => {
+  const id = node.id;
+
+  // 检查是否已选择
+  const index = searchCriteria.knowledge_point_ids.indexOf(id);
+  if (index === -1) {
+    // 未选择，添加到数组
+    searchCriteria.knowledge_point_ids.push(id);
+  } else {
+    // 已选择，从数组中移除
+    searchCriteria.knowledge_point_ids.splice(index, 1);
+  }
+
+  // 清空搜索并重置树显示
+  knowledgeSearch.value = "";
+  filterKnowledgeTree();
+};
+
+/**
+ * 选择副知识点
+ */
+const selectSubKnowledgePoint = (node) => {
+  const id = node.id;
+
+  // 检查是否已选择
+  const index = searchCriteria.sub_knowledge_point_ids.indexOf(id);
+  if (index === -1) {
+    // 未选择，添加到数组
+    searchCriteria.sub_knowledge_point_ids.push(id);
+  } else {
+    // 已选择，从数组中移除
+    searchCriteria.sub_knowledge_point_ids.splice(index, 1);
+  }
+
+  // 清空搜索并重置树显示
+  subKnowledgeSearch.value = "";
+  filterSubKnowledgeTree();
+};
+
+/**
+ * 移除知识点
+ */
+const removeKnowledgePoint = (id) => {
+  searchCriteria.knowledge_point_ids = searchCriteria.knowledge_point_ids.filter(
+    (kp) => kp !== id
+  );
+  filterKnowledgeTree();
+};
+
+/**
+ * 移除副知识点
+ */
+const removeSubKnowledgePoint = (id) => {
+  searchCriteria.sub_knowledge_point_ids = searchCriteria.sub_knowledge_point_ids.filter(
+    (kp) => kp !== id
+  );
+  filterSubKnowledgeTree();
+};
+
+/**
+ * 切换知识点节点展开状态
+ */
+const toggleKnowledgeNode = (node) => {
+  node.expanded = !node.expanded;
+};
+
+/**
+ * 切换副知识点节点展开状态
+ */
+const toggleSubKnowledgeNode = (node) => {
+  node.expanded = !node.expanded;
+};
+
+/**
+ * 科目变化处理
+ */
+const onSubjectChange = () => {
+  // 当科目改变时，重新加载知识点树
+  if (searchCriteria.subject_id && searchCriteria.grade_ids.length > 0) {
+    loadMultiGradeKnowledgeTree("knowledge", searchCriteria.subject_id, searchCriteria.grade_ids);
+    loadMultiGradeKnowledgeTree("subKnowledge", searchCriteria.subject_id, searchCriteria.grade_ids);
+  } else {
+    // 清空知识点树
+    knowledgeTreeData.value = [];
+    subKnowledgeTreeData.value = [];
+    originalKnowledgeTreeData.value = [];
+    originalSubKnowledgeTreeData.value = [];
+  }
+};
+
 // 生命周期钩子
 onMounted(() => {
   loadLists();
@@ -2167,6 +2481,25 @@ watch(
       nextTick(() => {
         renderTypeScoreChart();
       });
+    }
+  },
+  { deep: true }
+);
+
+// 监听科目和年级变化，加载知识点树
+watch(
+  () => [searchCriteria.subject_id, searchCriteria.grade_ids],
+  ([subjectId, gradeIds]) => {
+    if (subjectId && gradeIds && gradeIds.length > 0) {
+      // 使用新的多选年级加载函数
+      loadMultiGradeKnowledgeTree("knowledge", subjectId, gradeIds);
+      loadMultiGradeKnowledgeTree("subKnowledge", subjectId, gradeIds);
+    } else {
+      // 清空知识点树
+      knowledgeTreeData.value = [];
+      subKnowledgeTreeData.value = [];
+      originalKnowledgeTreeData.value = [];
+      originalSubKnowledgeTreeData.value = [];
     }
   },
   { deep: true }
@@ -2250,6 +2583,7 @@ watch(
   width: 100%;
   height: 300px;
 }
+
 /* ==================== Markdown内容样式 ==================== */
 .question-text :deep(h1),
 .question-text :deep(h2),
@@ -3020,6 +3354,182 @@ watch(
   text-align: center;
   color: #909399;
   font-size: 14px;
+}
+
+/* ==================== 知识点树样式 ==================== */
+.knowledge-tree-container {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #fff;
+}
+
+.tree-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.tree-controls .search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.btn-clear {
+  padding: 6px 12px;
+  background-color: #f4f4f5;
+  border: 1px solid #d3d4d6;
+  border-radius: 4px;
+  color: #606266;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn-clear:hover {
+  background-color: #e9e9eb;
+}
+
+.tree-wrapper {
+  max-height: 250px;
+  overflow-y: auto;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.loading-tip {
+  padding: 20px;
+  text-align: center;
+  color: #909399;
+  background-color: #fafafa;
+  border-radius: 4px;
+  border: 1px dashed #dcdfe6;
+}
+
+.select-tip {
+  padding: 10px;
+  text-align: center;
+  color: #909399;
+  font-style: italic;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.select-tip.full-width-tip {
+  width: 100%;
+  text-align: left;
+}
+
+.no-knowledge {
+  padding: 20px;
+  text-align: center;
+  color: #909399;
+  font-style: italic;
+}
+
+/* 年级标签样式 */
+.selected-grades-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #bae7ff;
+}
+
+.grades-label {
+  font-size: 12px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.grade-tag {
+  background: #409eff;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* 已选择的知识点标签 */
+.selected-items {
+  margin-top: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  background: #f0f9ff;
+  border-radius: 4px;
+  border: 1px solid #bae7ff;
+}
+
+.selected-tags-label {
+  font-size: 12px;
+  color: #606266;
+  font-weight: 500;
+  align-self: center;
+}
+
+.selected-items .selected-tag {
+  background: #409eff;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.selected-items .selected-tag:hover {
+  background: #66b1ff;
+  transform: translateY(-1px);
+}
+
+.tag-grade {
+  font-size: 10px;
+  color: #fff;
+  background-color: #e6a23c;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.selected-items .remove-icon {
+  margin-left: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #fff;
+  font-size: 14px;
+}
+
+.selected-items .remove-icon:hover {
+  color: #f56c6c;
+}
+
+/* 全宽度样式 */
+.criteria-item.full-width {
+  width: 100%;
+  min-width: 100%;
+  flex-basis: 100%;
+  margin-bottom: 20px;
+}
+
+.knowledge-tree-container.full-width-container {
+  width: 100%;
+  max-width: 100%;
 }
 
 /* ==================== 按钮样式系统 ==================== */
@@ -3896,6 +4406,25 @@ watch(
 
   .scores-preview-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .tree-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .selected-grades-info {
+    flex-wrap: wrap;
+  }
+  
+  .selected-items {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .selected-items .selected-tag {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

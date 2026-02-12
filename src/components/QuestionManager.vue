@@ -11,21 +11,12 @@
     <!-- 模式选择：上传题目 vs 更新题目 -->
     <div class="mode-select">
       <!-- 上传题目按钮 - 根据权限显示 -->
-      <button
-        v-if="hasPermission('question:create')"
-        :class="{ active: !updateMode }"
-        @click="exitUpdateMode"
-        type="button"
-      >
+      <button v-if="hasPermission('question:create')" :class="{ active: !updateMode }" @click="exitUpdateMode"
+        type="button">
         上传题目
       </button>
       <!-- 更新题目按钮 - 根据权限显示 -->
-      <button
-        v-if="hasPermission('question:*')"
-        :class="{ active: updateMode }"
-        @click="enterUpdateMode"
-        type="button"
-      >
+      <button v-if="hasPermission('question:*')" :class="{ active: updateMode }" @click="enterUpdateMode" type="button">
         更新题目
       </button>
     </div>
@@ -73,41 +64,19 @@
         <div class="form-group">
           <label class="form-label required">问题类别：</label>
           <div class="searchable-select">
-            <input
-              type="text"
-              v-model="questionCategorySearch"
-              placeholder="输入关键字搜索问题类别..."
-              class="form-input search-input"
-              @input="filterQuestionCategories"
-              @focus="showQuestionCategoryDropdown = true"
-              @blur="onQuestionCategoryBlur"
-            />
-            <div
-              v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="item in filteredQuestionCategories"
-                :key="item.id"
-                class="dropdown-item"
-                @mousedown="selectQuestionCategory(item)"
-              >
+            <input type="text" v-model="questionCategorySearch" placeholder="输入关键字搜索问题类别..."
+              class="form-input search-input" @input="filterQuestionCategories"
+              @focus="showQuestionCategoryDropdown = true" @blur="onQuestionCategoryBlur" />
+            <div v-if="showQuestionCategoryDropdown && filteredQuestionCategories.length" class="dropdown-list">
+              <div v-for="item in filteredQuestionCategories" :key="item.id" class="dropdown-item"
+                @mousedown="selectQuestionCategory(item)">
                 {{ item.name }}
-                <span
-                  v-if="
-                    selectedQuestionCategory && selectedQuestionCategory.id === item.id
-                  "
-                  class="selected-mark"
-                  >✓</span
-                >
+                <span v-if="
+                  selectedQuestionCategory && selectedQuestionCategory.id === item.id
+                " class="selected-mark">✓</span>
                 <!-- 删除问题类别按钮 - 根据权限显示 -->
-                <button
-                  v-if="hasPermission('question:delete')"
-                  type="button"
-                  @mousedown.stop="confirmDeleteQuestionCategory(item)"
-                  class="btn-remove-small"
-                  title="删除问题类别"
-                >
+                <button v-if="hasPermission('question:delete')" type="button"
+                  @mousedown.stop="confirmDeleteQuestionCategory(item)" class="btn-remove-small" title="删除问题类别">
                   ×
                 </button>
               </div>
@@ -121,19 +90,10 @@
           </div>
 
           <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newQuestionCategory"
-              placeholder="新建问题类别（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadQuestionCategory"
-            />
-            <button
-              type="button"
-              @click="uploadQuestionCategory"
-              class="btn-highlight"
-              :disabled="!newQuestionCategory.trim()"
-            >
+            <input type="text" v-model="newQuestionCategory" placeholder="新建问题类别（多个用逗号分隔）" class="form-input"
+              @keypress.enter="uploadQuestionCategory" />
+            <button type="button" @click="uploadQuestionCategory" class="btn-highlight"
+              :disabled="!newQuestionCategory.trim()">
               新增问题类别
             </button>
           </div>
@@ -144,17 +104,9 @@
           <label class="form-label required">题目内容：</label>
           <!-- Markdown 编辑器 -->
           <div class="markdown-editor-container">
-            <textarea
-              v-model="form.title"
-              data-form="form"
-              data-field="title"
-              class="markdown-editor"
-              placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式"
-              @paste="handlePaste"
-              @drop.prevent="handleDrop"
-              @dragover.prevent
-              rows="6"
-            ></textarea>
+            <textarea v-model="form.title" data-form="form" data-field="title" class="markdown-editor"
+              placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式" @paste="handlePaste" @drop.prevent="handleDrop"
+              @dragover.prevent rows="6"></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.title)"></div>
           </div>
         </div>
@@ -169,42 +121,20 @@
               <div class="option-input-container">
                 <!-- 选项 Markdown 编辑器 -->
                 <div class="markdown-editor-container small">
-                  <textarea
-                    v-model="opt.text"
-                    data-form="form"
-                    data-field="text"
-                    :data-opt="index"
-                    class="markdown-editor option-editor"
-                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                    @paste="handlePaste"
-                    @drop.prevent="handleDrop"
-                    @dragover.prevent
-                    rows="3"
-                  ></textarea>
+                  <textarea v-model="opt.text" data-form="form" data-field="text" :data-opt="index"
+                    class="markdown-editor option-editor" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                    @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent rows="3"></textarea>
                   <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                 </div>
               </div>
               <div class="option-actions">
                 <!-- 单选题正确答案选择 -->
-                <input
-                  type="radio"
-                  name="singleAnswer"
-                  :value="index"
-                  v-model="singleAnswerIndex"
-                  :id="`upload-single-answer-${index}`"
-                  class="radio-input"
-                  required
-                />
-                <label class="radio-label" :for="`upload-single-answer-${index}`"
-                  >正确答案</label
-                >
+                <input type="radio" name="singleAnswer" :value="index" v-model="singleAnswerIndex"
+                  :id="`upload-single-answer-${index}`" class="radio-input" required />
+                <label class="radio-label" :for="`upload-single-answer-${index}`">正确答案</label>
                 <!-- 删除选项按钮 -->
-                <button
-                  type="button"
-                  @click="removeOption(index)"
-                  class="btn-remove"
-                  :disabled="form.options.length <= 2"
-                >
+                <button type="button" @click="removeOption(index)" class="btn-remove"
+                  :disabled="form.options.length <= 2">
                   删除
                 </button>
               </div>
@@ -224,39 +154,20 @@
               <div class="option-input-container">
                 <!-- 选项 Markdown 编辑器 -->
                 <div class="markdown-editor-container small">
-                  <textarea
-                    v-model="opt.text"
-                    data-form="form"
-                    data-field="text"
-                    :data-opt="index"
-                    class="markdown-editor option-editor"
-                    :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                    @paste="handlePaste"
-                    @drop.prevent="handleDrop"
-                    @dragover.prevent
-                    rows="3"
-                  ></textarea>
+                  <textarea v-model="opt.text" data-form="form" data-field="text" :data-opt="index"
+                    class="markdown-editor option-editor" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                    @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent rows="3"></textarea>
                   <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                 </div>
               </div>
               <div class="option-actions">
                 <!-- 多选题正确答案选择 -->
-                <input
-                  type="checkbox"
-                  v-model="opt.isAnswer"
-                  :id="`upload-multiple-answer-${index}`"
-                  class="checkbox-input"
-                />
-                <label class="checkbox-label" :for="`upload-multiple-answer-${index}`"
-                  >正确答案</label
-                >
+                <input type="checkbox" v-model="opt.isAnswer" :id="`upload-multiple-answer-${index}`"
+                  class="checkbox-input" />
+                <label class="checkbox-label" :for="`upload-multiple-answer-${index}`">正确答案</label>
                 <!-- 删除选项按钮 -->
-                <button
-                  type="button"
-                  @click="removeOption(index)"
-                  class="btn-remove"
-                  :disabled="form.options.length <= 2"
-                >
+                <button type="button" @click="removeOption(index)" class="btn-remove"
+                  :disabled="form.options.length <= 2">
                   删除
                 </button>
               </div>
@@ -271,17 +182,9 @@
           <label class="form-label">参考答案：</label>
           <!-- Markdown 编辑器 -->
           <div class="markdown-editor-container">
-            <textarea
-              v-model="form.answer"
-              data-form="form"
-              data-field="answer"
-              class="markdown-editor"
-              placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式"
-              @paste="handlePaste"
-              @drop.prevent="handleDrop"
-              @dragover.prevent
-              rows="6"
-            ></textarea>
+            <textarea v-model="form.answer" data-form="form" data-field="answer" class="markdown-editor"
+              placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式" @paste="handlePaste" @drop.prevent="handleDrop"
+              @dragover.prevent rows="6"></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.answer)"></div>
           </div>
         </div>
@@ -291,17 +194,9 @@
           <label class="form-label">解析：</label>
           <!-- Markdown 编辑器 -->
           <div class="markdown-editor-container">
-            <textarea
-              v-model="form.notes"
-              data-form="form"
-              data-field="notes"
-              class="markdown-editor"
-              placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式"
-              @paste="handlePaste"
-              @drop.prevent="handleDrop"
-              @dragover.prevent
-              rows="6"
-            ></textarea>
+            <textarea v-model="form.notes" data-form="form" data-field="notes" class="markdown-editor"
+              placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式" @paste="handlePaste" @drop.prevent="handleDrop"
+              @dragover.prevent rows="6"></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.notes)"></div>
           </div>
         </div>
@@ -314,35 +209,18 @@
           <div v-if="loadingKnowledgePoints" class="loading-tip">正在加载知识点...</div>
 
           <!-- 当科目和年级都选择后显示知识点树 -->
-          <div
-            v-else-if="form.subject_id && form.grade_id"
-            class="knowledge-tree-container"
-          >
+          <div v-else-if="form.subject_id && form.grade_id" class="knowledge-tree-container">
             <div class="tree-controls">
-              <input
-                type="text"
-                v-model="knowledgeSearch"
-                placeholder="搜索知识点..."
-                class="search-input"
-                @input="filterKnowledgeTree"
-              />
-              <button
-                v-if="knowledgeSearch"
-                @click="clearKnowledgeSearch"
-                class="btn-clear"
-              >
+              <input type="text" v-model="knowledgeSearch" placeholder="搜索知识点..." class="search-input"
+                @input="filterKnowledgeTree" />
+              <button v-if="knowledgeSearch" @click="clearKnowledgeSearch" class="btn-clear">
                 清除搜索
               </button>
             </div>
 
             <div class="tree-wrapper">
-              <KnowledgeTree
-                v-if="knowledgeTreeData.length"
-                :data="knowledgeTreeData"
-                :selected-id="form.knowledge_point_id"
-                @select="selectKnowledgePoint"
-                @toggle="toggleKnowledgeNode"
-              />
+              <KnowledgeTree v-if="knowledgeTreeData.length" :data="knowledgeTreeData"
+                :selected-id="form.knowledge_point_id" @select="selectKnowledgePoint" @toggle="toggleKnowledgeNode" />
               <div v-else class="no-knowledge">暂无知识点数据</div>
             </div>
 
@@ -365,47 +243,27 @@
 
           <div v-if="loadingKnowledgePoints" class="loading-tip">正在加载知识点...</div>
 
-          <div
-            v-else-if="form.subject_id && form.grade_id"
-            class="knowledge-tree-container"
-          >
+          <div v-else-if="form.subject_id && form.grade_id" class="knowledge-tree-container">
             <div class="tree-controls">
-              <input
-                type="text"
-                v-model="subKnowledgeSearch"
-                placeholder="搜索副知识点..."
-                class="search-input"
-                @input="filterSubKnowledgeTree"
-              />
-              <button
-                v-if="subKnowledgeSearch"
-                @click="clearSubKnowledgeSearch"
-                class="btn-clear"
-              >
+              <input type="text" v-model="subKnowledgeSearch" placeholder="搜索副知识点..." class="search-input"
+                @input="filterSubKnowledgeTree" />
+              <button v-if="subKnowledgeSearch" @click="clearSubKnowledgeSearch" class="btn-clear">
                 清除搜索
               </button>
             </div>
 
             <div class="tree-wrapper">
-              <KnowledgeTree
-                v-if="subKnowledgeTreeData.length"
-                :data="subKnowledgeTreeData"
-                :multi-selected-ids="form.sub_knowledge_point_ids"
-                @select="selectSubKnowledgePoint"
-                @toggle="toggleSubKnowledgeNode"
-              />
+              <KnowledgeTree v-if="subKnowledgeTreeData.length" :data="subKnowledgeTreeData"
+                :multi-selected-ids="form.sub_knowledge_point_ids" @select="selectSubKnowledgePoint"
+                @toggle="toggleSubKnowledgeNode" />
               <div v-else class="no-knowledge">暂无知识点数据</div>
             </div>
 
             <!-- 已选择的副知识点标签显示 -->
             <div class="selected-items" v-if="selectedSubKnowledgePoints.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="kp in selectedSubKnowledgePoints"
-                :key="kp.id"
-                class="selected-tag"
-                @click="removeSubKnowledgePoint(kp.id)"
-              >
+              <span v-for="kp in selectedSubKnowledgePoints" :key="kp.id" class="selected-tag"
+                @click="removeSubKnowledgePoint(kp.id)">
                 {{ kp.name }} ×
               </span>
             </div>
@@ -418,40 +276,19 @@
         <div class="form-group">
           <label class="form-label">解题思想：</label>
           <div class="searchable-select">
-            <input
-              type="text"
-              v-model="solutionIdeaSearch"
-              placeholder="输入关键字搜索解题思想..."
-              class="form-input search-input"
-              @input="filterSolutionIdeas"
-              @focus="
+            <input type="text" v-model="solutionIdeaSearch" placeholder="输入关键字搜索解题思想..." class="form-input search-input"
+              @input="filterSolutionIdeas" @focus="
                 resetFilteredList('solutionIdea');
-                showSolutionIdeaDropdown = true;
-              "
-              @blur="onSolutionIdeaBlur"
-            />
-            <div
-              v-if="showSolutionIdeaDropdown && filteredSolutionIdeas.length"
-              class="dropdown-list"
-            >
-              <div
-                v-for="item in filteredSolutionIdeas"
-                :key="item.id"
-                class="dropdown-item"
-                @mousedown="selectSolutionIdea(item)"
-              >
+              showSolutionIdeaDropdown = true;
+              " @blur="onSolutionIdeaBlur" />
+            <div v-if="showSolutionIdeaDropdown && filteredSolutionIdeas.length" class="dropdown-list">
+              <div v-for="item in filteredSolutionIdeas" :key="item.id" class="dropdown-item"
+                @mousedown="selectSolutionIdea(item)">
                 {{ item.name }}
-                <span v-if="isSolutionIdeaSelected(item.id)" class="selected-mark"
-                  >✓</span
-                >
+                <span v-if="isSolutionIdeaSelected(item.id)" class="selected-mark">✓</span>
                 <!-- 删除解题思想按钮 - 根据权限显示 -->
-                <button
-                  v-if="hasPermission('question:delete')"
-                  type="button"
-                  @mousedown.stop="confirmDeleteSolutionIdea(item)"
-                  class="btn-remove-small"
-                  title="删除解题思想"
-                >
+                <button v-if="hasPermission('question:delete')" type="button"
+                  @mousedown.stop="confirmDeleteSolutionIdea(item)" class="btn-remove-small" title="删除解题思想">
                   ×
                 </button>
               </div>
@@ -459,29 +296,15 @@
           </div>
           <div class="selected-items" v-if="selectedSolutionIdeas.length">
             <span class="selected-tags-label">已选择：</span>
-            <span
-              v-for="item in selectedSolutionIdeas"
-              :key="item.id"
-              class="selected-tag"
-              @click="removeSolutionIdea(item.id)"
-            >
+            <span v-for="item in selectedSolutionIdeas" :key="item.id" class="selected-tag"
+              @click="removeSolutionIdea(item.id)">
               {{ item.name }} ×
             </span>
           </div>
           <div class="new-knowledge-input">
-            <input
-              type="text"
-              v-model="newSolutionIdea"
-              placeholder="新建解题思想（多个用逗号分隔）"
-              class="form-input"
-              @keypress.enter="uploadSolutionIdea"
-            />
-            <button
-              type="button"
-              @click="uploadSolutionIdea"
-              class="btn-highlight"
-              :disabled="!newSolutionIdea.trim()"
-            >
+            <input type="text" v-model="newSolutionIdea" placeholder="新建解题思想（多个用逗号分隔）" class="form-input"
+              @keypress.enter="uploadSolutionIdea" />
+            <button type="button" @click="uploadSolutionIdea" class="btn-highlight" :disabled="!newSolutionIdea.trim()">
               新增解题思想
             </button>
           </div>
@@ -511,53 +334,36 @@
           <label class="form-label">备注：</label>
           <!-- Markdown 编辑器 -->
           <div class="markdown-editor-container">
-            <textarea
-              v-model="form.remark"
-              data-form="form"
-              data-field="remark"
-              class="markdown-editor"
-              placeholder="请输入备注信息，支持 Markdown 语法"
-              @paste="handlePaste"
-              @drop.prevent="handleDrop"
-              @dragover.prevent
-              rows="4"
-            ></textarea>
+            <textarea v-model="form.remark" data-form="form" data-field="remark" class="markdown-editor"
+              placeholder="请输入备注信息，支持 Markdown 语法" @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent
+              rows="4"></textarea>
             <div class="markdown-preview" v-html="renderMarkdown(form.remark)"></div>
           </div>
         </div>
 
         <!-- 审核人选择 -->
-<div class="form-group">
-  <label class="form-label required">审核人：</label>
-  <select v-model="selectedReviewer" class="form-select" required>
-    <option value="">请选择审核人</option>
-    <option 
-      v-for="reviewer in reviewerOptions" 
-      :key="reviewer.id" 
-      :value="reviewer.account"
-    >
-      {{ reviewer.name || reviewer.account }}
-      <template v-if="reviewer.name && reviewer.account !== reviewer.name">
-        ({{ reviewer.account }})
-      </template>
-    </option>
-  </select>
-  <div v-if="selectedReviewer" class="selected-item">
-    已选择: {{ getReviewerName(selectedReviewer) }}
-    <button type="button" @click="selectedReviewer = ''" class="btn-remove">
-      清除
-    </button>
-  </div>
-</div>
+        <div class="form-group">
+          <label class="form-label required">审核人：</label>
+          <select v-model="selectedReviewer" class="form-select" required>
+            <option value="">请选择审核人</option>
+            <option v-for="reviewer in reviewerOptions" :key="reviewer.id" :value="reviewer.account">
+              {{ reviewer.name || reviewer.account }}
+              <template v-if="reviewer.name && reviewer.account !== reviewer.name">
+                ({{ reviewer.account }})
+              </template>
+            </option>
+          </select>
+          <div v-if="selectedReviewer" class="selected-item">
+            已选择: {{ getReviewerName(selectedReviewer) }}
+            <button type="button" @click="selectedReviewer = ''" class="btn-remove">
+              清除
+            </button>
+          </div>
+        </div>
 
         <!-- 提交按钮 -->
         <div class="form-actions">
-          <button
-            type="button"
-            @click="showPreview"
-            class="btn-primary submit-btn"
-            :disabled="submitting"
-          >
+          <button type="button" @click="showPreview" class="btn-primary submit-btn" :disabled="submitting">
             {{ submitting ? "提交中..." : "预览并提交" }}
           </button>
         </div>
@@ -574,43 +380,23 @@
           <div class="criteria-item">
             <label>年级：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateGradeSearch"
-                placeholder="输入关键字搜索年级..."
-                class="form-input search-input"
-                @input="filterUpdateGrades"
-                @focus="
+              <input type="text" v-model="updateGradeSearch" placeholder="输入关键字搜索年级..." class="form-input search-input"
+                @input="filterUpdateGrades" @focus="
                   resetFilteredList('updateGrade');
-                  showUpdateGradeDropdown = true;
-                "
-                @blur="onUpdateGradeBlur"
-              />
-              <div
-                v-if="showUpdateGradeDropdown && filteredUpdateGrades.length"
-                class="dropdown-list"
-              >
-                <div
-                  v-for="grade in filteredUpdateGrades"
-                  :key="grade.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateGrade(grade)"
-                >
+                showUpdateGradeDropdown = true;
+                " @blur="onUpdateGradeBlur" />
+              <div v-if="showUpdateGradeDropdown && filteredUpdateGrades.length" class="dropdown-list">
+                <div v-for="grade in filteredUpdateGrades" :key="grade.id" class="dropdown-item"
+                  @mousedown="selectUpdateGrade(grade)">
                   {{ grade.name }}
-                  <span v-if="isUpdateGradeSelected(grade.id)" class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="isUpdateGradeSelected(grade.id)" class="selected-mark">✓</span>
                 </div>
               </div>
             </div>
             <div class="selected-items" v-if="selectedUpdateGrades.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="grade in selectedUpdateGrades"
-                :key="grade.id"
-                class="selected-tag"
-                @click="removeUpdateGrade(grade.id)"
-              >
+              <span v-for="grade in selectedUpdateGrades" :key="grade.id" class="selected-tag"
+                @click="removeUpdateGrade(grade.id)">
                 {{ grade.name }} ×
               </span>
             </div>
@@ -621,28 +407,17 @@
             <label>难度：</label>
             <div class="difficulty-multi-select">
               <div class="difficulty-options">
-                <div
-                  v-for="n in 5"
-                  :key="n"
-                  class="difficulty-option"
-                  :class="{ selected: isUpdateDifficultySelected(n) }"
-                  @click="toggleUpdateDifficulty(n)"
-                >
+                <div v-for="n in 5" :key="n" class="difficulty-option"
+                  :class="{ selected: isUpdateDifficultySelected(n) }" @click="toggleUpdateDifficulty(n)">
                   <span class="difficulty-stars">{{ n }} 星</span>
-                  <span v-if="isUpdateDifficultySelected(n)" class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="isUpdateDifficultySelected(n)" class="selected-mark">✓</span>
                 </div>
               </div>
             </div>
             <div class="selected-items" v-if="searchCriteria.difficulty_levels.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="level in searchCriteria.difficulty_levels"
-                :key="level"
-                class="selected-tag"
-                @click="toggleUpdateDifficulty(level)"
-              >
+              <span v-for="level in searchCriteria.difficulty_levels" :key="level" class="selected-tag"
+                @click="toggleUpdateDifficulty(level)">
                 {{ level }}星 ×
               </span>
             </div>
@@ -663,42 +438,20 @@
           <div class="criteria-item">
             <label>问题类别：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateQuestionCategorySearch"
-                placeholder="输入关键字搜索问题类别..."
-                class="form-input search-input"
-                @input="filterUpdateQuestionCategories"
-                @focus="showUpdateQuestionCategoryDropdown = true"
-                @blur="onUpdateQuestionCategoryBlur"
-              />
-              <div
-                v-if="
-                  showUpdateQuestionCategoryDropdown &&
-                  filteredUpdateQuestionCategories.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateQuestionCategories"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateQuestionCategory(item)"
-                >
+              <input type="text" v-model="updateQuestionCategorySearch" placeholder="输入关键字搜索问题类别..."
+                class="form-input search-input" @input="filterUpdateQuestionCategories"
+                @focus="showUpdateQuestionCategoryDropdown = true" @blur="onUpdateQuestionCategoryBlur" />
+              <div v-if="
+                showUpdateQuestionCategoryDropdown &&
+                filteredUpdateQuestionCategories.length
+              " class="dropdown-list">
+                <div v-for="item in filteredUpdateQuestionCategories" :key="item.id" class="dropdown-item"
+                  @mousedown="selectUpdateQuestionCategory(item)">
                   {{ item.name }}
-                  <span
-                    v-if="isUpdateQuestionCategorySelected(item.id)"
-                    class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="isUpdateQuestionCategorySelected(item.id)" class="selected-mark">✓</span>
                   <!-- 删除问题类别按钮（更新界面） - 根据权限显示 -->
-                  <button
-                    v-if="hasPermission('question:delete')"
-                    type="button"
-                    @mousedown.stop="confirmDeleteQuestionCategory(item)"
-                    class="btn-remove-small"
-                    title="删除问题类别"
-                  >
+                  <button v-if="hasPermission('question:delete')" type="button"
+                    @mousedown.stop="confirmDeleteQuestionCategory(item)" class="btn-remove-small" title="删除问题类别">
                     ×
                   </button>
                 </div>
@@ -706,203 +459,130 @@
             </div>
             <div class="selected-items" v-if="selectedUpdateQuestionCategories.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="item in selectedUpdateQuestionCategories"
-                :key="item.id"
-                class="selected-tag"
-                @click="removeUpdateQuestionCategory(item.id)"
-              >
+              <span v-for="item in selectedUpdateQuestionCategories" :key="item.id" class="selected-tag"
+                @click="removeUpdateQuestionCategory(item.id)">
                 {{ item.name }} ×
               </span>
             </div>
           </div>
 
-<!-- 知识点筛选（多选） -->
-<div class="criteria-item full-width">
-  <label class="form-label">知识点：</label>
+          <!-- 知识点筛选（多选） -->
+          <div class="criteria-item full-width">
+            <label class="form-label">知识点：</label>
 
-  <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
-    正在加载知识点...
-  </div>
+            <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
+              正在加载知识点...
+            </div>
 
-  <div
-    v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
-    class="knowledge-tree-container full-width-container"
-  >
-    <div class="tree-controls">
-      <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
-        <span class="grades-label">已选年级：</span>
-        <span
-          v-for="gradeId in searchCriteria.grade_ids"
-          :key="gradeId"
-          class="grade-tag"
-        >
-          {{ getGradeName(gradeId) }}
-        </span>
-      </div>
-      <input
-        type="text"
-        v-model="updateKnowledgeSearch"
-        placeholder="搜索知识点..."
-        class="search-input"
-        @input="filterUpdateKnowledgeTree"
-      />
-      <button
-        v-if="updateKnowledgeSearch"
-        @click="clearUpdateKnowledgeSearch"
-        class="btn-clear"
-      >
-        清除搜索
-      </button>
-    </div>
+            <div v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
+              class="knowledge-tree-container full-width-container">
+              <div class="tree-controls">
+                <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
+                  <span class="grades-label">已选年级：</span>
+                  <span v-for="gradeId in searchCriteria.grade_ids" :key="gradeId" class="grade-tag">
+                    {{ getGradeName(gradeId) }}
+                  </span>
+                </div>
+                <input type="text" v-model="updateKnowledgeSearch" placeholder="搜索知识点..." class="search-input"
+                  @input="filterUpdateKnowledgeTree" />
+                <button v-if="updateKnowledgeSearch" @click="clearUpdateKnowledgeSearch" class="btn-clear">
+                  清除搜索
+                </button>
+              </div>
 
-    <div class="tree-wrapper">
-      <KnowledgeTree
-        v-if="updateKnowledgeTreeData.length"
-        :data="updateKnowledgeTreeData"
-        :multi-selected-ids="searchCriteria.knowledge_point_ids"
-        @select="selectUpdateKnowledgePoint"
-        @toggle="toggleUpdateKnowledgeNode"
-        :show-grade="true"
-      />
-      <div v-else-if="!loadingUpdateKnowledgePoints" class="no-knowledge">
-        暂无知识点数据
-      </div>
-    </div>
+              <div class="tree-wrapper">
+                <KnowledgeTree v-if="updateKnowledgeTreeData.length" :data="updateKnowledgeTreeData"
+                  :multi-selected-ids="searchCriteria.knowledge_point_ids" @select="selectUpdateKnowledgePoint"
+                  @toggle="toggleUpdateKnowledgeNode" :show-grade="true" />
+                <div v-else-if="!loadingUpdateKnowledgePoints" class="no-knowledge">
+                  暂无知识点数据
+                </div>
+              </div>
 
-    <div class="selected-items" v-if="selectedUpdateKnowledgePoints.length">
-      <span class="selected-tags-label">已选择：</span>
-      <span
-        v-for="kp in selectedUpdateKnowledgePoints"
-        :key="kp.id"
-        class="selected-tag"
-        @click="removeUpdateKnowledgePoint(kp.id)"
-      >
-        {{ kp.name }}
-        <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
-        <span class="remove-icon">×</span>
-      </span>
-    </div>
-  </div>
+              <div class="selected-items" v-if="selectedUpdateKnowledgePoints.length">
+                <span class="selected-tags-label">已选择：</span>
+                <span v-for="kp in selectedUpdateKnowledgePoints" :key="kp.id" class="selected-tag"
+                  @click="removeUpdateKnowledgePoint(kp.id)">
+                  {{ kp.name }}
+                  <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
+                  <span class="remove-icon">×</span>
+                </span>
+              </div>
+            </div>
 
-  <div v-else class="select-tip full-width-tip">
-    请先选择科目和至少一个年级
-  </div>
-</div>
+            <div v-else class="select-tip full-width-tip">
+              请先选择科目和至少一个年级
+            </div>
+          </div>
 
-<!-- 副知识点筛选（多选） -->
-<div class="criteria-item full-width">
-  <label class="form-label">副知识点：</label>
+          <!-- 副知识点筛选（多选） -->
+          <div class="criteria-item full-width">
+            <label class="form-label">副知识点：</label>
 
-  <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
-    正在加载知识点...
-  </div>
+            <div v-if="loadingUpdateKnowledgePoints" class="loading-tip">
+              正在加载知识点...
+            </div>
 
-  <div
-    v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
-    class="knowledge-tree-container full-width-container"
-  >
-    <div class="tree-controls">
-      <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
-        <span class="grades-label">已选年级：</span>
-        <span
-          v-for="gradeId in searchCriteria.grade_ids"
-          :key="gradeId"
-          class="grade-tag"
-        >
-          {{ getGradeName(gradeId) }}
-        </span>
-      </div>
-      <input
-        type="text"
-        v-model="updateSubKnowledgeSearch"
-        placeholder="搜索副知识点..."
-        class="search-input"
-        @input="filterUpdateSubKnowledgeTree"
-      />
-      <button
-        v-if="updateSubKnowledgeSearch"
-        @click="clearUpdateSubKnowledgeSearch"
-        class="btn-clear"
-      >
-        清除搜索
-      </button>
-    </div>
+            <div v-else-if="searchCriteria.subject_id && searchCriteria.grade_ids.length > 0"
+              class="knowledge-tree-container full-width-container">
+              <div class="tree-controls">
+                <div class="selected-grades-info" v-if="searchCriteria.grade_ids.length > 0">
+                  <span class="grades-label">已选年级：</span>
+                  <span v-for="gradeId in searchCriteria.grade_ids" :key="gradeId" class="grade-tag">
+                    {{ getGradeName(gradeId) }}
+                  </span>
+                </div>
+                <input type="text" v-model="updateSubKnowledgeSearch" placeholder="搜索副知识点..." class="search-input"
+                  @input="filterUpdateSubKnowledgeTree" />
+                <button v-if="updateSubKnowledgeSearch" @click="clearUpdateSubKnowledgeSearch" class="btn-clear">
+                  清除搜索
+                </button>
+              </div>
 
-    <div class="tree-wrapper">
-      <KnowledgeTree
-        v-if="updateSubKnowledgeTreeData.length"
-        :data="updateSubKnowledgeTreeData"
-        :multi-selected-ids="searchCriteria.sub_knowledge_point_ids"
-        @select="selectUpdateSubKnowledgePoint"
-        @toggle="toggleUpdateSubKnowledgeNode"
-        :show-grade="true"
-      />
-      <div v-else-if="!loadingUpdateKnowledgePoints" class="no-knowledge">
-        暂无知识点数据
-      </div>
-    </div>
+              <div class="tree-wrapper">
+                <KnowledgeTree v-if="updateSubKnowledgeTreeData.length" :data="updateSubKnowledgeTreeData"
+                  :multi-selected-ids="searchCriteria.sub_knowledge_point_ids" @select="selectUpdateSubKnowledgePoint"
+                  @toggle="toggleUpdateSubKnowledgeNode" :show-grade="true" />
+                <div v-else-if="!loadingUpdateKnowledgePoints" class="no-knowledge">
+                  暂无知识点数据
+                </div>
+              </div>
 
-    <div class="selected-items" v-if="selectedUpdateSubKnowledgePoints.length">
-      <span class="selected-tags-label">已选择：</span>
-      <span
-        v-for="kp in selectedUpdateSubKnowledgePoints"
-        :key="kp.id"
-        class="selected-tag"
-        @click="removeUpdateSubKnowledgePoint(kp.id)"
-      >
-        {{ kp.name }}
-        <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
-        <span class="remove-icon">×</span>
-      </span>
-    </div>
-  </div>
+              <div class="selected-items" v-if="selectedUpdateSubKnowledgePoints.length">
+                <span class="selected-tags-label">已选择：</span>
+                <span v-for="kp in selectedUpdateSubKnowledgePoints" :key="kp.id" class="selected-tag"
+                  @click="removeUpdateSubKnowledgePoint(kp.id)">
+                  {{ kp.name }}
+                  <span class="tag-grade" v-if="kp.gradeName">({{ kp.gradeName }})</span>
+                  <span class="remove-icon">×</span>
+                </span>
+              </div>
+            </div>
 
-  <div v-else class="select-tip full-width-tip">
-    请先选择科目和至少一个年级
-  </div>
-</div>
+            <div v-else class="select-tip full-width-tip">
+              请先选择科目和至少一个年级
+            </div>
+          </div>
 
           <!-- 解题思想筛选（多选） -->
           <div class="criteria-item">
             <label>解题思想：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateSolutionIdeaSearch"
-                placeholder="输入关键字搜索解题思想..."
-                class="form-input search-input"
-                @input="filterUpdateSolutionIdeas"
-                @focus="
+              <input type="text" v-model="updateSolutionIdeaSearch" placeholder="输入关键字搜索解题思想..."
+                class="form-input search-input" @input="filterUpdateSolutionIdeas" @focus="
                   resetFilteredList('updateSolutionIdea');
-                  showUpdateSolutionIdeaDropdown = true;
-                "
-                @blur="onUpdateSolutionIdeaBlur"
-              />
-              <div
-                v-if="
-                  showUpdateSolutionIdeaDropdown && filteredUpdateSolutionIdeas.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateSolutionIdeas"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateSolutionIdea(item)"
-                >
+                showUpdateSolutionIdeaDropdown = true;
+                " @blur="onUpdateSolutionIdeaBlur" />
+              <div v-if="
+                showUpdateSolutionIdeaDropdown && filteredUpdateSolutionIdeas.length
+              " class="dropdown-list">
+                <div v-for="item in filteredUpdateSolutionIdeas" :key="item.id" class="dropdown-item"
+                  @mousedown="selectUpdateSolutionIdea(item)">
                   {{ item.name }}
-                  <span v-if="isUpdateSolutionIdeaSelected(item.id)" class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="isUpdateSolutionIdeaSelected(item.id)" class="selected-mark">✓</span>
                   <!-- 删除解题思想按钮（更新界面） - 根据权限显示 -->
-                  <button
-                    v-if="hasPermission('question:delete')"
-                    type="button"
-                    @mousedown.stop="confirmDeleteSolutionIdea(item)"
-                    class="btn-remove-small"
-                    title="删除解题思想"
-                  >
+                  <button v-if="hasPermission('question:delete')" type="button"
+                    @mousedown.stop="confirmDeleteSolutionIdea(item)" class="btn-remove-small" title="删除解题思想">
                     ×
                   </button>
                 </div>
@@ -910,12 +590,8 @@
             </div>
             <div class="selected-items" v-if="selectedUpdateSolutionIdeas.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="item in selectedUpdateSolutionIdeas"
-                :key="item.id"
-                class="selected-tag"
-                @click="removeUpdateSolutionIdea(item.id)"
-              >
+              <span v-for="item in selectedUpdateSolutionIdeas" :key="item.id" class="selected-tag"
+                @click="removeUpdateSolutionIdea(item.id)">
                 {{ item.name }} ×
               </span>
             </div>
@@ -924,12 +600,7 @@
           <!-- 题目内容关键词搜索 -->
           <div class="criteria-item">
             <label>题目内容：</label>
-            <input
-              type="text"
-              v-model="searchCriteria.title"
-              placeholder="输入题目关键词"
-              class="form-input"
-            />
+            <input type="text" v-model="searchCriteria.title" placeholder="输入题目关键词" class="form-input" />
           </div>
 
           <!-- 检索按钮 -->
@@ -948,7 +619,7 @@
             <div class="table-header">
               <!-- <div class="table-cell">学校</div> -->
               <div class="table-cell">上传者</div>
-  <div class="table-cell">审核者</div>
+              <div class="table-cell">审核者</div>
               <div class="table-cell">年级</div>
               <div class="table-cell">科目</div>
               <div class="table-cell">问题类别</div>
@@ -964,8 +635,8 @@
             </div>
             <!-- 表格数据行 -->
             <div v-for="q in questionList" :key="q.id" class="table-row">
-  <div class="table-cell">{{ q.uploader || "-" }}</div>
-  <div class="table-cell">{{ q.reviewer || "-" }}</div>
+              <div class="table-cell">{{ q.uploader || "-" }}</div>
+              <div class="table-cell">{{ q.reviewer || "-" }}</div>
               <!-- <div class="table-cell">{{ getSchoolName(q.school_id) }}</div> -->
               <div class="table-cell">{{ getGradeName(q.grade_id) }}</div>
               <div class="table-cell">{{ getSubjectName(q.subject_id) }}</div>
@@ -974,39 +645,28 @@
               </div>
               <div class="table-cell">{{ getMarkingTypeName(q.marking_type) }}</div>
               <div class="table-cell">
-  {{ getKnowledgePointName(q.knowledge_point_id) }}
-</div>
+                {{ getKnowledgePointName(q.knowledge_point_id) }}
+              </div>
               <!-- 解题思想单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
-                <span
-                  v-for="ideaId in q.solution_idea_ids || []"
-                  :key="ideaId"
-                  class="sub-knowledge-tag"
-                >
+                <span v-for="ideaId in q.solution_idea_ids || []" :key="ideaId" class="sub-knowledge-tag">
                   {{ getSolutionIdeaName(ideaId) }}
                 </span>
-                <span
-                  v-if="!(q.solution_idea_ids && q.solution_idea_ids.length)"
-                  class="no-sub-knowledge"
-                >
+                <span v-if="!(q.solution_idea_ids && q.solution_idea_ids.length)" class="no-sub-knowledge">
                   无
                 </span>
               </div>
               <!-- 副知识点单元格（多值显示） -->
               <div class="table-cell sub-knowledge-cell">
-  <template v-if="q.sub_knowledge_point_ids && q.sub_knowledge_point_ids.length">
-    <span
-      v-for="subId in q.sub_knowledge_point_ids"
-      :key="subId"
-      class="sub-knowledge-tag"
-    >
-      {{ getKnowledgePointName(subId) }}
-    </span>
-  </template>
-  <span v-else class="no-sub-knowledge">
-    无
-  </span>
-</div>
+                <template v-if="q.sub_knowledge_point_ids && q.sub_knowledge_point_ids.length">
+                  <span v-for="subId in q.sub_knowledge_point_ids" :key="subId" class="sub-knowledge-tag">
+                    {{ getKnowledgePointName(subId) }}
+                  </span>
+                </template>
+                <span v-else class="no-sub-knowledge">
+                  无
+                </span>
+              </div>
               <div class="table-cell">{{ q.difficulty_level }}星</div>
               <!-- 题目内容单元格-->
               <div class="table-cell title-cell" v-html="renderMarkdown(q.title)"></div>
@@ -1014,32 +674,16 @@
               <div class="table-cell title-cell" v-html="renderMarkdown(q.remark)"></div>
               <!-- 图片预览单元格 -->
               <div class="table-cell image-cell">
-                <img
-                  v-if="q.img_url"
-                  :src="q.img_url"
-                  alt="题目图片"
-                  class="thumbnail-image"
-                  @click="previewImage(q.img_url)"
-                />
+                <img v-if="q.img_url" :src="q.img_url" alt="题目图片" class="thumbnail-image"
+                  @click="previewImage(q.img_url)" />
                 <span v-else class="no-image">-</span>
               </div>
               <!-- 操作按钮单元格 -->
-              <div
-                class="table-cell actions-cell"
-                style="margin-left: 30px; padding-left: 15px"
-              >
-                <button
-                  v-if="hasPermission('question:update')"
-                  @click="loadQuestionForUpdate(q)"
-                  class="btn-update"
-                >
+              <div class="table-cell actions-cell" style="margin-left: 30px; padding-left: 15px">
+                <button v-if="hasPermission('question:update')" @click="loadQuestionForUpdate(q)" class="btn-update">
                   更新
                 </button>
-                <button
-                  v-if="hasPermission('question:delete')"
-                  @click="confirmDelete(q)"
-                  class="btn-delete"
-                >
+                <button v-if="hasPermission('question:delete')" @click="confirmDelete(q)" class="btn-delete">
                   删除
                 </button>
               </div>
@@ -1049,55 +693,32 @@
         <!-- 分页控件 -->
         <div class="pagination-controls">
           <!-- 首页按钮 -->
-          <button
-            @click="goToFirstPage"
-            :disabled="searchCriteria.page_num <= 1"
-            class="pagination-btn"
-          >
+          <button @click="goToFirstPage" :disabled="searchCriteria.page_num <= 1" class="pagination-btn">
             首页
           </button>
           <!-- 上一页按钮 -->
-          <button
-            @click="changePage(searchCriteria.page_num - 1)"
-            :disabled="searchCriteria.page_num <= 1"
-            class="pagination-btn"
-          >
+          <button @click="changePage(searchCriteria.page_num - 1)" :disabled="searchCriteria.page_num <= 1"
+            class="pagination-btn">
             上一页
           </button>
 
-          <span
-            >第 {{ searchCriteria.page_num }} 页，共 {{ totalPages }} 页 ({{
-              totalItems
-            }}
-            条)</span
-          >
+          <span>第 {{ searchCriteria.page_num }} 页，共 {{ totalPages }} 页 ({{
+            totalItems
+          }}
+            条)</span>
 
           <!-- 下一页按钮 -->
-          <button
-            @click="changePage(searchCriteria.page_num + 1)"
-            :disabled="searchCriteria.page_num >= totalPages"
-            class="pagination-btn"
-          >
+          <button @click="changePage(searchCriteria.page_num + 1)" :disabled="searchCriteria.page_num >= totalPages"
+            class="pagination-btn">
             下一页
           </button>
           <!-- 末页按钮 -->
-          <button
-            @click="goToLastPage"
-            :disabled="searchCriteria.page_num >= totalPages"
-            class="pagination-btn"
-          >
+          <button @click="goToLastPage" :disabled="searchCriteria.page_num >= totalPages" class="pagination-btn">
             末页
           </button>
 
-          <input
-            type="number"
-            v-model.number="pageInput"
-            min="1"
-            :max="totalPages"
-            placeholder="页码"
-            @keyup.enter="goToPage"
-            class="page-input"
-          />
+          <input type="number" v-model.number="pageInput" min="1" :max="totalPages" placeholder="页码"
+            @keyup.enter="goToPage" class="page-input" />
           <button @click="goToPage" class="pagination-btn">跳转</button>
         </div>
       </div>
@@ -1108,12 +729,8 @@
       </div>
 
       <!-- 更新题目表单（选中题目后显示） -->
-      <div
-        v-if="selectedQuestion && showUpdateForm && hasPermission('question:update')"
-        :key="'update-form'"
-        class="update-form-section"
-        ref="updateFormRef"
-      >
+      <div v-if="selectedQuestion && showUpdateForm && hasPermission('question:update')" :key="'update-form'"
+        class="update-form-section" ref="updateFormRef">
         <h3>更新题目 (ID: {{ selectedQuestion.id }})</h3>
         <form @submit.prevent="handleUpdateSubmit" class="update-form">
           <!-- 学校选择 -->
@@ -1128,20 +745,20 @@
           </div>
 
           <!-- 显示提交者信息（只读） -->
-<div class="form-group">
-  <label class="form-label">提交者：</label>
-  <div class="readonly-field">
-    {{ selectedQuestion?.uploader || "-" }}
-  </div>
-</div>
+          <div class="form-group">
+            <label class="form-label">提交者：</label>
+            <div class="readonly-field">
+              {{ selectedQuestion?.uploader || "-" }}
+            </div>
+          </div>
 
-<!-- 显示审核者信息（只读） -->
-<div class="form-group">
-  <label class="form-label">审核者：</label>
-  <div class="readonly-field">
-    {{ selectedQuestion?.reviewer || "-" }}
-  </div>
-</div>
+          <!-- 显示审核者信息（只读） -->
+          <div class="form-group">
+            <label class="form-label">审核者：</label>
+            <div class="readonly-field">
+              {{ selectedQuestion?.reviewer || "-" }}
+            </div>
+          </div>
 
           <!-- 年级选择 -->
           <div class="form-group">
@@ -1169,45 +786,23 @@
           <div class="form-group">
             <label class="form-label">问题类别：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormQuestionCategorySearch"
-                placeholder="输入关键字搜索问题类别..."
-                class="form-input search-input"
-                @input="filterUpdateFormQuestionCategories"
-                @focus="showUpdateFormQuestionCategoryDropdown = true"
-                @blur="onUpdateFormQuestionCategoryBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormQuestionCategoryDropdown &&
-                  filteredUpdateFormQuestionCategories.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateFormQuestionCategories"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormQuestionCategory(item)"
-                >
+              <input type="text" v-model="updateFormQuestionCategorySearch" placeholder="输入关键字搜索问题类别..."
+                class="form-input search-input" @input="filterUpdateFormQuestionCategories"
+                @focus="showUpdateFormQuestionCategoryDropdown = true" @blur="onUpdateFormQuestionCategoryBlur" />
+              <div v-if="
+                showUpdateFormQuestionCategoryDropdown &&
+                filteredUpdateFormQuestionCategories.length
+              " class="dropdown-list">
+                <div v-for="item in filteredUpdateFormQuestionCategories" :key="item.id" class="dropdown-item"
+                  @mousedown="selectUpdateFormQuestionCategory(item)">
                   {{ item.name }}
-                  <span
-                    v-if="
-                      selectedUpdateFormQuestionCategory &&
-                      selectedUpdateFormQuestionCategory.id === item.id
-                    "
-                    class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="
+                    selectedUpdateFormQuestionCategory &&
+                    selectedUpdateFormQuestionCategory.id === item.id
+                  " class="selected-mark">✓</span>
                   <!-- 删除问题类别按钮（更新表单） - 根据权限显示 -->
-                  <button
-                    v-if="hasPermission('question:delete')"
-                    type="button"
-                    @mousedown.stop="confirmDeleteQuestionCategory(item)"
-                    class="btn-remove-small"
-                    title="删除问题类别"
-                  >
+                  <button v-if="hasPermission('question:delete')" type="button"
+                    @mousedown.stop="confirmDeleteQuestionCategory(item)" class="btn-remove-small" title="删除问题类别">
                     ×
                   </button>
                 </div>
@@ -1215,11 +810,7 @@
             </div>
             <div class="selected-item" v-if="selectedUpdateFormQuestionCategory">
               已选择: {{ selectedUpdateFormQuestionCategory.name }}
-              <button
-                type="button"
-                @click="clearUpdateFormQuestionCategory"
-                class="btn-remove"
-              >
+              <button type="button" @click="clearUpdateFormQuestionCategory" class="btn-remove">
                 清除
               </button>
             </div>
@@ -1243,46 +834,26 @@
             </div>
 
             <!-- 当科目和年级都选择后显示知识点树 -->
-            <div
-              v-else-if="updateForm.subject_id && updateForm.grade_id"
-              class="knowledge-tree-container"
-            >
+            <div v-else-if="updateForm.subject_id && updateForm.grade_id" class="knowledge-tree-container">
               <div class="tree-controls">
-                <input
-                  type="text"
-                  v-model="updateFormKnowledgeSearch"
-                  placeholder="搜索知识点..."
-                  class="search-input"
-                  @input="filterUpdateFormKnowledgeTree"
-                />
-                <button
-                  v-if="updateFormKnowledgeSearch"
-                  @click="clearUpdateFormKnowledgeSearch"
-                  class="btn-clear"
-                >
+                <input type="text" v-model="updateFormKnowledgeSearch" placeholder="搜索知识点..." class="search-input"
+                  @input="filterUpdateFormKnowledgeTree" />
+                <button v-if="updateFormKnowledgeSearch" @click="clearUpdateFormKnowledgeSearch" class="btn-clear">
                   清除搜索
                 </button>
               </div>
 
               <div class="tree-wrapper">
-                <KnowledgeTree
-                  v-if="updateFormKnowledgeTreeData.length"
-                  :data="updateFormKnowledgeTreeData"
-                  :selected-id="updateForm.knowledge_point_id"
-                  @select="selectUpdateFormKnowledgePoint"
-                  @toggle="toggleUpdateFormKnowledgeNode"
-                />
+                <KnowledgeTree v-if="updateFormKnowledgeTreeData.length" :data="updateFormKnowledgeTreeData"
+                  :selected-id="updateForm.knowledge_point_id" @select="selectUpdateFormKnowledgePoint"
+                  @toggle="toggleUpdateFormKnowledgeNode" />
                 <div v-else class="no-knowledge">暂无知识点数据</div>
               </div>
 
               <!-- 已选择的知识点显示 -->
               <div class="selected-item" v-if="selectedUpdateFormKnowledgePoint">
                 已选择: {{ selectedUpdateFormKnowledgePoint.name }}
-                <button
-                  type="button"
-                  @click="clearUpdateFormKnowledgePoint"
-                  class="btn-remove"
-                >
+                <button type="button" @click="clearUpdateFormKnowledgePoint" class="btn-remove">
                   清除
                 </button>
               </div>
@@ -1300,50 +871,28 @@
               正在加载知识点...
             </div>
 
-            <div
-              v-else-if="updateForm.subject_id && updateForm.grade_id"
-              class="knowledge-tree-container"
-            >
+            <div v-else-if="updateForm.subject_id && updateForm.grade_id" class="knowledge-tree-container">
               <div class="tree-controls">
-                <input
-                  type="text"
-                  v-model="updateFormSubKnowledgeSearch"
-                  placeholder="搜索副知识点..."
-                  class="search-input"
-                  @input="filterUpdateFormSubKnowledgeTree"
-                />
-                <button
-                  v-if="updateFormSubKnowledgeSearch"
-                  @click="clearUpdateFormSubKnowledgeSearch"
-                  class="btn-clear"
-                >
+                <input type="text" v-model="updateFormSubKnowledgeSearch" placeholder="搜索副知识点..." class="search-input"
+                  @input="filterUpdateFormSubKnowledgeTree" />
+                <button v-if="updateFormSubKnowledgeSearch" @click="clearUpdateFormSubKnowledgeSearch"
+                  class="btn-clear">
                   清除搜索
                 </button>
               </div>
 
               <div class="tree-wrapper">
-                <KnowledgeTree
-                  v-if="updateFormSubKnowledgeTreeData.length"
-                  :data="updateFormSubKnowledgeTreeData"
-                  :multi-selected-ids="updateForm.sub_knowledge_point_ids"
-                  @select="selectUpdateFormSubKnowledgePoint"
-                  @toggle="toggleUpdateFormSubKnowledgeNode"
-                />
+                <KnowledgeTree v-if="updateFormSubKnowledgeTreeData.length" :data="updateFormSubKnowledgeTreeData"
+                  :multi-selected-ids="updateForm.sub_knowledge_point_ids" @select="selectUpdateFormSubKnowledgePoint"
+                  @toggle="toggleUpdateFormSubKnowledgeNode" />
                 <div v-else class="no-knowledge">暂无知识点数据</div>
               </div>
 
               <!-- 已选择的副知识点标签显示 -->
-              <div
-                class="selected-items"
-                v-if="selectedUpdateFormSubKnowledgePoints.length"
-              >
+              <div class="selected-items" v-if="selectedUpdateFormSubKnowledgePoints.length">
                 <span class="selected-tags-label">已选择：</span>
-                <span
-                  v-for="kp in selectedUpdateFormSubKnowledgePoints"
-                  :key="kp.id"
-                  class="selected-tag"
-                  @click="removeUpdateFormSubKnowledgePoint(kp.id)"
-                >
+                <span v-for="kp in selectedUpdateFormSubKnowledgePoints" :key="kp.id" class="selected-tag"
+                  @click="removeUpdateFormSubKnowledgePoint(kp.id)">
                   {{ kp.name }} ×
                 </span>
               </div>
@@ -1356,45 +905,22 @@
           <div class="form-group">
             <label class="form-label">解题思想：</label>
             <div class="searchable-select">
-              <input
-                type="text"
-                v-model="updateFormSolutionIdeaSearch"
-                placeholder="输入关键字搜索解题思想..."
-                class="form-input search-input"
-                @input="filterUpdateFormSolutionIdeas"
-                @focus="
+              <input type="text" v-model="updateFormSolutionIdeaSearch" placeholder="输入关键字搜索解题思想..."
+                class="form-input search-input" @input="filterUpdateFormSolutionIdeas" @focus="
                   resetFilteredList('updateFormSolutionIdea');
-                  showUpdateFormSolutionIdeaDropdown = true;
-                "
-                @blur="onUpdateFormSolutionIdeaBlur"
-              />
-              <div
-                v-if="
-                  showUpdateFormSolutionIdeaDropdown &&
-                  filteredUpdateFormSolutionIdeas.length
-                "
-                class="dropdown-list"
-              >
-                <div
-                  v-for="item in filteredUpdateFormSolutionIdeas"
-                  :key="item.id"
-                  class="dropdown-item"
-                  @mousedown="selectUpdateFormSolutionIdea(item)"
-                >
+                showUpdateFormSolutionIdeaDropdown = true;
+                " @blur="onUpdateFormSolutionIdeaBlur" />
+              <div v-if="
+                showUpdateFormSolutionIdeaDropdown &&
+                filteredUpdateFormSolutionIdeas.length
+              " class="dropdown-list">
+                <div v-for="item in filteredUpdateFormSolutionIdeas" :key="item.id" class="dropdown-item"
+                  @mousedown="selectUpdateFormSolutionIdea(item)">
                   {{ item.name }}
-                  <span
-                    v-if="isUpdateFormSolutionIdeaSelected(item.id)"
-                    class="selected-mark"
-                    >✓</span
-                  >
+                  <span v-if="isUpdateFormSolutionIdeaSelected(item.id)" class="selected-mark">✓</span>
                   <!-- 删除解题思想按钮（更新表单） - 根据权限显示 -->
-                  <button
-                    v-if="hasPermission('question:delete')"
-                    type="button"
-                    @mousedown.stop="confirmDeleteSolutionIdea(item)"
-                    class="btn-remove-small"
-                    title="删除解题思想"
-                  >
+                  <button v-if="hasPermission('question:delete')" type="button"
+                    @mousedown.stop="confirmDeleteSolutionIdea(item)" class="btn-remove-small" title="删除解题思想">
                     ×
                   </button>
                 </div>
@@ -1402,30 +928,17 @@
             </div>
             <div class="selected-items" v-if="selectedUpdateFormSolutionIdeas.length">
               <span class="selected-tags-label">已选择：</span>
-              <span
-                v-for="item in selectedUpdateFormSolutionIdeas"
-                :key="item.id"
-                class="selected-tag"
-                @click="removeUpdateFormSolutionIdea(item.id)"
-              >
+              <span v-for="item in selectedUpdateFormSolutionIdeas" :key="item.id" class="selected-tag"
+                @click="removeUpdateFormSolutionIdea(item.id)">
                 {{ item.name }} ×
               </span>
             </div>
             <!-- 新增解题思想功能 -->
             <div class="new-knowledge-input">
-              <input
-                type="text"
-                v-model="newUpdateFormSolutionIdea"
-                placeholder="新建解题思想（多个用逗号分隔）"
-                class="form-input"
-                @keypress.enter="uploadUpdateFormSolutionIdea"
-              />
-              <button
-                type="button"
-                @click="uploadUpdateFormSolutionIdea"
-                class="btn-highlight"
-                :disabled="!newUpdateFormSolutionIdea.trim()"
-              >
+              <input type="text" v-model="newUpdateFormSolutionIdea" placeholder="新建解题思想（多个用逗号分隔）" class="form-input"
+                @keypress.enter="uploadUpdateFormSolutionIdea" />
+              <button type="button" @click="uploadUpdateFormSolutionIdea" class="btn-highlight"
+                :disabled="!newUpdateFormSolutionIdea.trim()">
                 新增解题思想
               </button>
             </div>
@@ -1445,21 +958,10 @@
             <label class="form-label required">题目内容：</label>
             <!-- Markdown 编辑器 -->
             <div class="markdown-editor-container">
-              <textarea
-                v-model="updateForm.title"
-                data-form="updateForm"
-                data-field="title"
-                class="markdown-editor"
-                placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式"
-                @paste="handlePaste"
-                @drop.prevent="handleDrop"
-                @dragover.prevent
-                rows="6"
-              ></textarea>
-              <div
-                class="markdown-preview"
-                v-html="renderMarkdown(updateForm.title)"
-              ></div>
+              <textarea v-model="updateForm.title" data-form="updateForm" data-field="title" class="markdown-editor"
+                placeholder="请输入题干，支持 Markdown 语法和 LaTeX 数学公式" @paste="handlePaste" @drop.prevent="handleDrop"
+                @dragover.prevent rows="6"></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.title)"></div>
             </div>
           </div>
 
@@ -1467,51 +969,25 @@
           <div v-if="showUpdateSingleOptions" class="form-group">
             <label class="form-label">选项：</label>
             <div class="options-list">
-              <div
-                v-for="(opt, index) in updateForm.options"
-                :key="index"
-                class="option-item"
-              >
+              <div v-for="(opt, index) in updateForm.options" :key="index" class="option-item">
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
                 <div class="option-input-container">
                   <!-- 选项 Markdown 编辑器 -->
                   <div class="markdown-editor-container small">
-                    <textarea
-                      v-model="opt.text"
-                      data-form="updateForm"
-                      data-field="text"
-                      :data-opt="index"
-                      class="markdown-editor option-editor"
-                      :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                      @paste="handlePaste"
-                      @drop.prevent="handleDrop"
-                      @dragover.prevent
-                      rows="3"
-                    ></textarea>
+                    <textarea v-model="opt.text" data-form="updateForm" data-field="text" :data-opt="index"
+                      class="markdown-editor option-editor" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                      @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent rows="3"></textarea>
                     <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                   </div>
                 </div>
                 <div class="option-actions">
                   <!-- 单选题答案选择 -->
-                  <input
-                    type="radio"
-                    name="updateSingleAnswer"
-                    :value="index"
-                    v-model="updateSingleAnswerIndex"
-                    :id="`update-single-answer-${index}`"
-                    class="radio-input"
-                    required
-                  />
-                  <label class="radio-label" :for="`update-single-answer-${index}`"
-                    >正确答案</label
-                  >
+                  <input type="radio" name="updateSingleAnswer" :value="index" v-model="updateSingleAnswerIndex"
+                    :id="`update-single-answer-${index}`" class="radio-input" required />
+                  <label class="radio-label" :for="`update-single-answer-${index}`">正确答案</label>
                   <!-- 删除选项按钮 -->
-                  <button
-                    type="button"
-                    @click="removeUpdateOption(index)"
-                    class="btn-remove"
-                    :disabled="updateForm.options.length <= 2"
-                  >
+                  <button type="button" @click="removeUpdateOption(index)" class="btn-remove"
+                    :disabled="updateForm.options.length <= 2">
                     删除
                   </button>
                 </div>
@@ -1527,48 +1003,25 @@
           <div v-if="showUpdateMultipleOptions" class="form-group">
             <label class="form-label">选项：</label>
             <div class="options-list">
-              <div
-                v-for="(opt, index) in updateForm.options"
-                :key="index"
-                class="option-item"
-              >
+              <div v-for="(opt, index) in updateForm.options" :key="index" class="option-item">
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
                 <div class="option-input-container">
                   <!-- 选项 Markdown 编辑器 -->
                   <div class="markdown-editor-container small">
-                    <textarea
-                      v-model="opt.text"
-                      data-form="updateForm"
-                      data-field="text"
-                      :data-opt="index"
-                      class="markdown-editor option-editor"
-                      :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
-                      @paste="handlePaste"
-                      @drop.prevent="handleDrop"
-                      @dragover.prevent
-                      rows="3"
-                    ></textarea>
+                    <textarea v-model="opt.text" data-form="updateForm" data-field="text" :data-opt="index"
+                      class="markdown-editor option-editor" :placeholder="`请输入选项 ${getOptionLabel(index)} 的内容`"
+                      @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent rows="3"></textarea>
                     <div class="markdown-preview" v-html="renderMarkdown(opt.text)"></div>
                   </div>
                 </div>
                 <div class="option-actions">
                   <!-- 多选题答案选择 -->
-                  <input
-                    type="checkbox"
-                    v-model="opt.isAnswer"
-                    :id="`update-multiple-answer-${index}`"
-                    class="checkbox-input"
-                  />
-                  <label class="checkbox-label" :for="`update-multiple-answer-${index}`"
-                    >正确答案</label
-                  >
+                  <input type="checkbox" v-model="opt.isAnswer" :id="`update-multiple-answer-${index}`"
+                    class="checkbox-input" />
+                  <label class="checkbox-label" :for="`update-multiple-answer-${index}`">正确答案</label>
                   <!-- 删除选项按钮 -->
-                  <button
-                    type="button"
-                    @click="removeUpdateOption(index)"
-                    class="btn-remove"
-                    :disabled="updateForm.options.length <= 2"
-                  >
+                  <button type="button" @click="removeUpdateOption(index)" class="btn-remove"
+                    :disabled="updateForm.options.length <= 2">
                     删除
                   </button>
                 </div>
@@ -1585,21 +1038,10 @@
             <label class="form-label">参考答案：</label>
             <!-- Markdown 编辑器 -->
             <div class="markdown-editor-container">
-              <textarea
-                v-model="updateForm.answer"
-                data-form="updateForm"
-                data-field="answer"
-                class="markdown-editor"
-                placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式"
-                @paste="handlePaste"
-                @drop.prevent="handleDrop"
-                @dragover.prevent
-                rows="6"
-              ></textarea>
-              <div
-                class="markdown-preview"
-                v-html="renderMarkdown(updateForm.answer)"
-              ></div>
+              <textarea v-model="updateForm.answer" data-form="updateForm" data-field="answer" class="markdown-editor"
+                placeholder="请输入参考答案，支持 Markdown 语法和 LaTeX 数学公式" @paste="handlePaste" @drop.prevent="handleDrop"
+                @dragover.prevent rows="6"></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.answer)"></div>
             </div>
           </div>
 
@@ -1608,21 +1050,10 @@
             <label class="form-label">解析：</label>
             <!-- Markdown 编辑器 -->
             <div class="markdown-editor-container">
-              <textarea
-                v-model="updateForm.notes"
-                data-form="updateForm"
-                data-field="notes"
-                class="markdown-editor"
-                placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式"
-                @paste="handlePaste"
-                @drop.prevent="handleDrop"
-                @dragover.prevent
-                rows="6"
-              ></textarea>
-              <div
-                class="markdown-preview"
-                v-html="renderMarkdown(updateForm.notes)"
-              ></div>
+              <textarea v-model="updateForm.notes" data-form="updateForm" data-field="notes" class="markdown-editor"
+                placeholder="请输入题目解析，支持 Markdown 语法和 LaTeX 数学公式" @paste="handlePaste" @drop.prevent="handleDrop"
+                @dragover.prevent rows="6"></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.notes)"></div>
             </div>
           </div>
 
@@ -1631,32 +1062,16 @@
             <label class="form-label">备注：</label>
             <!-- Markdown 编辑器 -->
             <div class="markdown-editor-container">
-              <textarea
-                v-model="updateForm.remark"
-                data-form="updateForm"
-                data-field="remark"
-                class="markdown-editor"
-                placeholder="请输入备注信息，支持 Markdown 语法"
-                @paste="handlePaste"
-                @drop.prevent="handleDrop"
-                @dragover.prevent
-                rows="4"
-              ></textarea>
-              <div
-                class="markdown-preview"
-                v-html="renderMarkdown(updateForm.remark)"
-              ></div>
+              <textarea v-model="updateForm.remark" data-form="updateForm" data-field="remark" class="markdown-editor"
+                placeholder="请输入备注信息，支持 Markdown 语法" @paste="handlePaste" @drop.prevent="handleDrop" @dragover.prevent
+                rows="4"></textarea>
+              <div class="markdown-preview" v-html="renderMarkdown(updateForm.remark)"></div>
             </div>
           </div>
 
           <!-- 更新操作按钮 -->
           <div class="form-actions">
-            <button
-              type="button"
-              @click="showUpdatePreview"
-              class="btn-primary submit-btn"
-              :disabled="submitting"
-            >
+            <button type="button" @click="showUpdatePreview" class="btn-primary submit-btn" :disabled="submitting">
               {{ submitting ? "更新中..." : "预览并更新" }}
             </button>
             <button type="button" @click="cancelUpdate" class="btn-secondary">
@@ -1687,11 +1102,7 @@
     </div>
 
     <!-- ==================== 题目预览模态框 ==================== -->
-    <div
-      v-if="showPreviewModal"
-      class="modal-overlay preview-modal-overlay"
-      @click="closePreview"
-    >
+    <div v-if="showPreviewModal" class="modal-overlay preview-modal-overlay" @click="closePreview">
       <div class="preview-modal-content">
         <h3 class="preview-modal-title">
           {{ previewMode === "upload" ? "题目上传预览" : "题目更新预览" }}
@@ -1703,13 +1114,13 @@
             <h4>基本信息</h4>
             <div class="preview-grid">
               <div class="preview-item">
-      <label>上传人:</label>
-      <span>{{ getPreviewUploaderName() }}</span>
-    </div>
-    <div class="preview-item">
-      <label>审核人:</label>
-      <span>{{ getPreviewReviewerName() }}</span>
-    </div>
+                <label>上传人:</label>
+                <span>{{ getPreviewUploaderName() }}</span>
+              </div>
+              <div class="preview-item">
+                <label>审核人:</label>
+                <span>{{ getPreviewReviewerName() }}</span>
+              </div>
               <div class="preview-item">
                 <label>学校:</label>
                 <span>{{ getPreviewSchoolName() }}</span>
@@ -1759,10 +1170,7 @@
           <!-- 题目内容 -->
           <div class="preview-section">
             <h4>题目内容</h4>
-            <div
-              class="preview-text-content"
-              v-html="renderMarkdown(getPreviewTitle())"
-            ></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewTitle())"></div>
             <div v-if="getPreviewImageUrl()" class="preview-image">
               <img :src="getPreviewImageUrl()" alt="题目图片" class="preview-img" />
             </div>
@@ -1772,17 +1180,11 @@
           <div v-if="showPreviewOptions()" class="preview-section">
             <h4>选项</h4>
             <div class="preview-options">
-              <div
-                v-for="(opt, index) in getPreviewOptions()"
-                :key="index"
-                class="preview-option"
-                :class="{ 'correct-answer': isPreviewOptionCorrect(index) }"
-              >
+              <div v-for="(opt, index) in getPreviewOptions()" :key="index" class="preview-option"
+                :class="{ 'correct-answer': isPreviewOptionCorrect(index) }">
                 <span class="option-label">{{ getOptionLabel(index) }}.</span>
                 <span class="option-text" v-html="renderMarkdown(opt.text)"></span>
-                <span v-if="isPreviewOptionCorrect(index)" class="correct-badge"
-                  >正确答案</span
-                >
+                <span v-if="isPreviewOptionCorrect(index)" class="correct-badge">正确答案</span>
               </div>
             </div>
           </div>
@@ -1790,28 +1192,19 @@
           <!-- 答案（主观题） -->
           <div v-if="showPreviewSubjectiveAnswer()" class="preview-section">
             <h4>参考答案</h4>
-            <div
-              class="preview-text-content"
-              v-html="renderMarkdown(getPreviewAnswer())"
-            ></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewAnswer())"></div>
           </div>
 
           <!-- 解析 -->
           <div v-if="getPreviewNotes()" class="preview-section">
             <h4>解析</h4>
-            <div
-              class="preview-text-content"
-              v-html="renderMarkdown(getPreviewNotes())"
-            ></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewNotes())"></div>
           </div>
 
           <!-- 备注 -->
           <div v-if="getPreviewRemark()" class="preview-section">
             <h4>备注</h4>
-            <div
-              class="preview-text-content"
-              v-html="renderMarkdown(getPreviewRemark())"
-            ></div>
+            <div class="preview-text-content" v-html="renderMarkdown(getPreviewRemark())"></div>
           </div>
         </div>
 
@@ -1834,10 +1227,7 @@
         </p>
 
         <!-- 对于解题思想和问题类别，显示依赖题目列表 -->
-        <div
-          v-if="deleteEntityType === '解题思想' || deleteEntityType === '问题类别'"
-          class="dependent-questions"
-        >
+        <div v-if="deleteEntityType === '解题思想' || deleteEntityType === '问题类别'" class="dependent-questions">
           <h4>
             以下题目使用了该{{ deleteEntityType }}（共
             {{ dependentQuestionsTotalItems }} 条）：
@@ -1851,17 +1241,11 @@
                     getQuestionCategoryName(q.question_category_id)
                   }}</span>
                 </div>
-                <div
-                  class="dependent-question-content"
-                  v-html="renderMarkdown(q.title)"
-                ></div>
+                <div class="dependent-question-content" v-html="renderMarkdown(q.title)"></div>
                 <div class="dependent-question-actions">
                   <!-- 删除按钮 - 根据权限显示 -->
-                  <button
-                    v-if="hasPermission('question:delete')"
-                    @click="deleteDependentQuestion(q)"
-                    class="btn-delete"
-                  >
+                  <button v-if="hasPermission('question:delete')" @click="deleteDependentQuestion(q)"
+                    class="btn-delete">
                     删除
                   </button>
                 </div>
@@ -1871,83 +1255,48 @@
         </div>
 
         <!-- 对于解题思想和问题类别，显示分页控件 -->
-        <div
-          v-if="deleteEntityType === '解题思想' || deleteEntityType === '问题类别'"
-          class="pagination-controls"
-        >
-          <button
-            @click="goToDependentFirstPage"
-            :disabled="dependentQuestionsPageNum <= 1"
-            class="pagination-btn"
-          >
+        <div v-if="deleteEntityType === '解题思想' || deleteEntityType === '问题类别'" class="pagination-controls">
+          <button @click="goToDependentFirstPage" :disabled="dependentQuestionsPageNum <= 1" class="pagination-btn">
             首页
           </button>
-          <button
-            @click="changeDependentPage(dependentQuestionsPageNum - 1)"
-            :disabled="dependentQuestionsPageNum <= 1"
-            class="pagination-btn"
-          >
+          <button @click="changeDependentPage(dependentQuestionsPageNum - 1)" :disabled="dependentQuestionsPageNum <= 1"
+            class="pagination-btn">
             上一页
           </button>
 
-          <span
-            >第 {{ dependentQuestionsPageNum }} 页，共
+          <span>第 {{ dependentQuestionsPageNum }} 页，共
             {{ dependentQuestionsTotalPages }} 页 ({{
               dependentQuestionsTotalItems
             }}
-            条)</span
-          >
+            条)</span>
 
-          <button
-            @click="changeDependentPage(dependentQuestionsPageNum + 1)"
-            :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
-            class="pagination-btn"
-          >
+          <button @click="changeDependentPage(dependentQuestionsPageNum + 1)"
+            :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages" class="pagination-btn">
             下一页
           </button>
-          <button
-            @click="goToDependentLastPage"
-            :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
-            class="pagination-btn"
-          >
+          <button @click="goToDependentLastPage" :disabled="dependentQuestionsPageNum >= dependentQuestionsTotalPages"
+            class="pagination-btn">
             末页
           </button>
 
-          <input
-            type="number"
-            v-model.number="dependentQuestionsPageInput"
-            min="1"
-            :max="dependentQuestionsTotalPages"
-            placeholder="页码"
-            @keyup.enter="goToDependentPage"
-            class="page-input"
-          />
+          <input type="number" v-model.number="dependentQuestionsPageInput" min="1" :max="dependentQuestionsTotalPages"
+            placeholder="页码" @keyup.enter="goToDependentPage" class="page-input" />
           <button @click="goToDependentPage" class="pagination-btn">跳转</button>
         </div>
 
         <div class="modal-actions">
           <!-- 对于解题思想和问题类别，显示全部删除按钮 -->
-          <button
-            v-if="
-              (deleteEntityType === '解题思想' || deleteEntityType === '问题类别') &&
-              dependentQuestions.length > 0 &&
-              hasPermission('question:delete')
-            "
-            @click="deleteAllDependentQuestions"
-            class="btn-delete delete-all-btn"
-          >
+          <button v-if="
+            (deleteEntityType === '解题思想' || deleteEntityType === '问题类别') &&
+            dependentQuestions.length > 0 &&
+            hasPermission('question:delete')
+          " @click="deleteAllDependentQuestions" class="btn-delete delete-all-btn">
             全部删除（共 {{ dependentQuestionsTotalItems }} 道题目）
           </button>
           <!-- 确认删除按钮 - 根据权限显示 -->
-          <button
-            v-if="hasPermission('question:delete')"
-            @click="deleteEntity"
-            class="btn-delete"
-            :disabled="
-              (deleteEntityType === '解题思想' || deleteEntityType === '问题类别') &&
-              dependentQuestions.length > 0
-            "
-          >
+          <button v-if="hasPermission('question:delete')" @click="deleteEntity" class="btn-delete" :disabled="(deleteEntityType === '解题思想' || deleteEntityType === '问题类别') &&
+            dependentQuestions.length > 0
+            ">
             确认删除
           </button>
           <button @click="cancelDeleteEntity" class="btn-secondary">取消</button>
@@ -2987,24 +2336,50 @@ const removeUpdateOption = (index) => {
  * 处理问题类别变更
  */
 const handleQuestionCategoryChange = () => {
-  // 重置选项
-  form.options = [
-    { text: "", isAnswer: false },
-    { text: "", isAnswer: false },
-    { text: "", isAnswer: false },
-    { text: "", isAnswer: false },
-  ];
-  singleAnswerIndex.value = null;
-  form.answer = "";
+  const name = selectedQuestionCategory.value?.name || "";
+  const isChoiceQuestion = name === "单选题" ||
+    name.includes("单选") ||
+    name === "多选题" ||
+    name.includes("多选");
+  const wasChoiceQuestion = form._lastQuestionCategoryType?.isChoice || false;
+
+  // 只在从选择题切换到选择题时重置选项
+  if (isChoiceQuestion) {
+    // 保存当前答案（如果是选择题，答案可能是字母）
+    const currentAnswer = form.answer;
+
+    // 重置选项（保留现有文本，清空答案标记）
+    form.options = form.options.map((opt, index) => ({
+      text: opt.text || "",
+      isAnswer: false
+    }));
+
+    // 确保至少有4个选项
+    while (form.options.length < 4) {
+      form.options.push({ text: "", isAnswer: false });
+    }
+
+    // 如果是第一次进入选择题，或者从主观题切换过来，才重置答案
+    if (!wasChoiceQuestion) {
+      singleAnswerIndex.value = null;
+      form.answer = "";
+    }
+  } else {
+    // 主观题：保留答案，不清空
+    // 不需要做任何重置
+  }
 
   // 根据问题类别设置默认评分方法
-  if (selectedQuestionCategory.value) {
-    const name = selectedQuestionCategory.value.name || "";
-    const autoMarkingKeywords = ["单选", "多选"]; // 可在这里扩展更多自动评分题型
-    form.marking_type = autoMarkingKeywords.some((keyword) => name.includes(keyword))
-      ? 0
-      : 1;
-  }
+  const autoMarkingKeywords = ["单选", "多选"];
+  form.marking_type = autoMarkingKeywords.some((keyword) => name.includes(keyword))
+    ? 0
+    : 1;
+
+  // 保存当前问题类别类型，用于下次判断
+  form._lastQuestionCategoryType = {
+    name,
+    isChoice: isChoiceQuestion
+  };
 };
 
 /**
@@ -3041,7 +2416,9 @@ const selectQuestionCategory = (item) => {
   form.question_category_id = item.id;
   questionCategorySearch.value = item.name;
   showQuestionCategoryDropdown.value = false;
+
   handleQuestionCategoryChange();
+
   // 更新记忆
   uploadMemory.value.question_category_id = item.id;
   saveUploadMemory();
@@ -3435,17 +2812,17 @@ const loadReviewerList = async () => {
   try {
     loadingReviewers.value = true;
     reviewerLoadError.value = false;
-    
+
     // 并行获取教师列表和角色列表
     const [staffResponse, roleResponse] = await Promise.all([
       axios.get(`${API_BASE}/user/getStaffList`),
       axios.get(`${API_BASE}/questions/getRoleList`)
     ]);
-    
+
     if (staffResponse.data.code === 200 && staffResponse.data.data) {
       // 保存完整的教师列表
       staffList.value = staffResponse.data.data;
-      
+
       // 处理角色映射关系
       let roleMap = {};
       if (roleResponse.data.code === 200 && roleResponse.data.data) {
@@ -3453,20 +2830,20 @@ const loadReviewerList = async () => {
           roleMap[role.id] = role.role_name;
         });
       }
-      
+
       // 过滤出有审核权限的用户 (role是1或2，对应ROLE_ROOT和ROLE_ADMINISTRATOR)
       reviewerOptions.value = staffList.value
         .filter(user => {
           if (!user || user.role === undefined || user.role === null) {
             return false;
           }
-          
+
           // 获取用户角色ID
           const userRoleId = Number(user.role);
-          
+
           // 检查是否是ROOT或ADMINISTRATOR
           const isReviewer = userRoleId === 1 || userRoleId === 2; // 1: ROLE_ROOT, 2: ROLE_ADMINISTRATOR
-          
+
           // 获取角色名称用于日志
           const roleName = roleMap[userRoleId] || `未知角色(ID:${userRoleId})`;
 
@@ -3474,7 +2851,7 @@ const loadReviewerList = async () => {
           if (currentUser.value && user.account === currentUser.value) {
             return false;
           }
-          
+
           return isReviewer;
         })
         .map(user => ({
@@ -3484,12 +2861,12 @@ const loadReviewerList = async () => {
           role_id: user.role,
           role_name: roleMap[user.role] || `角色ID:${user.role}`
         }));
-      
+
       if (reviewerOptions.value.length === 0) {
         console.warn("没有找到符合条件的审核人");
         ElMessage.warning("没有找到符合条件的审核人，请确保有ROOT或ADMINISTRATOR权限的教师账户");
       }
-      
+
     } else {
       console.error("获取教师列表失败:", staffResponse.data.message);
       reviewerLoadError.value = true;
@@ -3964,11 +3341,249 @@ const saveUploadMemory = () => {
 /**
  * 组件挂载时执行
  */
-onMounted(() => {
-  loadLists();
+const isDataInitialized = ref(false);
+
+onMounted(async () => {
+  // 1. 先加载所有列表数据 - 使用 await 确保数据加载完成
+  await loadLists();
+
+  // 2. 加载其他数据
   getCurrentUser();
   loadReviewerList();
   fetchKnowledgePointList();
+
+  // 3. 数据加载完成后再检查是否有再次上传的数据
+  const reuploadData = localStorage.getItem('reuploadQuestionData');
+  if (reuploadData) {
+    try {
+      const questionData = JSON.parse(reuploadData);
+
+      // ============ 立即恢复的数据 ============
+      // 基础字段
+      form.school_id = questionData.school_id;
+      form.grade_id = questionData.grade_id;
+      form.subject_id = questionData.subject_id;
+      form.marking_type = questionData.marking_type || 0;
+      form.difficulty_level = questionData.difficulty_level;
+      form.title = questionData.title || "";
+      form.answer = questionData.answer || "";
+      form.notes = questionData.notes || "";
+      form.remark = questionData.remark || "";
+      form.img_url = questionData.img_url || "";
+
+      // 恢复副知识点
+      form.sub_knowledge_point_ids =
+        questionData.sub_knowledge_point_ids ||
+        questionData.subKnowledgePointIds ||
+        [];
+
+      // 恢复解题思想
+      form.solution_idea_ids =
+        questionData.solution_idea_ids ||
+        questionData.solutionIdeaIds ||
+        [];
+
+      // 恢复选项
+      if (questionData.options && Array.isArray(questionData.options)) {
+        form.options = questionData.options;
+      }
+
+      // ============ 问题类别恢复 ============
+      if (questionData.question_category_id) {
+        const categoryId = Number(questionData.question_category_id);
+        const category = questionCategoryList.value.find(c => c.id === categoryId);
+
+        if (category) {
+          // 1. 先保存所有需要恢复的数据
+          const savedAnswer = questionData.answer || "";
+          const savedOptions = questionData.options || [];
+          const savedSingleAnswerIndex = (() => {
+            if (savedOptions.length && savedAnswer) {
+              const index = savedOptions.findIndex((opt, i) => {
+                const letter = String.fromCharCode(65 + i);
+                return savedAnswer === letter;
+              });
+              return index !== -1 ? index : null;
+            }
+            return null;
+          })();
+
+          // 2. 设置问题类别
+          selectedQuestionCategory.value = category;
+          form.question_category_id = category.id;
+          questionCategorySearch.value = category.name;
+
+          // 3. 先恢复选项
+          if (savedOptions.length) {
+            form.options = savedOptions;
+          }
+
+          // 4. 调用处理函数（修改后的版本不会清空重要数据）
+          handleQuestionCategoryChange();
+
+          // 5. 恢复答案
+          const isChoiceQuestion = category.name === "单选题" ||
+            category.name.includes("单选") ||
+            category.name === "多选题" ||
+            category.name.includes("多选");
+
+          if (isChoiceQuestion) {
+            // 选择题：恢复单选索引
+            if (savedSingleAnswerIndex !== null) {
+              singleAnswerIndex.value = savedSingleAnswerIndex;
+            }
+          } else {
+            // 主观题：恢复文本答案
+            form.answer = savedAnswer;
+          }
+
+          // 6. 更新记忆
+          uploadMemory.value.question_category_id = category.id;
+          saveUploadMemory();
+        }
+      }
+
+      // ============ 恢复单选题答案 ============
+      if (questionData.options && questionData.answer && selectedQuestionCategory.value) {
+        const questionCategoryName = selectedQuestionCategory.value.name;
+        if (questionCategoryName === '单选题' || questionCategoryName?.includes('单选')) {
+          const answerIndex = questionData.options.findIndex((opt, index) => {
+            const letter = String.fromCharCode(65 + index);
+            return questionData.answer === letter;
+          });
+          if (answerIndex !== -1) {
+            singleAnswerIndex.value = answerIndex;
+          }
+        }
+      }
+
+      // ============ 知识点恢复 ============
+      // 先保存知识点ID，但不要立即设置到form
+      const pendingKnowledgeId = questionData.knowledge_point_id
+        ? Number(questionData.knowledge_point_id)
+        : null;
+
+      if (pendingKnowledgeId) {
+        console.log('准备恢复知识点ID:', pendingKnowledgeId);
+
+        // 定义查找并选中知识点的函数
+        const selectKnowledgeNode = (nodes) => {
+          for (const node of nodes) {
+            if (node.id === pendingKnowledgeId) {
+              // 选中知识点
+              selectedKnowledgePoint.value = node;
+              form.knowledge_point_id = node.id;
+              console.log('知识点恢复成功:', node.name);
+              return true;
+            }
+            if (node.children && node.children.length) {
+              if (selectKnowledgeNode(node.children)) {
+                // 展开父节点
+                node.expanded = true;
+                return true;
+              }
+            }
+          }
+          return false;
+        };
+
+        // 检查知识点树是否已加载
+        if (knowledgeTreeData.value && knowledgeTreeData.value.length > 0) {
+          // 已加载，直接选中
+          selectKnowledgeNode(knowledgeTreeData.value);
+        } else {
+          // 未加载，等待知识点树加载完成
+          console.log('知识点树尚未加载，等待加载...');
+
+          // 监听知识点树数据变化
+          const unwatch = watch(
+            () => knowledgeTreeData.value,
+            (newTree) => {
+              if (newTree && newTree.length > 0) {
+                console.log('知识点树已加载，开始恢复知识点');
+                const found = selectKnowledgeNode(newTree);
+                if (found) {
+                  ElMessage.success(`已恢复知识点: ${selectedKnowledgePoint.value?.name}`);
+                } else {
+                  console.warn('未找到知识点ID:', pendingKnowledgeId);
+                }
+                unwatch(); // 停止监听
+              }
+            },
+            { immediate: true } // 立即检查一次，防止错过
+          );
+
+          // 设置超时，避免无限等待
+          setTimeout(() => {
+            unwatch();
+            if (!selectedKnowledgePoint.value) {
+              console.warn('知识点树加载超时，请手动选择知识点');
+              // 即使超时，也设置form的值，至少保证提交时有知识点ID
+              form.knowledge_point_id = pendingKnowledgeId;
+            }
+          }, 5000);
+        }
+      }
+
+      // ============ 审核人恢复 ============
+      const savedReviewer = localStorage.getItem('reuploadReviewer') || questionData.reviewer;
+      if (savedReviewer) {
+        if (reviewerOptions.value.length > 0) {
+          const reviewerExists = reviewerOptions.value.some(r => r.account === savedReviewer);
+          if (reviewerExists) {
+            selectedReviewer.value = savedReviewer;
+            ElMessage.success(`已恢复审核人: ${getReviewerName(savedReviewer)}`);
+          } else {
+            console.warn('审核人不在列表中:', savedReviewer);
+          }
+        } else {
+          const unwatch = watch(reviewerOptions, (reviewers) => {
+            if (reviewers.length > 0) {
+              const reviewerExists = reviewers.some(r => r.account === savedReviewer);
+              if (reviewerExists) {
+                selectedReviewer.value = savedReviewer;
+                ElMessage.success(`已恢复审核人: ${getReviewerName(savedReviewer)}`);
+              } else {
+                console.warn('审核人不在列表中:', savedReviewer);
+              }
+              unwatch();
+            }
+          }, { immediate: true });
+
+          setTimeout(() => {
+            unwatch();
+          }, 5000);
+        }
+      }
+
+      ElMessage.success('已恢复被拒绝的题目数据，请修改后重新提交');
+
+      // ============ 清除存储的数据 ============
+      localStorage.removeItem('reuploadQuestionData');
+      localStorage.removeItem('reuploadUploader');
+      localStorage.removeItem('reuploadReviewer');
+      localStorage.removeItem('reuploadQuestionId');
+      localStorage.removeItem('reuploadQuestionCategoryId');
+      localStorage.removeItem('sub_knowledge_point_ids');
+      localStorage.removeItem('subKnowledgePointIds');
+      localStorage.removeItem('solution_idea_ids');
+      localStorage.removeItem('solutionIdeaIds');
+
+    } catch (error) {
+      console.error('恢复题目数据失败:', error);
+      ElMessage.error('恢复题目数据失败');
+      // 清理所有可能的数据
+      localStorage.removeItem('reuploadQuestionData');
+      localStorage.removeItem('reuploadUploader');
+      localStorage.removeItem('reuploadReviewer');
+      localStorage.removeItem('reuploadQuestionId');
+      localStorage.removeItem('reuploadQuestionCategoryId');
+      localStorage.removeItem('sub_knowledge_point_ids');
+      localStorage.removeItem('subKnowledgePointIds');
+      localStorage.removeItem('solution_idea_ids');
+      localStorage.removeItem('solutionIdeaIds');
+    }
+  }
 });
 
 /**
@@ -4039,9 +3654,13 @@ const loadLists = async () => {
         saveUploadMemory();
       }
     }
+
+    // 返回成功状态
+    return true;
   } catch (err) {
     console.error("获取列表失败:", err);
     ElMessage.error("获取列表失败");
+    return false;
   }
 };
 
@@ -4411,12 +4030,12 @@ const loadMultiGradeKnowledgeTree = async (type, subjectId, gradeIds) => {
     });
 
     const results = await Promise.all(gradePromises);
-    
+
     let allKnowledgePoints = [];
-    
+
     results.forEach(result => {
       const { gradeId, gradeName, data } = result;
-      
+
       if (data && data.length > 0) {
         const addGradeInfo = (nodes) => {
           return nodes.map(node => {
@@ -4428,20 +4047,20 @@ const loadMultiGradeKnowledgeTree = async (type, subjectId, gradeIds) => {
               originalName: node.name,
               expanded: true
             };
-            
+
             if (node.children && node.children.length) {
               currentNode.children = addGradeInfo(node.children);
             }
-            
+
             return currentNode;
           });
         };
-        
+
         const gradeKnowledge = addGradeInfo(data);
         allKnowledgePoints.push(...gradeKnowledge);
       }
     });
-    
+
     // 按 sort_order 排序
     const addExpandedProperty = (nodes) => {
       const sortedNodes = nodes.sort((a, b) => {
@@ -4472,11 +4091,11 @@ const loadMultiGradeKnowledgeTree = async (type, subjectId, gradeIds) => {
         originalUpdateSubKnowledgeTreeData.value = JSON.parse(JSON.stringify(treeData));
         break;
     }
-    
+
     if (treeData.length === 0) {
       ElMessage.warning("选中的年级和科目暂无知识点数据");
     }
-    
+
   } catch (err) {
     console.error(`加载多年级知识点树失败(${type}):`, err);
     ElMessage.error("加载知识点失败，请稍后重试");
@@ -4562,9 +4181,8 @@ const loadUpdateSubKnowledgeTree = async (subjectId, gradeId) => {
   try {
     loadingUpdateKnowledgePoints.value = true;
 
-    const url = `${API_BASE}/questions/getKnowledgePointJson/${subjectId}/${
-      gradeId || ""
-    }`;
+    const url = `${API_BASE}/questions/getKnowledgePointJson/${subjectId}/${gradeId || ""
+      }`;
     const res = await axios.get(url);
     const data = res.data.data || [];
 
@@ -4796,9 +4414,9 @@ const findQuestions = async () => {
     if (searchCriteria.grade_ids.length > 0) {
       payload.grade_ids = searchCriteria.grade_ids.map(id => Number(id));
     }
-    
+
     // 其他条件处理保持不变...
-    
+
     const res = await axios.post(`${API_BASE}/questions/findQuestions`, payload);
     const responseData = res.data.data;
 
@@ -4821,7 +4439,7 @@ const findQuestions = async () => {
     } else {
       // 显示选中的年级数量
       const gradeCount = searchCriteria.grade_ids.length;
-      const gradeText = gradeCount > 1 ? 
+      const gradeText = gradeCount > 1 ?
         `跨 ${gradeCount} 个年级找到 ${totalItems.value} 条题目` :
         `找到 ${totalItems.value} 条题目`;
       ElMessage.success(gradeText);
@@ -5062,7 +4680,7 @@ const handleSubmit = async () => {
     ElMessage.error("请选择问题类别");
     return;
   }
-  
+
   // 验证审核人是否选择
   if (!selectedReviewer.value) {
     ElMessage.error("请选择审核人");
@@ -5128,10 +4746,10 @@ const handleSubmit = async () => {
         form.difficulty_level !== null ? Number(form.difficulty_level) : null,
       title: form.title,
       ...(questionCategoryName &&
-      (questionCategoryName === "单选题" ||
-        questionCategoryName.includes("单选") ||
-        questionCategoryName === "多选题" ||
-        questionCategoryName.includes("多选"))
+        (questionCategoryName === "单选题" ||
+          questionCategoryName.includes("单选") ||
+          questionCategoryName === "多选题" ||
+          questionCategoryName.includes("多选"))
         ? { options: optionsPayload }
         : {}),
       answer: answerPayload,
@@ -5143,7 +4761,7 @@ const handleSubmit = async () => {
 
     const url = `${API_BASE}/questions/uploadSingleQuestion/${currentUser.value}/${selectedReviewer.value}`;
     const res = await axios.post(url, payload);
-    
+
     if (res.data.message && res.data.message.includes("题目已存在")) {
       ElMessage.error("题目已存在");
     } else {
@@ -5234,10 +4852,10 @@ const handleUpdateSubmit = async () => {
         updateForm.difficulty_level !== null ? Number(updateForm.difficulty_level) : null,
       title: updateForm.title,
       ...(questionCategoryName &&
-      (questionCategoryName === "单选题" ||
-        questionCategoryName.includes("单选") ||
-        questionCategoryName === "多选题" ||
-        questionCategoryName.includes("多选"))
+        (questionCategoryName === "单选题" ||
+          questionCategoryName.includes("单选") ||
+          questionCategoryName === "多选题" ||
+          questionCategoryName.includes("多选"))
         ? { options: optionsPayload }
         : {}),
       answer: answerPayload,
@@ -5704,9 +5322,12 @@ init();
 /* ==================== 全局容器样式 ==================== */
 /* 主容器样式 */
 .container {
-  max-width: 1800px; /* 最大宽度，适应大屏幕 */
-  margin: auto; /* 水平居中 */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; /* 字体栈，优先使用系统字体 */
+  max-width: 1800px;
+  /* 最大宽度，适应大屏幕 */
+  margin: auto;
+  /* 水平居中 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* 字体栈，优先使用系统字体 */
 }
 
 /* ==================== 页面头部样式 ==================== */
@@ -5790,251 +5411,374 @@ init();
 
 /* ==================== 模式选择器样式 ==================== */
 .mode-select {
-  margin-bottom: 30px; /* 底部外边距 */
-  display: flex; /* 弹性布局 */
-  gap: 10px; /* 子元素间距 */
+  margin-bottom: 30px;
+  /* 底部外边距 */
+  display: flex;
+  /* 弹性布局 */
+  gap: 10px;
+  /* 子元素间距 */
 }
 
 .mode-select button {
-  padding: 10px 20px; /* 内边距 */
-  border: 2px solid #409eff; /* 边框颜色使用主题蓝色 */
-  background: white; /* 背景色 */
-  color: #409eff; /* 文字颜色 */
-  border-radius: 6px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 14px; /* 字体大小 */
-  transition: all 0.3s; /* 过渡动画 */
+  padding: 10px 20px;
+  /* 内边距 */
+  border: 2px solid #409eff;
+  /* 边框颜色使用主题蓝色 */
+  background: white;
+  /* 背景色 */
+  color: #409eff;
+  /* 文字颜色 */
+  border-radius: 6px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 14px;
+  /* 字体大小 */
+  transition: all 0.3s;
+  /* 过渡动画 */
 }
 
 /* 激活状态的按钮样式 */
 .mode-select button.active {
-  background-color: #409eff; /* 主题蓝色背景 */
-  color: white; /* 白色文字 */
+  background-color: #409eff;
+  /* 主题蓝色背景 */
+  color: white;
+  /* 白色文字 */
 }
 
 /* 非激活状态按钮的悬停效果 */
 .mode-select button:hover:not(.active) {
-  background-color: #ecf5ff; /* 浅蓝色背景 */
+  background-color: #ecf5ff;
+  /* 浅蓝色背景 */
 }
 
 /* ==================== 表单区域样式 ==================== */
 .form-section,
 .update-section {
-  background: white; /* 白色背景 */
-  padding: 20px; /* 内边距 */
-  border-radius: 8px; /* 圆角 */
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); /* 阴影效果 */
+  background: white;
+  /* 白色背景 */
+  padding: 20px;
+  /* 内边距 */
+  border-radius: 8px;
+  /* 圆角 */
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  /* 阴影效果 */
 }
 
 /* 标题样式 */
 .form-section h2,
 .update-section h2 {
-  margin-bottom: 25px; /* 底部外边距 */
-  color: #303133; /* 深灰色文字 */
-  font-size: 20px; /* 字体大小 */
-  border-bottom: 1px solid #e4e7ed; /* 底部边框 */
-  padding-bottom: 10px; /* 底部内边距 */
+  margin-bottom: 25px;
+  /* 底部外边距 */
+  color: #303133;
+  /* 深灰色文字 */
+  font-size: 20px;
+  /* 字体大小 */
+  border-bottom: 1px solid #e4e7ed;
+  /* 底部边框 */
+  padding-bottom: 10px;
+  /* 底部内边距 */
 }
 
 /* ==================== 搜索条件区域样式 ==================== */
 .search-criteria {
-  margin-bottom: 30px; /* 底部外边距 */
+  margin-bottom: 30px;
+  /* 底部外边距 */
 }
 
 .criteria-row {
-  display: flex; /* 弹性布局 */
-  flex-wrap: wrap; /* 允许换行 */
-  gap: 15px; /* 子元素间距 */
-  align-items: flex-end; /* 底部对齐 */
+  display: flex;
+  /* 弹性布局 */
+  flex-wrap: wrap;
+  /* 允许换行 */
+  gap: 15px;
+  /* 子元素间距 */
+  align-items: flex-end;
+  /* 底部对齐 */
 }
 
 .criteria-item {
-  flex: 1; /* 弹性填充 */
-  min-width: 300px; /* 最小宽度 */
+  flex: 1;
+  /* 弹性填充 */
+  min-width: 300px;
+  /* 最小宽度 */
 }
 
 .criteria-item label {
-  display: block; /* 块级显示 */
-  margin-bottom: 5px; /* 底部外边距 */
-  font-size: 14px; /* 字体大小 */
-  color: #606266; /* 中灰色文字 */
-  font-weight: 500; /* 中等字重 */
+  display: block;
+  /* 块级显示 */
+  margin-bottom: 5px;
+  /* 底部外边距 */
+  font-size: 14px;
+  /* 字体大小 */
+  color: #606266;
+  /* 中灰色文字 */
+  font-weight: 500;
+  /* 中等字重 */
 }
 
 .search-btn {
-  min-width: 80px; /* 搜索按钮最小宽度 */
+  min-width: 80px;
+  /* 搜索按钮最小宽度 */
 }
 
 /* ==================== 搜索结果区域样式 ==================== */
 .search-results {
-  margin-top: 30px; /* 顶部外边距 */
+  margin-top: 30px;
+  /* 顶部外边距 */
 }
 
 .search-results h3 {
-  margin-bottom: 15px; /* 底部外边距 */
-  color: #303133; /* 深灰色文字 */
+  margin-bottom: 15px;
+  /* 底部外边距 */
+  color: #303133;
+  /* 深灰色文字 */
 }
 
 .results-table-container {
-  overflow-x: auto; /* 水平滚动 */
-  border: 1px solid #e4e7ed; /* 边框 */
-  border-radius: 4px; /* 圆角 */
+  overflow-x: auto;
+  /* 水平滚动 */
+  border: 1px solid #e4e7ed;
+  /* 边框 */
+  border-radius: 4px;
+  /* 圆角 */
 }
 
 .results-table {
-  min-width: 1200px; /* 最小宽度 */
-  width: 100%; /* 宽度100% */
-  display: flex; /* 弹性布局 */
-  flex-direction: column; /* 垂直方向 */
+  min-width: 1200px;
+  /* 最小宽度 */
+  width: 100%;
+  /* 宽度100% */
+  display: flex;
+  /* 弹性布局 */
+  flex-direction: column;
+  /* 垂直方向 */
 }
 
 /* 表格行样式 */
 .table-header,
 .table-row {
-  display: flex; /* 弹性布局 */
-  align-items: center; /* 垂直居中 */
-  justify-content: flex-start; /* 水平居中 */
+  display: flex;
+  /* 弹性布局 */
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: flex-start;
+  /* 水平居中 */
 }
 
 .table-header {
-  background-color: #d6f0ff; /* 浅蓝色表头背景 */
-  font-weight: 600; /* 粗体字重 */
+  background-color: #d6f0ff;
+  /* 浅蓝色表头背景 */
+  font-weight: 600;
+  /* 粗体字重 */
 }
 
 .table-cell {
-  padding: 12px 8px; /* 内边距 */
-  font-size: 14px; /* 字体大小 */
-  color: #606266; /* 文字颜色 */
-  box-sizing: border-box; /* 盒模型 */
-  text-align: center; /* 文字居中 */
-  word-break: break-word; /* 单词换行 */
-  white-space: normal !important; /* 正常换行 */
+  padding: 12px 8px;
+  /* 内边距 */
+  font-size: 14px;
+  /* 字体大小 */
+  color: #606266;
+  /* 文字颜色 */
+  box-sizing: border-box;
+  /* 盒模型 */
+  text-align: center;
+  /* 文字居中 */
+  word-break: break-word;
+  /* 单词换行 */
+  white-space: normal !important;
+  /* 正常换行 */
 }
 
 .table-header .table-cell {
-  font-weight: 600; /* 粗体 */
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
+  font-weight: 600;
+  /* 粗体 */
+  justify-content: center;
+  /* 水平居中 */
+  align-items: center;
+  /* 垂直居中 */
 }
 
 .table-row {
-  border-bottom: 1px solid #e4e7ed; /* 底部边框 */
+  border-bottom: 1px solid #e4e7ed;
+  /* 底部边框 */
 }
 
 .table-row:last-child {
-  border-bottom: none; /* 最后一行无底部边框 */
+  border-bottom: none;
+  /* 最后一行无底部边框 */
 }
 
 /* 表格行悬停效果 */
 .table-row:hover {
-  background-color: #f5f7fa; /* 浅灰色背景 */
+  background-color: #f5f7fa;
+  /* 浅灰色背景 */
 }
 
 /* 副知识点单元格样式 */
 .sub-knowledge-cell {
-  display: flex; /* 弹性布局 */
-  flex-wrap: wrap; /* 允许换行 */
-  gap: 4px; /* 子元素间距 */
-  align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
+  display: flex;
+  /* 弹性布局 */
+  flex-wrap: wrap;
+  /* 允许换行 */
+  gap: 4px;
+  /* 子元素间距 */
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: center;
+  /* 水平居中 */
 }
 
 /* 副知识点标签样式 */
 .sub-knowledge-tag {
-  background: #ecf5ff; /* 浅蓝色背景 */
-  color: #409eff; /* 主题蓝色文字 */
-  padding: 2px 6px; /* 内边距 */
-  border-radius: 3px; /* 小圆角 */
-  font-size: 11px; /* 小字体 */
-  border: 1px solid #d9ecff; /* 边框 */
-  white-space: nowrap; /* 不换行 */
-  margin: 2px; /* 外边距 */
-  display: inline-block; /* 行内块显示 */
+  background: #ecf5ff;
+  /* 浅蓝色背景 */
+  color: #409eff;
+  /* 主题蓝色文字 */
+  padding: 2px 6px;
+  /* 内边距 */
+  border-radius: 3px;
+  /* 小圆角 */
+  font-size: 11px;
+  /* 小字体 */
+  border: 1px solid #d9ecff;
+  /* 边框 */
+  white-space: nowrap;
+  /* 不换行 */
+  margin: 2px;
+  /* 外边距 */
+  display: inline-block;
+  /* 行内块显示 */
 }
 
 /* 无副知识点提示样式 （问题定义，解题思想，问题类别也同样适用此标签）*/
 .no-sub-knowledge {
-  color: #c0c4cc; /* 浅灰色文字 */
-  font-style: italic; /* 斜体 */
+  color: #c0c4cc;
+  /* 浅灰色文字 */
+  font-style: italic;
+  /* 斜体 */
 }
 
 /* 题目内容单元格样式 */
 .title-cell {
-  word-break: break-word; /* 单词换行 */
-  line-height: 1.4; /* 行高 */
-  text-align: left; /* 左对齐 */
-  max-height: 250px; /* 设置最大高度 */
-  overflow-y: auto; /* 垂直滚动条 */
+  word-break: break-word;
+  /* 单词换行 */
+  line-height: 1.4;
+  /* 行高 */
+  text-align: left;
+  /* 左对齐 */
+  max-height: 250px;
+  /* 设置最大高度 */
+  overflow-y: auto;
+  /* 垂直滚动条 */
 }
 
 .image-cell {
-  text-align: center; /* 居中对齐 */
+  text-align: center;
+  /* 居中对齐 */
 }
 
 /* 缩略图样式 */
 .thumbnail-image {
-  width: 60px; /* 固定宽度 */
-  height: 45px; /* 固定高度 */
-  object-fit: cover; /* 图片填充方式 */
-  border: 1px solid #e4e7ed; /* 边框 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  transition: transform 0.2s; /* 变换过渡 */
+  width: 60px;
+  /* 固定宽度 */
+  height: 45px;
+  /* 固定高度 */
+  object-fit: cover;
+  /* 图片填充方式 */
+  border: 1px solid #e4e7ed;
+  /* 边框 */
+  border-radius: 4px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  transition: transform 0.2s;
+  /* 变换过渡 */
 }
 
 /* 缩略图悬停效果 */
 .thumbnail-image:hover {
-  transform: scale(1.1); /* 放大效果 */
+  transform: scale(1.1);
+  /* 放大效果 */
 }
 
 .no-image {
-  color: #c0c4cc; /* 浅灰色文字 */
-  font-style: italic; /* 斜体 */
+  color: #c0c4cc;
+  /* 浅灰色文字 */
+  font-style: italic;
+  /* 斜体 */
 }
 
 /* 操作按钮单元格样式 */
 .actions-cell {
-  display: flex; /* 弹性布局 */
-  gap: 8px; /* 按钮间距 */
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
-  height: 100%; /* 高度100% */
-  min-height: 60px; /* 最小高度 */
+  display: flex;
+  /* 弹性布局 */
+  gap: 8px;
+  /* 按钮间距 */
+  justify-content: center;
+  /* 水平居中 */
+  align-items: center;
+  /* 垂直居中 */
+  height: 100%;
+  /* 高度100% */
+  min-height: 60px;
+  /* 最小高度 */
 }
 
 /* 更新按钮样式 */
 .btn-update {
-  background-color: #409eff; /* 主题蓝色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 8px 16px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 14px; /* 字体大小 */
-  white-space: nowrap; /* 不换行 */
-  transition: background-color 0.3s; /* 背景色过渡 */
+  background-color: #409eff;
+  /* 主题蓝色背景 */
+  color: white;
+  /* 白色文字 */
+  border: none;
+  /* 无边框 */
+  padding: 8px 16px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 14px;
+  /* 字体大小 */
+  white-space: nowrap;
+  /* 不换行 */
+  transition: background-color 0.3s;
+  /* 背景色过渡 */
 }
 
 .btn-update:hover {
-  background-color: #66b1ff; /* 悬停时更亮的蓝色 */
+  background-color: #66b1ff;
+  /* 悬停时更亮的蓝色 */
 }
 
 /* 删除按钮样式 */
 .btn-delete {
-  background-color: #f56c6c; /* 红色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 8px 16px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 14px; /* 字体大小 */
-  white-space: nowrap; /* 不换行 */
-  transition: background-color 0.3s; /* 背景色过渡 */
+  background-color: #f56c6c;
+  /* 红色背景 */
+  color: white;
+  /* 白色文字 */
+  border: none;
+  /* 无边框 */
+  padding: 8px 16px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 14px;
+  /* 字体大小 */
+  white-space: nowrap;
+  /* 不换行 */
+  transition: background-color 0.3s;
+  /* 背景色过渡 */
 }
 
 .btn-delete:hover {
-  background-color: #f78989; /* 悬停时更亮的红色 */
+  background-color: #f78989;
+  /* 悬停时更亮的红色 */
 }
+
 /* ==================== 分页控件样式 ==================== */
 .pagination-controls {
   display: flex;
@@ -6077,6 +5821,7 @@ init();
   font-size: 14px;
   color: #606266;
 }
+
 .pagination-controls {
   display: flex;
   align-items: center;
@@ -6127,276 +5872,437 @@ init();
 
 /* ==================== 更新表单区域样式 ==================== */
 .update-form-section {
-  margin-top: 30px; /* 顶部外边距 */
-  padding-top: 20px; /* 顶部内边距 */
-  border-top: 1px solid #e4e7ed; /* 顶部边框 */
+  margin-top: 30px;
+  /* 顶部外边距 */
+  padding-top: 20px;
+  /* 顶部内边距 */
+  border-top: 1px solid #e4e7ed;
+  /* 顶部边框 */
 }
 
 .update-form-section h3 {
-  margin-bottom: 20px; /* 底部外边距 */
-  color: #303133; /* 深灰色文字 */
+  margin-bottom: 20px;
+  /* 底部外边距 */
+  color: #303133;
+  /* 深灰色文字 */
 }
 
 .update-form {
-  display: grid; /* 网格布局 */
-  grid-template-columns: repeat(2, 1fr); /* 两列等宽 */
-  gap: 20px; /* 网格间距 */
+  display: grid;
+  /* 网格布局 */
+  grid-template-columns: repeat(2, 1fr);
+  /* 两列等宽 */
+  gap: 20px;
+  /* 网格间距 */
 }
 
 /* 跨列的表单组 */
 .update-form .form-group:nth-child(7),
 .update-form .form-group:nth-child(8),
 .update-form .form-group:nth-child(9) {
-  grid-column: 1 / -1; /* 跨所有列 */
+  grid-column: 1 / -1;
+  /* 跨所有列 */
 }
 
 /* ==================== 模态框样式 ==================== */
 .modal-overlay {
-  position: fixed; /* 固定定位 */
-  top: 0; /* 顶部对齐 */
-  left: 0; /* 左侧对齐 */
-  right: 0; /* 右侧对齐 */
-  bottom: 0; /* 底部对齐 */
-  background: rgba(0, 0, 0, 0.5); /* 半透明黑色背景 */
-  display: flex; /* 弹性布局 */
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
-  z-index: 1000; /* 高z-index确保在最上层 */
+  position: fixed;
+  /* 固定定位 */
+  top: 0;
+  /* 顶部对齐 */
+  left: 0;
+  /* 左侧对齐 */
+  right: 0;
+  /* 右侧对齐 */
+  bottom: 0;
+  /* 底部对齐 */
+  background: rgba(0, 0, 0, 0.5);
+  /* 半透明黑色背景 */
+  display: flex;
+  /* 弹性布局 */
+  justify-content: center;
+  /* 水平居中 */
+  align-items: center;
+  /* 垂直居中 */
+  z-index: 1000;
+  /* 高z-index确保在最上层 */
 }
 
 .modal-content {
-  background: white; /* 白色背景 */
-  padding: 40px; /* 内边距 */
-  border-radius: 12px; /* 大圆角 */
-  max-width: 1500px; /* 最大宽度 */
-  width: 90%; /* 宽度90% */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
-  text-align: center; /* 文字居中 */
-  transform: scale(1.05); /* 轻微放大 */
-  animation: modalAppear 0.3s ease-out; /* 出现动画 */
+  background: white;
+  /* 白色背景 */
+  padding: 40px;
+  /* 内边距 */
+  border-radius: 12px;
+  /* 大圆角 */
+  max-width: 1500px;
+  /* 最大宽度 */
+  width: 90%;
+  /* 宽度90% */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  /* 阴影效果 */
+  text-align: center;
+  /* 文字居中 */
+  transform: scale(1.05);
+  /* 轻微放大 */
+  animation: modalAppear 0.3s ease-out;
+  /* 出现动画 */
 }
 
 /* 模态框出现动画 */
 @keyframes modalAppear {
   from {
-    opacity: 0; /* 完全透明 */
-    transform: scale(0.8) translateY(-20px); /* 缩小并上移 */
+    opacity: 0;
+    /* 完全透明 */
+    transform: scale(0.8) translateY(-20px);
+    /* 缩小并上移 */
   }
 
   to {
-    opacity: 1; /* 完全不透明 */
-    transform: scale(1.05) translateY(0); /* 正常大小和位置 */
+    opacity: 1;
+    /* 完全不透明 */
+    transform: scale(1.05) translateY(0);
+    /* 正常大小和位置 */
   }
 }
 
 .modal-content h3 {
-  margin-bottom: 20px; /* 底部外边距 */
-  color: #303133; /* 深灰色文字 */
-  font-size: 24px; /* 大字体 */
-  font-weight: 600; /* 粗体 */
+  margin-bottom: 20px;
+  /* 底部外边距 */
+  color: #303133;
+  /* 深灰色文字 */
+  font-size: 24px;
+  /* 大字体 */
+  font-weight: 600;
+  /* 粗体 */
 }
 
 .modal-content p {
-  margin-bottom: 30px; /* 底部外边距 */
-  color: #606266; /* 中灰色文字 */
-  font-size: 18px; /* 字体大小 */
-  line-height: 1.5; /* 行高 */
+  margin-bottom: 30px;
+  /* 底部外边距 */
+  color: #606266;
+  /* 中灰色文字 */
+  font-size: 18px;
+  /* 字体大小 */
+  line-height: 1.5;
+  /* 行高 */
 }
 
 .modal-actions {
   padding: 12px 24px;
-  display: flex; /* 弹性布局 */
-  gap: 15px; /* 按钮间距 */
-  justify-content: center; /* 水平居中 */
+  display: flex;
+  /* 弹性布局 */
+  gap: 15px;
+  /* 按钮间距 */
+  justify-content: center;
+  /* 水平居中 */
 }
 
 .modal-actions button {
-  padding: 12px 24px; /* 内边距 */
-  font-size: 16px; /* 字体大小 */
-  border-radius: 6px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  transition: all 0.3s; /* 过渡动画 */
-  min-width: 100px; /* 最小宽度 */
+  padding: 12px 24px;
+  /* 内边距 */
+  font-size: 16px;
+  /* 字体大小 */
+  border-radius: 6px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  transition: all 0.3s;
+  /* 过渡动画 */
+  min-width: 100px;
+  /* 最小宽度 */
 }
 
 /* ==================== 图片预览模态框样式 ==================== */
 .image-preview-modal {
-  background: white; /* 白色背景 */
-  padding: 30px; /* 内边距 */
-  border-radius: 12px; /* 大圆角 */
-  max-width: 90vw; /* 最大宽度为视口90% */
-  max-height: 90vh; /* 最大高度为视口90% */
-  display: flex; /* 弹性布局 */
-  flex-direction: column; /* 垂直方向 */
-  align-items: center; /* 水平居中 */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
-  transform: scale(1.05); /* 轻微放大 */
-  animation: modalAppear 0.3s ease-out; /* 出现动画 */
+  background: white;
+  /* 白色背景 */
+  padding: 30px;
+  /* 内边距 */
+  border-radius: 12px;
+  /* 大圆角 */
+  max-width: 90vw;
+  /* 最大宽度为视口90% */
+  max-height: 90vh;
+  /* 最大高度为视口90% */
+  display: flex;
+  /* 弹性布局 */
+  flex-direction: column;
+  /* 垂直方向 */
+  align-items: center;
+  /* 水平居中 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  /* 阴影效果 */
+  transform: scale(1.05);
+  /* 轻微放大 */
+  animation: modalAppear 0.3s ease-out;
+  /* 出现动画 */
 }
 
 .full-size-image {
-  max-width: 100%; /* 最大宽度100% */
-  max-height: 70vh; /* 最大高度为视口70% */
-  object-fit: contain; /* 保持比例填充 */
-  margin-bottom: 20px; /* 底部外边距 */
-  border-radius: 8px; /* 圆角 */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 阴影效果 */
+  max-width: 100%;
+  /* 最大宽度100% */
+  max-height: 70vh;
+  /* 最大高度为视口70% */
+  object-fit: contain;
+  /* 保持比例填充 */
+  margin-bottom: 20px;
+  /* 底部外边距 */
+  border-radius: 8px;
+  /* 圆角 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  /* 阴影效果 */
 }
 
 /* ==================== 题目预览模态框样式 ==================== */
 .preview-modal-overlay {
-  z-index: 2000; /* 更高的z-index确保在最上层 */
+  z-index: 2000;
+  /* 更高的z-index确保在最上层 */
 }
 
 .preview-modal-content {
-  background: white; /* 白色背景 */
-  padding: 40px; /* 内边距 */
-  border-radius: 12px; /* 大圆角 */
-  max-width: 800px; /* 最大宽度 */
-  width: 95%; /* 宽度95% */
-  max-height: 90vh; /* 最大高度为视口90% */
-  overflow-y: auto; /* 垂直滚动 */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); /* 阴影效果 */
-  transform: scale(1.05); /* 轻微放大 */
-  animation: modalAppear 0.3s ease-out; /* 出现动画 */
+  background: white;
+  /* 白色背景 */
+  padding: 40px;
+  /* 内边距 */
+  border-radius: 12px;
+  /* 大圆角 */
+  max-width: 800px;
+  /* 最大宽度 */
+  width: 95%;
+  /* 宽度95% */
+  max-height: 90vh;
+  /* 最大高度为视口90% */
+  overflow-y: auto;
+  /* 垂直滚动 */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  /* 阴影效果 */
+  transform: scale(1.05);
+  /* 轻微放大 */
+  animation: modalAppear 0.3s ease-out;
+  /* 出现动画 */
 }
 
 .preview-modal-title {
-  margin-bottom: 25px; /* 底部外边距 */
-  color: #303133; /* 深灰色文字 */
-  font-size: 24px; /* 大字体 */
-  font-weight: 600; /* 粗体 */
-  text-align: center; /* 文字居中 */
-  border-bottom: 2px solid #409eff; /* 底部边框 */
-  padding-bottom: 15px; /* 底部内边距 */
+  margin-bottom: 25px;
+  /* 底部外边距 */
+  color: #303133;
+  /* 深灰色文字 */
+  font-size: 24px;
+  /* 大字体 */
+  font-weight: 600;
+  /* 粗体 */
+  text-align: center;
+  /* 文字居中 */
+  border-bottom: 2px solid #409eff;
+  /* 底部边框 */
+  padding-bottom: 15px;
+  /* 底部内边距 */
 }
 
 .preview-content {
-  margin-bottom: 30px; /* 底部外边距 */
+  margin-bottom: 30px;
+  /* 底部外边距 */
 }
 
 .preview-section {
-  margin-bottom: 20px; /* 底部外边距 */
-  padding: 15px; /* 内边距 */
-  border: 1px solid #e4e7ed; /* 边框 */
-  border-radius: 8px; /* 圆角 */
-  background: #fafafa; /* 浅灰色背景 */
+  margin-bottom: 20px;
+  /* 底部外边距 */
+  padding: 15px;
+  /* 内边距 */
+  border: 1px solid #e4e7ed;
+  /* 边框 */
+  border-radius: 8px;
+  /* 圆角 */
+  background: #fafafa;
+  /* 浅灰色背景 */
 }
 
 .preview-section h4 {
-  margin-bottom: 15px; /* 底部外边距 */
-  color: #409eff; /* 主题蓝色文字 */
-  font-size: 18px; /* 字体大小 */
-  font-weight: 600; /* 粗体 */
-  border-bottom: 1px solid #dcdfe6; /* 底部边框 */
-  padding-bottom: 8px; /* 底部内边距 */
+  margin-bottom: 15px;
+  /* 底部外边距 */
+  color: #409eff;
+  /* 主题蓝色文字 */
+  font-size: 18px;
+  /* 字体大小 */
+  font-weight: 600;
+  /* 粗体 */
+  border-bottom: 1px solid #dcdfe6;
+  /* 底部边框 */
+  padding-bottom: 8px;
+  /* 底部内边距 */
 }
 
 .preview-grid {
-  display: grid; /* 网格布局 */
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 自适应列 */
-  gap: 15px; /* 网格间距 */
+  display: grid;
+  /* 网格布局 */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  /* 自适应列 */
+  gap: 15px;
+  /* 网格间距 */
 }
 
 .preview-item {
-  display: flex; /* 弹性布局 */
-  flex-direction: column; /* 垂直方向 */
+  display: flex;
+  /* 弹性布局 */
+  flex-direction: column;
+  /* 垂直方向 */
 }
 
 .preview-item label {
-  font-weight: 600; /* 粗体 */
-  color: #606266; /* 中灰色文字 */
-  margin-bottom: 5px; /* 底部外边距 */
-  font-size: 14px; /* 字体大小 */
+  font-weight: 600;
+  /* 粗体 */
+  color: #606266;
+  /* 中灰色文字 */
+  margin-bottom: 5px;
+  /* 底部外边距 */
+  font-size: 14px;
+  /* 字体大小 */
 }
 
 .preview-item span {
-  color: #303133; /* 深灰色文字 */
-  font-size: 15px; /* 字体大小 */
-  line-height: 1.5; /* 行高 */
-  word-break: break-word; /* 单词换行 */
+  color: #303133;
+  /* 深灰色文字 */
+  font-size: 15px;
+  /* 字体大小 */
+  line-height: 1.5;
+  /* 行高 */
+  word-break: break-word;
+  /* 单词换行 */
 }
 
 .preview-text-content {
-  background: white; /* 白色背景 */
-  padding: 15px; /* 内边距 */
-  border-radius: 6px; /* 圆角 */
-  border: 1px solid #dcdfe6; /* 边框 */
-  line-height: 1.6; /* 行高 */
-  color: #303133; /* 深灰色文字 */
-  overflow: auto; /* 垂直滚动 */
+  background: white;
+  /* 白色背景 */
+  padding: 15px;
+  /* 内边距 */
+  border-radius: 6px;
+  /* 圆角 */
+  border: 1px solid #dcdfe6;
+  /* 边框 */
+  line-height: 1.6;
+  /* 行高 */
+  color: #303133;
+  /* 深灰色文字 */
+  overflow: auto;
+  /* 垂直滚动 */
 }
 
 .preview-img {
-  max-width: 100%; /* 最大宽度100% */
-  max-height: 4000px; /* 最大高度 */
-  height: auto; /* 高度自适应 */
-  border-radius: 6px; /* 圆角 */
-  border: 1px solid #dcdfe6; /* 边框 */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+  max-width: 100%;
+  /* 最大宽度100% */
+  max-height: 4000px;
+  /* 最大高度 */
+  height: auto;
+  /* 高度自适应 */
+  border-radius: 6px;
+  /* 圆角 */
+  border: 1px solid #dcdfe6;
+  /* 边框 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* 阴影效果 */
 }
 
 .preview-options {
-  display: flex; /* 弹性布局 */
-  flex-direction: column; /* 垂直方向 */
-  gap: 12px; /* 选项间距 */
+  display: flex;
+  /* 弹性布局 */
+  flex-direction: column;
+  /* 垂直方向 */
+  gap: 12px;
+  /* 选项间距 */
 }
 
 .preview-option {
-  display: flex; /* 弹性布局 */
-  align-items: flex-start; /* 顶部对齐 */
-  gap: 10px; /* 子元素间距 */
-  padding: 12px; /* 内边距 */
-  background: white; /* 白色背景 */
-  border: 1px solid #dcdfe6; /* 边框 */
-  border-radius: 6px; /* 圆角 */
-  transition: all 0.3s; /* 过渡动画 */
-  overflow-y: auto; /* 允许垂直滚动 */
+  display: flex;
+  /* 弹性布局 */
+  align-items: flex-start;
+  /* 顶部对齐 */
+  gap: 10px;
+  /* 子元素间距 */
+  padding: 12px;
+  /* 内边距 */
+  background: white;
+  /* 白色背景 */
+  border: 1px solid #dcdfe6;
+  /* 边框 */
+  border-radius: 6px;
+  /* 圆角 */
+  transition: all 0.3s;
+  /* 过渡动画 */
+  overflow-y: auto;
+  /* 允许垂直滚动 */
 }
 
 .preview-option.correct-answer {
-  background: #f0f9ff; /* 浅蓝色背景 */
-  border-color: #409eff; /* 主题蓝色边框 */
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2); /* 蓝色阴影 */
+  background: #f0f9ff;
+  /* 浅蓝色背景 */
+  border-color: #409eff;
+  /* 主题蓝色边框 */
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+  /* 蓝色阴影 */
 }
 
 .option-label {
-  font-weight: 600; /* 粗体 */
-  color: #409eff; /* 主题蓝色 */
-  min-width: 30px; /* 最小宽度 */
+  font-weight: 600;
+  /* 粗体 */
+  color: #409eff;
+  /* 主题蓝色 */
+  min-width: 30px;
+  /* 最小宽度 */
 }
 
 .option-text {
-  flex: 1; /* 弹性填充 */
-  color: #303133; /* 深灰色文字 */
-  line-height: 1.5; /* 行高 */
+  flex: 1;
+  /* 弹性填充 */
+  color: #303133;
+  /* 深灰色文字 */
+  line-height: 1.5;
+  /* 行高 */
 }
 
 .correct-badge {
-  background: #67c23a; /* 绿色背景 */
-  color: white; /* 白色文字 */
-  padding: 4px 8px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  font-size: 12px; /* 小字体 */
-  font-weight: 600; /* 粗体 */
+  background: #67c23a;
+  /* 绿色背景 */
+  color: white;
+  /* 白色文字 */
+  padding: 4px 8px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  font-size: 12px;
+  /* 小字体 */
+  font-weight: 600;
+  /* 粗体 */
 }
 
 .preview-actions {
-  display: flex; /* 弹性布局 */
-  gap: 15px; /* 按钮间距 */
-  justify-content: center; /* 水平居中 */
-  margin-top: 25px; /* 顶部外边距 */
-  padding-top: 20px; /* 顶部内边距 */
-  border-top: 1px solid #e4e7ed; /* 顶部边框 */
+  display: flex;
+  /* 弹性布局 */
+  gap: 15px;
+  /* 按钮间距 */
+  justify-content: center;
+  /* 水平居中 */
+  margin-top: 25px;
+  /* 顶部外边距 */
+  padding-top: 20px;
+  /* 顶部内边距 */
+  border-top: 1px solid #e4e7ed;
+  /* 顶部边框 */
 }
 
 .preview-actions button {
-  padding: 12px 24px; /* 内边距 */
-  font-size: 16px; /* 字体大小 */
-  border-radius: 6px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  transition: all 0.3s; /* 过渡动画 */
-  min-width: 120px; /* 最小宽度 */
+  padding: 12px 24px;
+  /* 内边距 */
+  font-size: 16px;
+  /* 字体大小 */
+  border-radius: 6px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  transition: all 0.3s;
+  /* 过渡动画 */
+  min-width: 120px;
+  /* 最小宽度 */
 }
 
 /* ==================== 删除知识点/解题思想/问题类别确认对话框样式 ==================== */
@@ -6496,19 +6402,29 @@ init();
 
 /* ==================== 编辑按钮样式 ==================== */
 .btn-edit-small {
-  background-color: #409eff; /* 主题蓝色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 2px 6px; /* 小内边距 */
-  border-radius: 3px; /* 小圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 12px; /* 小字体 */
-  transition: background-color 0.3s; /* 背景色过渡 */
-  margin-left: 4px; /* 左侧间距 */
+  background-color: #409eff;
+  /* 主题蓝色背景 */
+  color: white;
+  /* 白色文字 */
+  border: none;
+  /* 无边框 */
+  padding: 2px 6px;
+  /* 小内边距 */
+  border-radius: 3px;
+  /* 小圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 12px;
+  /* 小字体 */
+  transition: background-color 0.3s;
+  /* 背景色过渡 */
+  margin-left: 4px;
+  /* 左侧间距 */
 }
 
 .btn-edit-small:hover {
-  background-color: #66b1ff; /* 悬停时更亮的蓝色 */
+  background-color: #66b1ff;
+  /* 悬停时更亮的蓝色 */
 }
 
 /* ==================== 按钮容器样式 ==================== */
@@ -6520,93 +6436,134 @@ init();
 
 /* ==================== 表单组件样式 ==================== */
 .form-group {
-  margin-bottom: 20px; /* 底部外边距 */
+  margin-bottom: 20px;
+  /* 底部外边距 */
 }
 
 .form-label {
-  display: block; /* 块级显示 */
-  margin-bottom: 8px; /* 底部外边距 */
-  font-weight: 700; /* 粗体 */
-  color: black; /* 黑色文字 */
+  display: block;
+  /* 块级显示 */
+  margin-bottom: 8px;
+  /* 底部外边距 */
+  font-weight: 700;
+  /* 粗体 */
+  color: black;
+  /* 黑色文字 */
 }
 
 /* 必填字段标记 */
 .form-label.required::after {
-  content: " *"; /* 星号内容 */
-  color: #f56c6c; /* 红色 */
+  content: " *";
+  /* 星号内容 */
+  color: #f56c6c;
+  /* 红色 */
 }
 
 /* 表单控件通用样式 */
 .form-select,
 .form-input,
 .form-textarea {
-  width: 100%; /* 宽度100% */
-  padding: 10px 12px; /* 内边距 */
-  border: 1px solid #dcdfe6; /* 边框 */
-  border-radius: 4px; /* 圆角 */
-  font-size: 14px; /* 字体大小 */
-  transition: border-color 0.3s; /* 边框颜色过渡 */
-  box-sizing: border-box; /* 盒模型 */
+  width: 100%;
+  /* 宽度100% */
+  padding: 10px 12px;
+  /* 内边距 */
+  border: 1px solid #dcdfe6;
+  /* 边框 */
+  border-radius: 4px;
+  /* 圆角 */
+  font-size: 14px;
+  /* 字体大小 */
+  transition: border-color 0.3s;
+  /* 边框颜色过渡 */
+  box-sizing: border-box;
+  /* 盒模型 */
 }
 
 /* 表单控件焦点状态 */
 .form-select:focus,
 .form-input:focus,
 .form-textarea:focus {
-  outline: none; /* 去除默认轮廓 */
-  border-color: #409eff; /* 主题蓝色边框 */
+  outline: none;
+  /* 去除默认轮廓 */
+  border-color: #409eff;
+  /* 主题蓝色边框 */
 }
 
 /* 下拉选择框特定样式 */
 .form-select {
-  background-color: white; /* 白色背景 */
-  border: 2px solid #e4e7ed; /* 边框 */
-  border-radius: 6px; /* 圆角 */
-  padding: 10px; /* 内边距 */
-  font-size: 16px; /* 字体大小 */
-  cursor: pointer; /* 鼠标手型 */
-  transition: all 0.3s ease; /* 过渡动画 */
+  background-color: white;
+  /* 白色背景 */
+  border: 2px solid #e4e7ed;
+  /* 边框 */
+  border-radius: 6px;
+  /* 圆角 */
+  padding: 10px;
+  /* 内边距 */
+  font-size: 16px;
+  /* 字体大小 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  transition: all 0.3s ease;
+  /* 过渡动画 */
 }
 
 .form-select:hover {
-  border-color: #409eff; /* 悬停时主题蓝色边框 */
-  background-color: #f5f7fa; /* 浅灰色背景 */
+  border-color: #409eff;
+  /* 悬停时主题蓝色边框 */
+  background-color: #f5f7fa;
+  /* 浅灰色背景 */
 }
 
 .form-select:focus {
-  border-color: #409eff; /* 焦点时主题蓝色边框 */
-  background-color: #fff; /* 白色背景 */
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2); /* 蓝色发光效果 */
+  border-color: #409eff;
+  /* 焦点时主题蓝色边框 */
+  background-color: #fff;
+  /* 白色背景 */
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  /* 蓝色发光效果 */
 }
 
 /* 错误状态的下拉框 */
 .form-select.error {
-  border-color: #f56c6c; /* 红色边框 */
-  background-color: #fef0f0; /* 浅红色背景 */
+  border-color: #f56c6c;
+  /* 红色边框 */
+  background-color: #fef0f0;
+  /* 浅红色背景 */
 }
 
 .form-select.error:focus {
-  border-color: #f56c6c; /* 红色边框 */
-  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2); /* 红色发光效果 */
+  border-color: #f56c6c;
+  /* 红色边框 */
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2);
+  /* 红色发光效果 */
 }
 
 /* 错误消息样式 */
 .error-message {
-  color: #f56c6c; /* 红色文字 */
-  font-size: 12px; /* 小字体 */
-  margin-top: 4px; /* 顶部外边距 */
-  display: flex; /* 弹性布局 */
-  align-items: center; /* 垂直居中 */
+  color: #f56c6c;
+  /* 红色文字 */
+  font-size: 12px;
+  /* 小字体 */
+  margin-top: 4px;
+  /* 顶部外边距 */
+  display: flex;
+  /* 弹性布局 */
+  align-items: center;
+  /* 垂直居中 */
 }
 
 .error-message::before {
-  content: "⚠ "; /* 警告图标 */
-  margin-right: 4px; /* 右侧间距 */
+  content: "⚠ ";
+  /* 警告图标 */
+  margin-right: 4px;
+  /* 右侧间距 */
 }
 
 .form-textarea {
-  resize: vertical; /* 允许垂直调整大小 */
-  min-height: 80px; /* 最小高度 */
+  resize: vertical;
+  /* 允许垂直调整大小 */
+  min-height: 80px;
+  /* 最小高度 */
 }
 
 /* 只读字段样式 */
@@ -6624,111 +6581,175 @@ init();
 
 /* ==================== 可搜索选择框样式 ==================== */
 .searchable-select {
-  position: relative; /* 相对定位，为下拉列表提供定位上下文 */
+  position: relative;
+  /* 相对定位，为下拉列表提供定位上下文 */
 }
 
 .dropdown-list {
-  position: absolute; /* 绝对定位 */
-  top: 100%; /* 位于父元素底部 */
-  left: 0; /* 左侧对齐 */
-  right: 0; /* 右侧对齐 */
-  background: #ffffff; /* 白色背景 */
-  border: 1px solid #dcdfe6; /* 边框 */
-  border-radius: 8px; /* 圆角 */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 阴影效果 */
-  max-height: 250px; /* 最大高度 */
-  overflow-y: auto; /* 垂直滚动 */
-  z-index: 1000; /* 高z-index确保在最上层 */
-  font-size: 16px; /* 字体大小 */
+  position: absolute;
+  /* 绝对定位 */
+  top: 100%;
+  /* 位于父元素底部 */
+  left: 0;
+  /* 左侧对齐 */
+  right: 0;
+  /* 右侧对齐 */
+  background: #ffffff;
+  /* 白色背景 */
+  border: 1px solid #dcdfe6;
+  /* 边框 */
+  border-radius: 8px;
+  /* 圆角 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* 阴影效果 */
+  max-height: 250px;
+  /* 最大高度 */
+  overflow-y: auto;
+  /* 垂直滚动 */
+  z-index: 1000;
+  /* 高z-index确保在最上层 */
+  font-size: 16px;
+  /* 字体大小 */
 }
 
 .dropdown-item {
-  padding: 10px 12px; /* 内边距 */
-  cursor: pointer; /* 鼠标手型 */
-  transition: all 0.2s ease; /* 过渡动画 */
-  border-bottom: 1px solid #f0f0f0; /* 底部边框 */
-  background-color: white; /* 白色背景 */
-  color: #303133; /* 文字颜色 */
-  display: flex; /* 弹性布局 */
-  justify-content: space-between; /* 两端对齐 */
-  align-items: center; /* 垂直居中 */
+  padding: 10px 12px;
+  /* 内边距 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  transition: all 0.2s ease;
+  /* 过渡动画 */
+  border-bottom: 1px solid #f0f0f0;
+  /* 底部边框 */
+  background-color: white;
+  /* 白色背景 */
+  color: #303133;
+  /* 文字颜色 */
+  display: flex;
+  /* 弹性布局 */
+  justify-content: space-between;
+  /* 两端对齐 */
+  align-items: center;
+  /* 垂直居中 */
 }
 
 .dropdown-item:hover {
-  background-color: #409eff; /* 悬停时主题蓝色背景 */
-  color: white; /* 白色文字 */
+  background-color: #409eff;
+  /* 悬停时主题蓝色背景 */
+  color: white;
+  /* 白色文字 */
 }
 
 .dropdown-item:last-child {
-  border-bottom: none; /* 最后一项无底部边框 */
+  border-bottom: none;
+  /* 最后一项无底部边框 */
 }
 
 .selected-mark {
-  color: #409eff; /* 主题蓝色 */
-  font-weight: bold; /* 粗体 */
+  color: #409eff;
+  /* 主题蓝色 */
+  font-weight: bold;
+  /* 粗体 */
 }
 
 .search-input {
-  margin-bottom: 0; /* 无底部外边距 */
-  border-radius: 4px; /* 圆角 */
+  margin-bottom: 0;
+  /* 无底部外边距 */
+  border-radius: 4px;
+  /* 圆角 */
 }
 
 /* ==================== 删除按钮样式 ==================== */
 .btn-remove-small {
-  background-color: #f56c6c; /* 红色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 2px 6px; /* 小内边距 */
-  border-radius: 3px; /* 小圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 12px; /* 小字体 */
-  transition: background-color 0.3s; /* 背景色过渡 */
-  margin-left: 8px; /* 左侧间距 */
+  background-color: #f56c6c;
+  /* 红色背景 */
+  color: white;
+  /* 白色文字 */
+  border: none;
+  /* 无边框 */
+  padding: 2px 6px;
+  /* 小内边距 */
+  border-radius: 3px;
+  /* 小圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 12px;
+  /* 小字体 */
+  transition: background-color 0.3s;
+  /* 背景色过渡 */
+  margin-left: 8px;
+  /* 左侧间距 */
 }
 
 .btn-remove-small:hover {
-  background-color: #f78989; /* 悬停时更亮的红色 */
+  background-color: #f78989;
+  /* 悬停时更亮的红色 */
 }
 
 /* ==================== 选中项显示样式 ==================== */
 .selected-item {
-  margin-top: 8px; /* 顶部外边距 */
-  padding: 8px 12px; /* 内边距 */
-  background: #f0f9ff; /* 浅蓝色背景 */
-  border: 1px solid #bae7ff; /* 边框 */
-  border-radius: 4px; /* 圆角 */
-  display: flex; /* 弹性布局 */
-  justify-content: space-between; /* 两端对齐 */
-  align-items: center; /* 垂直居中 */
-  font-size: 14px; /* 字体大小 */
+  margin-top: 8px;
+  /* 顶部外边距 */
+  padding: 8px 12px;
+  /* 内边距 */
+  background: #f0f9ff;
+  /* 浅蓝色背景 */
+  border: 1px solid #bae7ff;
+  /* 边框 */
+  border-radius: 4px;
+  /* 圆角 */
+  display: flex;
+  /* 弹性布局 */
+  justify-content: space-between;
+  /* 两端对齐 */
+  align-items: center;
+  /* 垂直居中 */
+  font-size: 14px;
+  /* 字体大小 */
 }
 
 .selected-items {
-  margin-top: 8px; /* 顶部外边距 */
-  display: flex; /* 弹性布局 */
-  flex-wrap: wrap; /* 允许换行 */
-  gap: 8px; /* 子元素间距 */
-  align-items: center; /* 垂直居中 */
+  margin-top: 8px;
+  /* 顶部外边距 */
+  display: flex;
+  /* 弹性布局 */
+  flex-wrap: wrap;
+  /* 允许换行 */
+  gap: 8px;
+  /* 子元素间距 */
+  align-items: center;
+  /* 垂直居中 */
 }
 
 .selected-tag {
-  background: #ecf5ff; /* 浅蓝色背景 */
-  color: #409eff; /* 主题蓝色文字 */
-  padding: 4px 8px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  font-size: 12px; /* 小字体 */
-  border: 1px solid #d9ecff; /* 边框 */
-  cursor: pointer; /* 鼠标手型 */
-  transition: background-color 0.3s; /* 背景色过渡 */
+  background: #ecf5ff;
+  /* 浅蓝色背景 */
+  color: #409eff;
+  /* 主题蓝色文字 */
+  padding: 4px 8px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  font-size: 12px;
+  /* 小字体 */
+  border: 1px solid #d9ecff;
+  /* 边框 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  transition: background-color 0.3s;
+  /* 背景色过渡 */
 }
 
 .selected-tag:hover {
-  background-color: #d9ecff; /* 悬停时更深的蓝色背景 */
+  background-color: #d9ecff;
+  /* 悬停时更深的蓝色背景 */
 }
 
 .selected-tags-label {
-  font-size: 13px; /* 字体大小 */
-  color: #909399; /* 浅灰色文字 */
+  font-size: 13px;
+  /* 字体大小 */
+  color: #909399;
+  /* 浅灰色文字 */
 }
 
 /* ==================== 难度多选样式 ==================== */
@@ -6773,278 +6794,397 @@ init();
 
 /* ==================== 无结果提示样式 ==================== */
 .no-results {
-  text-align: center; /* 文字居中 */
-  padding: 40px; /* 内边距 */
-  color: #909399; /* 浅灰色文字 */
-  font-size: 16px; /* 字体大小 */
-  background: #fafafa; /* 浅灰色背景 */
-  border-radius: 4px; /* 圆角 */
-  margin-top: 20px; /* 顶部外边距 */
+  text-align: center;
+  /* 文字居中 */
+  padding: 40px;
+  /* 内边距 */
+  color: #909399;
+  /* 浅灰色文字 */
+  font-size: 16px;
+  /* 字体大小 */
+  background: #fafafa;
+  /* 浅灰色背景 */
+  border-radius: 4px;
+  /* 圆角 */
+  margin-top: 20px;
+  /* 顶部外边距 */
 }
 
 .no-results p {
-  margin: 0; /* 无外边距 */
+  margin: 0;
+  /* 无外边距 */
 }
 
 /* 多选下拉框样式 */
 .searchable-select .form-select[multiple] {
-  height: 80px; /* 固定高度 */
-  padding: 5px; /* 内边距 */
+  height: 80px;
+  /* 固定高度 */
+  padding: 5px;
+  /* 内边距 */
 }
 
 .searchable-select .form-select[multiple] option {
-  padding: 5px 8px; /* 选项内边距 */
+  padding: 5px 8px;
+  /* 选项内边距 */
 }
 
 /* ==================== 新建知识点输入区域样式 ==================== */
 .new-knowledge-input {
-  display: flex; /* 弹性布局 */
-  gap: 10px; /* 子元素间距 */
-  margin-top: 10px; /* 顶部外边距 */
+  display: flex;
+  /* 弹性布局 */
+  gap: 10px;
+  /* 子元素间距 */
+  margin-top: 10px;
+  /* 顶部外边距 */
 }
 
 .new-knowledge-input .form-input {
-  flex: 1; /* 弹性填充 */
+  flex: 1;
+  /* 弹性填充 */
 }
 
 /* ==================== 按钮样式系统 ==================== */
 /* 主要按钮样式 */
 .btn-primary {
-  background-color: #409eff; /* 主题蓝色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 10px 20px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 14px; /* 字体大小 */
-  transition: background-color 0.3s; /* 背景色过渡 */
+  background-color: #409eff;
+  /* 主题蓝色背景 */
+  color: white;
+  /* 白色文字 */
+  border: none;
+  /* 无边框 */
+  padding: 10px 20px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 14px;
+  /* 字体大小 */
+  transition: background-color 0.3s;
+  /* 背景色过渡 */
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #66b1ff; /* 悬停时更亮的蓝色 */
+  background-color: #66b1ff;
+  /* 悬停时更亮的蓝色 */
 }
 
 .btn-primary:disabled {
-  background-color: #a0cfff; /* 禁用时浅蓝色 */
-  cursor: not-allowed; /* 禁用光标 */
+  background-color: #a0cfff;
+  /* 禁用时浅蓝色 */
+  cursor: not-allowed;
+  /* 禁用光标 */
 }
 
 /* 次要按钮样式 */
 .btn-secondary {
-  background-color: #f4f4f5; /* 浅灰色背景 */
-  color: #606266; /* 中灰色文字 */
-  border: 1px solid #d3d4d6; /* 边框 */
-  padding: 8px 16px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 13px; /* 字体大小 */
-  transition: all 0.3s; /* 过渡动画 */
+  background-color: #f4f4f5;
+  /* 浅灰色背景 */
+  color: #606266;
+  /* 中灰色文字 */
+  border: 1px solid #d3d4d6;
+  /* 边框 */
+  padding: 8px 16px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 13px;
+  /* 字体大小 */
+  transition: all 0.3s;
+  /* 过渡动画 */
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: #e9e9eb; /* 悬停时更深的灰色 */
+  background-color: #e9e9eb;
+  /* 悬停时更深的灰色 */
 }
 
 .btn-secondary:disabled {
-  opacity: 0.6; /* 半透明 */
-  cursor: not-allowed; /* 禁用光标 */
+  opacity: 0.6;
+  /* 半透明 */
+  cursor: not-allowed;
+  /* 禁用光标 */
 }
 
 /* 高亮按钮样式（用于新建等操作） */
 .btn-highlight {
-  background-color: #67c23a; /* 绿色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 10px 16px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 13px; /* 字体大小 */
-  transition: all 0.3s; /* 过渡动画 */
-  font-weight: 500; /* 中等字重 */
+  background-color: #67c23a;
+  /* 绿色背景 */
+  color: white;
+  /* 白色文字 */
+  border: none;
+  /* 无边框 */
+  padding: 10px 16px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 13px;
+  /* 字体大小 */
+  transition: all 0.3s;
+  /* 过渡动画 */
+  font-weight: 500;
+  /* 中等字重 */
 }
 
 .btn-highlight:hover:not(:disabled) {
-  background-color: #85ce61; /* 悬停时更亮的绿色 */
-  transform: translateY(-1px); /* 上移效果 */
-  box-shadow: 0 2px 6px rgba(103, 194, 58, 0.3); /* 阴影效果 */
+  background-color: #85ce61;
+  /* 悬停时更亮的绿色 */
+  transform: translateY(-1px);
+  /* 上移效果 */
+  box-shadow: 0 2px 6px rgba(103, 194, 58, 0.3);
+  /* 阴影效果 */
 }
 
 .btn-highlight:disabled {
-  opacity: 0.6; /* 半透明 */
-  cursor: not-allowed; /* 禁用光标 */
-  transform: none; /* 无变换 */
-  box-shadow: none; /* 无阴影 */
+  opacity: 0.6;
+  /* 半透明 */
+  cursor: not-allowed;
+  /* 禁用光标 */
+  transform: none;
+  /* 无变换 */
+  box-shadow: none;
+  /* 无阴影 */
 }
 
 /* 移除按钮样式 */
 .btn-remove {
-  background-color: #f56c6c; /* 红色背景 */
-  color: white; /* 白色文字 */
-  border: none; /* 无边框 */
-  padding: 6px 12px; /* 内边距 */
-  border-radius: 4px; /* 圆角 */
-  cursor: pointer; /* 鼠标手型 */
-  font-size: 12px; /* 小字体 */
+  background-color: #f56c6c;
+  /* 红色背景 */
+  color: white;
+  /* 白色文字 */
+  border: none;
+  /* 无边框 */
+  padding: 6px 12px;
+  /* 内边距 */
+  border-radius: 4px;
+  /* 圆角 */
+  cursor: pointer;
+  /* 鼠标手型 */
+  font-size: 12px;
+  /* 小字体 */
 }
 
 .btn-remove:hover {
-  background-color: #f78989; /* 悬停时更亮的红色 */
+  background-color: #f78989;
+  /* 悬停时更亮的红色 */
 }
 
 /* ==================== 图片上传区域样式 ==================== */
 .image-preview {
-  display: flex; /* 弹性布局 */
-  align-items: center; /* 垂直居中 */
-  gap: 15px; /* 子元素间距 */
-  margin-top: 10px; /* 顶部外边距 */
+  display: flex;
+  /* 弹性布局 */
+  align-items: center;
+  /* 垂直居中 */
+  gap: 15px;
+  /* 子元素间距 */
+  margin-top: 10px;
+  /* 顶部外边距 */
 }
 
 /* ==================== 选项列表样式 ==================== */
 .options-list {
-  margin-bottom: 15px; /* 底部外边距 */
+  margin-bottom: 15px;
+  /* 底部外边距 */
 }
 
 .option-item {
-  display: flex; /* 弹性布局 */
-  align-items: flex-start; /* 顶部对齐 */
-  gap: 10px; /* 子元素间距 */
-  margin-bottom: 15px; /* 底部外边距 */
-  padding: 10px; /* 内边距 */
-  background: #fafafa; /* 浅灰色背景 */
-  border-radius: 4px; /* 圆角 */
+  display: flex;
+  /* 弹性布局 */
+  align-items: flex-start;
+  /* 顶部对齐 */
+  gap: 10px;
+  /* 子元素间距 */
+  margin-bottom: 15px;
+  /* 底部外边距 */
+  padding: 10px;
+  /* 内边距 */
+  background: #fafafa;
+  /* 浅灰色背景 */
+  border-radius: 4px;
+  /* 圆角 */
 }
 
 .option-label {
-  font-weight: 500; /* 中等字重 */
-  min-width: 30px; /* 最小宽度 */
-  color: #409eff; /* 主题蓝色 */
-  margin-top: 8px; /* 顶部外边距 */
+  font-weight: 500;
+  /* 中等字重 */
+  min-width: 30px;
+  /* 最小宽度 */
+  color: #409eff;
+  /* 主题蓝色 */
+  margin-top: 8px;
+  /* 顶部外边距 */
 }
 
 .option-input-container {
-  flex: 1; /* 弹性填充 */
-  display: flex; /* 弹性布局 */
-  flex-direction: column; /* 垂直方向 */
+  flex: 1;
+  /* 弹性填充 */
+  display: flex;
+  /* 弹性布局 */
+  flex-direction: column;
+  /* 垂直方向 */
 }
 
 .option-input {
-  margin-bottom: 4px; /* 底部外边距 */
+  margin-bottom: 4px;
+  /* 底部外边距 */
 }
 
 .option-actions {
-  display: flex; /* 弹性布局 */
-  align-items: center; /* 垂直居中 */
-  gap: 10px; /* 子元素间距 */
-  margin-top: 8px; /* 顶部外边距 */
+  display: flex;
+  /* 弹性布局 */
+  align-items: center;
+  /* 垂直居中 */
+  gap: 10px;
+  /* 子元素间距 */
+  margin-top: 8px;
+  /* 顶部外边距 */
 }
 
 .radio-input,
 .checkbox-input {
-  margin: 0; /* 无外边距 */
+  margin: 0;
+  /* 无外边距 */
 }
 
 .radio-label,
 .checkbox-label {
-  font-size: 13px; /* 小字体 */
-  color: #606266; /* 中灰色文字 */
-  white-space: nowrap; /* 不换行 */
+  font-size: 13px;
+  /* 小字体 */
+  color: #606266;
+  /* 中灰色文字 */
+  white-space: nowrap;
+  /* 不换行 */
 }
 
 /* ==================== 表单操作区域样式 ==================== */
 .form-actions {
-  display: flex; /* 弹性布局 */
-  gap: 15px; /* 子元素间距 */
-  margin-top: 30px; /* 顶部外边距 */
-  padding-top: 20px; /* 顶部内边距 */
-  border-top: 1px solid #e4e7ed; /* 顶部边框 */
-  grid-column: 1 / -1; /* 网格布局中跨所有列 */
+  display: flex;
+  /* 弹性布局 */
+  gap: 15px;
+  /* 子元素间距 */
+  margin-top: 30px;
+  /* 顶部外边距 */
+  padding-top: 20px;
+  /* 顶部内边距 */
+  border-top: 1px solid #e4e7ed;
+  /* 顶部边框 */
+  grid-column: 1 / -1;
+  /* 网格布局中跨所有列 */
 }
 
 .submit-btn {
-  flex: 1; /* 弹性填充 */
+  flex: 1;
+  /* 弹性填充 */
 }
 
 /* ==================== 表格列宽设置 ==================== */
 /* 按顺序为每个表格列设置固定宽度 */
 .table-cell:nth-child(1) {
-  width: 60px; /* 上传者列 */
+  width: 60px;
+  /* 上传者列 */
 }
 
 .table-cell:nth-child(2) {
-  width: 60px; /* 审核者列 */
+  width: 60px;
+  /* 审核者列 */
 }
 
 .table-cell:nth-child(3) {
-  width: 80px; /* 年级列 */
+  width: 80px;
+  /* 年级列 */
 }
 
 .table-cell:nth-child(4) {
-  width: 50px; /* 科目列 */
+  width: 50px;
+  /* 科目列 */
 }
 
 .table-cell:nth-child(5) {
-  width: 90px; /* 问题类别列 */
+  width: 90px;
+  /* 问题类别列 */
 }
 
 .table-cell:nth-child(6) {
-  width: 50px; /* 评分方法列 */
+  width: 50px;
+  /* 评分方法列 */
 }
 
 .table-cell:nth-child(7) {
-  width: 100px; /* 知识点列 */
+  width: 100px;
+  /* 知识点列 */
 }
 
 .table-cell:nth-child(8) {
-  width: 100px; /* 解题思想列 */
+  width: 100px;
+  /* 解题思想列 */
 }
 
 .table-cell:nth-child(9) {
-  width: 150px; /* 副知识点列 */
+  width: 150px;
+  /* 副知识点列 */
 }
 
 .table-cell:nth-child(10) {
-  width: 50px; /* 难度列 */
+  width: 50px;
+  /* 难度列 */
 }
 
 .table-cell:nth-child(11) {
-  width: 300px; /* 题目内容列 */
+  width: 300px;
+  /* 题目内容列 */
 }
 
 .table-cell:nth-child(12) {
-  width: 100px; /* 备注列 */
+  width: 100px;
+  /* 备注列 */
 }
 
 .table-cell:nth-child(13) {
-  width: 100px; /* 图片列 */
+  width: 100px;
+  /* 图片列 */
 }
 
 .table-cell:nth-child(14) {
-  width: 45px; /* 操作列 */
+  width: 45px;
+  /* 操作列 */
 }
 
 /* 表格行边框 */
 .table-row {
-  border-bottom: 1px solid #e4e7ed; /* 底部边框 */
+  border-bottom: 1px solid #e4e7ed;
+  /* 底部边框 */
 }
 
 .table-header {
-  border-bottom: 2px solid #e4e7ed; /* 更粗的底部边框 */
+  border-bottom: 2px solid #e4e7ed;
+  /* 更粗的底部边框 */
 }
 
 .table-row:last-child {
-  border-bottom: none; /* 最后一行无边框 */
+  border-bottom: none;
+  /* 最后一行无边框 */
 }
 
 .actions-cell {
-  display: flex; /* 弹性布局 */
-  align-items: center; /* 垂直居中 */
-  justify-content: center; /* 水平居中 */
-  height: 100%; /* 高度100% */
-  min-height: 60px; /* 最小高度 */
+  display: flex;
+  /* 弹性布局 */
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: center;
+  /* 水平居中 */
+  height: 100%;
+  /* 高度100% */
+  min-height: 60px;
+  /* 最小高度 */
 }
 
 .sub-knowledge-tag {
-  margin: 2px; /* 外边距 */
+  margin: 2px;
+  /* 外边距 */
 }
 
 /* ==================== 知识点树样式 ==================== */
@@ -7333,16 +7473,19 @@ init();
 
 /* 调整表格布局 */
 .results-table {
-  min-width: 1400px; /* 增加最小宽度以适应更宽的内容 */
+  min-width: 1400px;
+  /* 增加最小宽度以适应更宽的内容 */
 }
 
 /* 为知识点和副知识点列增加宽度 */
 .table-cell:nth-child(6) {
-  width: 100px; /* 知识点列 */
+  width: 100px;
+  /* 知识点列 */
 }
 
 .table-cell:nth-child(8) {
-  width: 200px; /* 副知识点列 */
+  width: 200px;
+  /* 副知识点列 */
 }
 
 /* ==================== 审核人选择样式 ==================== */
@@ -7384,29 +7527,38 @@ init();
 
 /* ==================== 响应式设计 ==================== */
 @media (max-width: 768px) {
+
   /* 在小屏幕上将选项项改为垂直布局 */
   .option-item {
-    flex-direction: column; /* 垂直方向 */
-    align-items: stretch; /* 拉伸对齐 */
+    flex-direction: column;
+    /* 垂直方向 */
+    align-items: stretch;
+    /* 拉伸对齐 */
   }
 
   .option-actions {
-    justify-content: flex-start; /* 左对齐 */
-    margin-top: 10px; /* 顶部外边距 */
+    justify-content: flex-start;
+    /* 左对齐 */
+    margin-top: 10px;
+    /* 顶部外边距 */
   }
 
   /* 预览模态框在小屏幕上的适配 */
   .preview-modal-content {
-    padding: 20px; /* 较小的内边距 */
-    margin: 10px; /* 较小的外边距 */
+    padding: 20px;
+    /* 较小的内边距 */
+    margin: 10px;
+    /* 较小的外边距 */
   }
 
   .preview-grid {
-    grid-template-columns: 1fr; /* 单列布局 */
+    grid-template-columns: 1fr;
+    /* 单列布局 */
   }
 
   .preview-actions {
-    flex-direction: column; /* 垂直方向 */
+    flex-direction: column;
+    /* 垂直方向 */
   }
 
   /* 删除实体确认对话框在小屏幕上的适配 */
