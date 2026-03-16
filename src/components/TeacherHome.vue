@@ -53,8 +53,8 @@
             <el-icon><User /></el-icon>
             <span>学生管理</span>
           </template>
-          <el-menu-item index="student-list">班级学情</el-menu-item>
-          <el-menu-item index="student-info">学生学情</el-menu-item>
+          <el-menu-item index="class-management">班级管理</el-menu-item>
+          <!-- <el-menu-item index="student-info">学生学情</el-menu-item> -->
           <el-menu-item index="account-management">账户管理</el-menu-item>
         </el-sub-menu>
 
@@ -260,7 +260,12 @@ export default {
         "account-management": {
           path: "/teacher/accountmanagement",
           module: "学生管理",
-          page: "学生列表",
+          page: "账户管理",
+        },
+        "class-management": {
+          path: "/teacher/classmanagement",
+          module: "学生管理",
+          page: "班级管理",
         },
         "class-schedule": {
           // path: "/teacher/classroom/schedule",

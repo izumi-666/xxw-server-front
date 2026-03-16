@@ -1,10 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Login from "../Login.vue";
-import QuestionManager from "../components/QuestionManager.vue";
-import QuestionReview from "../components/QuestionReview.vue";
-import PaperManagement from "../components/PaperManagement.vue";
+import QuestionManager from "../components/QuestionManager.vue"; //题库
+import QuestionReview from "../components/QuestionReview.vue"; //审核题目
+import PaperManagement from "../components/PaperManagement.vue"; //试卷管理
 import ExamManagement from "../components/ExamManagement.vue"; //考试管理(教师用)
 import KnowledgePointManagement from "../components/KnowledgePointManagement.vue";//知识点管理
+import ClassManagement from "../components/ClassManagement.vue"; //班级管理
 import AssessExam from "../components/AssessExam.vue"; //批改考试
 import ExamDashboard from "../components/ExamDashboard.vue"; //学生用
 import TakeExam from "../components/TakeExam.vue"; //学生参加考试
@@ -175,6 +176,15 @@ const routes = [
         meta: {
           requiresAuth: true,
           breadcrumb: ["学生管理", "账户管理"]
+        }
+      },
+       {
+        path: "classmanagement",
+        name: "class-management",
+        component: ClassManagement,
+        meta: {
+          requiresAuth: true,
+          breadcrumb: ["学生管理", "班级管理"]
         }
       },
       {
