@@ -481,38 +481,38 @@
                 <span class="dropdown-arrow">▼</span>
               </div>
 
-              <div class="multi-select-dropdown" v-if="showStudentDropdown">
-                <div class="search-input-container">
-                  <input
-                    type="text"
-                    v-model="studentSearch"
-                    placeholder="搜索学生..."
-                    class="search-input"
-                    @input="filterStudents"
-                  />
-                </div>
+<div class="multi-select-dropdown" v-if="showStudentDropdown">
+  <div class="search-input-container">
+    <input
+      type="text"
+      v-model="studentSearch"
+      placeholder="搜索学生..."
+      class="search-input"
+      @input="filterStudents"
+    />
+  </div>
 
-                <div class="dropdown-options">
-                  <div
-                    v-for="stu in filteredStudents"
-                    :key="stu.id"
-                    class="dropdown-option"
-                    @click="toggleStudent(stu)"
-                  >
-                    <span
-                      class="checkbox"
-                      :class="{ checked: isStudentSelected(stu.id) }"
-                    >
-                      {{ isStudentSelected(stu.id) ? "✓" : "" }}
-                    </span>
-                    <span class="option-text">{{ stu.name }}</span>
-                  </div>
+  <div class="dropdown-options">
+    <div
+      v-for="stu in filteredStudents"
+      :key="stu.id"
+      class="dropdown-option"
+      @click="toggleStudent(stu)"
+    >
+      <span
+        class="checkbox"
+        :class="{ checked: isStudentSelected(stu.name) }"
+      >
+        {{ isStudentSelected(stu.name) ? "✓" : "" }}
+      </span>
+      <span class="option-text">{{ stu.name }}</span>
+    </div>
 
-                  <div v-if="filteredStudents.length === 0" class="no-options">
-                    无匹配学生
-                  </div>
-                </div>
-              </div>
+    <div v-if="filteredStudents.length === 0" class="no-options">
+      无匹配学生
+    </div>
+  </div>
+</div>
             </div>
           </div>
         </div>
@@ -1087,20 +1087,40 @@ const showStudentDropdown = ref(false);
 // 选中的学生姓名数组
 const selectedStudentNames = ref([]);
 
+// loadStudentList 函数
 const loadStudentList = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/user/getStudentList`);
+    // 获取学校ID（从用户信息中获取）
+    const userInfo = getUserInfo();
+    const schoolId = userInfo?.schoolId || 1; // 默认学校ID为1
+    
+    // 传递请求体参数
+    const requestBody = {
+      status: "ACTIVE", // 只获取活跃的学生
+      schoolId: schoolId,
+      // 其他可选参数，根据需要传递
+      // account: "",
+      // phone: "",
+      // id: null,
+      // QQ: "",
+      // email: "",
+      // wechat: "",
+      // emergencyCall: ""
+    };
+    
+    const res = await axios.post(`${API_BASE}/user/getStudent`, requestBody);
     const list = res.data.data || [];
 
     // 确保每个学生对象都有 name 字段
     studentList.value = list.map((item) => ({
       id: item.id,
-      name: item.name || item.account, // 使用姓名，如果没有则使用账号
-      account: item.account, // 保留账号字段备用
+      name: item.account || item.name, // 使用 account 作为显示名称
+      account: item.account,
     }));
 
     filteredStudents.value = studentList.value;
   } catch (err) {
+    console.error("加载学生列表失败:", err);
     ElMessage.error("加载学生列表失败");
   }
 };
